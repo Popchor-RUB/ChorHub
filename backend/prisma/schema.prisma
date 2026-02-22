@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ChoirVoice {
+  SOPRAN
+  MEZZOSOPRAN
+  ALT
+  TENOR
+  BARITON
+  BASS
+}
+
+enum AttendanceResponse {
+  CONFIRMED
+  DECLINED
+}
+
+model Member {
+  id         String     @id @default(uuid())
+  firstName  String
+  lastName   String
+  email      String     @unique
+  choirVoice ChoirVoice
+  loginToken String?    @unique // SHA-256 hash of raw token (permanent, no expiry)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  attendancePlans   AttendancePlan[]
+  attendanceRecords AttendanceRecord[]
+
+  @@map("members")
+}
+
+model Rehearsal {
+  id          String   @id @default(uuid())
+  date        DateTime
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attendancePlans   AttendancePlan[]
+  attendanceRecords AttendanceRecord[]
+
+  @@map("rehearsals")
+}
+
+model AttendancePlan {
+  id          String             @id @default(uuid())
+  memberId    String
+  rehearsalId String
+  response    AttendanceResponse
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  rehearsal Rehearsal @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, rehearsalId])
+  @@map("attendance_plans")
+}
+
+model AttendanceRecord {
+  id          String   @id @default(uuid())
+  memberId    String
+  rehearsalId String
+  createdAt   DateTime @default(now())
+
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  rehearsal Rehearsal @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, rehearsalId])
+  @@map("attendance_records")
+}
+
+model AdminUser {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  passkeyCredentials PasskeyCredential[]
+
+  @@map("admin_users")
+}
+
+model PasskeyCredential {
+  id           String   @id @default(uuid())
+  adminUserId  String
+  credentialId String   @unique
+  publicKey    Bytes
+  counter      BigInt   @default(0)
+  deviceType   String?
+  backedUp     Boolean  @default(false)
+  transports   String[]
+  createdAt    DateTime @default(now())
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@map("passkey_credentials")
+}
+
+model GeneralInfo {
+  id              String   @id @default(cuid())
+  markdownContent String
+  updatedAt       DateTime @updatedAt
+
+  @@map("general_info")
+}

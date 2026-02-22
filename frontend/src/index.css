@@ -1,0 +1,25 @@
+@import "tailwindcss";
+@plugin './hero.ts';
+/* Note: You may need to change the path to fit your project structure */
+@source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
+@custom-variant dark (&:is(.dark *));
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Prose styles for markdown rendering */
+.prose h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
+.prose h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.5rem; }
+.prose h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.25rem; }
+.prose p { margin-bottom: 0.75rem; line-height: 1.7; }
+.prose ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.prose ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.prose li { margin-bottom: 0.25rem; }
+.prose a { color: #006FEE; text-decoration: underline; }
+.prose strong { font-weight: 600; }
+.prose em { font-style: italic; }
+.prose hr { border: none; border-top: 1px solid #e5e7eb; margin: 1rem 0; }
