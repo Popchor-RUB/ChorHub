@@ -37,6 +37,7 @@
     "class-validator": "^0.14.3",
     "cookie-parser": "^1.4.7",
     "csv-parse": "^6.1.0",
+    "exceljs": "^4.4.0",
     "handlebars": "^4.7.8",
     "multer": "^2.0.2",
     "nodemailer": "^8.0.1",

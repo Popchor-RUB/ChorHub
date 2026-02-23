@@ -4,6 +4,7 @@ import {
   Post,
   Query,
   Param,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -33,6 +34,15 @@ export class AdminController {
   @Get('members/search')
   searchMembers(@Query('q') query: string = '') {
     return this.adminService.searchMembers(query);
+  }
+
+  @Get('members/export')
+  async exportMembers() {
+    const buffer = await this.adminService.exportMembersExcel();
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment; filename="mitglieder-export.xlsx"',
+    });
   }
 
   @Get('members/:id/rehearsals')

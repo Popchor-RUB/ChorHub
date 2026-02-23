@@ -5,6 +5,16 @@ import { ConfigService } from '@nestjs/config';
 import { ChoirVoice } from '@prisma/client';
 import { randomBytes, createHash } from 'crypto';
 import { parse } from 'csv-parse/sync';
+import * as ExcelJS from 'exceljs';
+
+const CHOIR_VOICE_LABELS: Record<string, string> = {
+  SOPRAN: 'Sopran',
+  MEZZOSOPRAN: 'Mezzosopran',
+  ALT: 'Alt',
+  TENOR: 'Tenor',
+  BARITON: 'Bariton',
+  BASS: 'Bass',
+};
 
 const CHOIR_VOICES = Object.values(ChoirVoice);
 
@@ -205,6 +215,89 @@ export class AdminService {
       attended: r.attendanceRecords.length > 0,
       plan: r.attendancePlans[0]?.response ?? null,
     }));
+  }
+
+  async exportMembersExcel(): Promise<Buffer> {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const [rehearsals, members] = await Promise.all([
+      this.prisma.rehearsal.findMany({
+        where: { date: { lt: startOfToday } },
+        orderBy: { date: 'asc' },
+        select: { id: true, date: true, title: true },
+      }),
+      this.prisma.member.findMany({
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          choirVoice: true,
+          attendanceRecords: {
+            where: { rehearsal: { date: { lt: startOfToday } } },
+            select: { rehearsalId: true },
+          },
+          attendancePlans: {
+            where: { response: 'DECLINED', rehearsal: { date: { lt: startOfToday } } },
+            select: { rehearsalId: true },
+          },
+        },
+      }),
+    ]);
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Mitglieder');
+
+    const formatDate = (d: Date) =>
+      new Intl.DateTimeFormat('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(d);
+
+    const headerRow = sheet.addRow([
+      'Name',
+      'E-Mail',
+      'Stimme',
+      'Proben besucht',
+      'Unentschuldigt',
+      ...rehearsals.map((r) => `${formatDate(r.date)} – ${r.title}`),
+    ]);
+    headerRow.font = { bold: true };
+
+    for (const m of members) {
+      const attendedIds = new Set(m.attendanceRecords.map((r) => r.rehearsalId));
+      const declinedIds = new Set(m.attendancePlans.map((p) => p.rehearsalId));
+
+      const attendanceCount = attendedIds.size;
+      const unexcusedCount = rehearsals.filter(
+        (r) => !attendedIds.has(r.id) && !declinedIds.has(r.id),
+      ).length;
+
+      const rehearsalStatuses = rehearsals.map((r) => {
+        if (attendedIds.has(r.id)) return 'ja';
+        if (declinedIds.has(r.id)) return 'nein';
+        return 'unentschuldigt';
+      });
+
+      sheet.addRow([
+        `${m.lastName}, ${m.firstName}`,
+        m.email,
+        CHOIR_VOICE_LABELS[m.choirVoice] ?? m.choirVoice,
+        attendanceCount,
+        unexcusedCount,
+        ...rehearsalStatuses,
+      ]);
+    }
+
+    sheet.columns.forEach((col) => {
+      col.width = 20;
+    });
+
+    const arrayBuffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(arrayBuffer);
   }
 
   async getMemberHistory(memberId: string) {

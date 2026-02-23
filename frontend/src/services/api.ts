@@ -96,6 +96,7 @@ export const adminMembersApi = {
     });
   },
   list: () => api.get('/admin/members'),
+  export: () => api.get('/admin/members/export', { responseType: 'blob' }),
   search: (q: string) => api.get(`/admin/members/search?q=${encodeURIComponent(q)}`),
   history: (id: string) => api.get(`/admin/members/${id}/history`),
   rehearsals: (id: string) => api.get(`/admin/members/${id}/rehearsals`),

@@ -169,6 +169,7 @@ function MemberDetailModal({
 export function MemberOverviewPage() {
   const [members, setMembers] = useState<MemberOverview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [selectedMember, setSelectedMember] = useState<MemberOverview | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
@@ -185,17 +186,48 @@ export function MemberOverviewPage() {
     onOpen();
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await adminMembersApi.export();
+      const blob = new Blob([res.data as BlobPart], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const filename = `Mitglieder_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}.xlsx`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Mitglieder</h1>
-        <Button
-          color="primary"
-          size="sm"
-          onPress={() => navigate('/admin/mitglieder/importieren')}
-        >
-          CSV importieren
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="flat"
+            isLoading={exporting}
+            onPress={handleExport}
+          >
+            Excel exportieren
+          </Button>
+          <Button
+            color="primary"
+            size="sm"
+            onPress={() => navigate('/admin/mitglieder/importieren')}
+          >
+            CSV importieren
+          </Button>
+        </div>
       </div>
 
       {loading ? (
