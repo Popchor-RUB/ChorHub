@@ -32,8 +32,21 @@ model Member {
 
   attendancePlans   AttendancePlan[]
   attendanceRecords AttendanceRecord[]
+  pushSubscriptions PushSubscription[]
 
   @@map("members")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@map("push_subscriptions")
 }
 
 model Rehearsal {

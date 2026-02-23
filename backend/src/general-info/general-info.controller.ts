@@ -3,10 +3,14 @@ import { GeneralInfoService } from './general-info.service';
 import { UpdateGeneralInfoDto } from './dto/update-general-info.dto';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { OrGuard } from '../auth/guards/or.guard';
+import { PushService } from '../push/push.service';
 
 @Controller('general-info')
 export class GeneralInfoController {
-  constructor(private readonly generalInfoService: GeneralInfoService) {}
+  constructor(
+    private readonly generalInfoService: GeneralInfoService,
+    private readonly pushService: PushService,
+  ) {}
 
   @Get()
   @UseGuards(OrGuard)
@@ -16,7 +20,15 @@ export class GeneralInfoController {
 
   @Patch()
   @UseGuards(JwtAdminGuard)
-  updateInfo(@Body() dto: UpdateGeneralInfoDto) {
-    return this.generalInfoService.updateInfo(dto);
+  async updateInfo(@Body() dto: UpdateGeneralInfoDto) {
+    const result = await this.generalInfoService.updateInfo(dto);
+    if (dto.sendPushNotification) {
+      await this.pushService.sendToAll({
+        title: 'ChorHub – Neue Informationen',
+        body: 'Der Admin hat allgemeine Informationen aktualisiert.',
+        url: '/',
+      });
+    }
+    return result;
   }
 }

@@ -13,45 +13,51 @@ import { GeneralInfoPage } from './pages/admin/GeneralInfoPage';
 import { AttendancePage } from './pages/admin/AttendancePage';
 import { RehearsalOverviewPage } from './pages/admin/RehearsalOverviewPage';
 
-const router = createBrowserRouter([
-  // Member routes
-  {
-    path: '/',
-    element: (
-      <ProtectedRoute role="member">
-        <MemberLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      { index: true, element: <DashboardPage /> },
-      { path: 'proben', element: <RehearsalsPage /> },
-    ],
-  },
+// Get basename from Vite's __BASE_PATH__ (defaults to '/')
+const basename = __BASE_PATH__;
 
-  // Admin routes
-  {
-    path: '/admin',
-    element: (
-      <ProtectedRoute role="admin">
-        <AdminLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      { index: true, element: <Navigate to="/admin/mitglieder" replace /> },
-      { path: 'mitglieder', element: <MemberOverviewPage /> },
-      { path: 'mitglieder/importieren', element: <ImportMembersPage /> },
-      { path: 'proben', element: <RehearsalOverviewPage /> },
-      { path: 'anwesenheit', element: <AttendancePage /> },
-      { path: 'informationen', element: <GeneralInfoPage /> },
-    ],
-  },
+const router = createBrowserRouter(
+  [
+    // Member routes
+    {
+      path: '/',
+      element: (
+        <ProtectedRoute role="member">
+          <MemberLayout />
+        </ProtectedRoute>
+      ),
+      children: [
+        { index: true, element: <DashboardPage /> },
+        { path: 'proben', element: <RehearsalsPage /> },
+      ],
+    },
 
-  // Public auth routes
-  { path: '/login', element: <MagicLinkRequestPage /> },
-  { path: '/auth/verify', element: <MagicLinkVerifyPage /> },
-  { path: '/admin/login', element: <LoginPage /> },
-  { path: '*', element: <Navigate to="/" replace /> },
-]);
+    // Admin routes
+    {
+      path: '/admin',
+      element: (
+        <ProtectedRoute role="admin">
+          <AdminLayout />
+        </ProtectedRoute>
+      ),
+      children: [
+        { index: true, element: <Navigate to="/admin/mitglieder" replace /> },
+        { path: 'mitglieder', element: <MemberOverviewPage /> },
+        { path: 'mitglieder/importieren', element: <ImportMembersPage /> },
+        { path: 'proben', element: <RehearsalOverviewPage /> },
+        { path: 'anwesenheit', element: <AttendancePage /> },
+        { path: 'informationen', element: <GeneralInfoPage /> },
+      ],
+    },
+
+    // Public auth routes
+    { path: '/login', element: <MagicLinkRequestPage /> },
+    { path: '/auth/verify', element: <MagicLinkVerifyPage /> },
+    { path: '/admin/login', element: <LoginPage /> },
+    { path: '*', element: <Navigate to="/" replace /> },
+  ],
+  { basename },
+);
 
 function App() {
   return <RouterProvider router={router} />;

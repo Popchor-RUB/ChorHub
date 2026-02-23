@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Spinner } from '@heroui/react';
+import { Checkbox, Spinner } from '@heroui/react';
 import { generalInfoApi } from '../../services/api';
 import { MarkdownEditor } from '../../components/info/MarkdownEditor';
 
@@ -8,6 +8,7 @@ export function GeneralInfoPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [sendPush, setSendPush] = useState(false);
 
   useEffect(() => {
     generalInfoApi.get().then((res) => {
@@ -20,8 +21,9 @@ export function GeneralInfoPage() {
     setSaving(true);
     setSaved(false);
     try {
-      await generalInfoApi.update(content);
+      await generalInfoApi.update(content, sendPush);
       setSaved(true);
+      setSendPush(false);
       setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
@@ -47,6 +49,9 @@ export function GeneralInfoPage() {
         onSave={handleSave}
         saving={saving}
       />
+      <Checkbox isSelected={sendPush} onValueChange={setSendPush}>
+        Push-Benachrichtigung an alle Mitglieder senden
+      </Checkbox>
     </div>
   );
 }

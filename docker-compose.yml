@@ -10,18 +10,20 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-chorhub}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chorhub} -d ${POSTGRES_DB:-chorhub}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app
 
   backend:
     build:
       context: ./backend
-      target: development
+      target: production
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-chorhub}:${POSTGRES_PASSWORD:-chorhub_secret}@db:5432/${POSTGRES_DB:-chorhub}
@@ -33,36 +35,67 @@ services:
       MAIL_FROM: ${MAIL_FROM:-noreply@chorhub.de}
       APP_URL: ${APP_URL:-http://localhost:5173}
       NODE_ENV: development
-    ports:
-      - "3000:3000"
+      VAPID_PUBLIC_KEY: BJdwA_Tn5Q9Baii9nfS0UDGEeI-2rS_sTFm5vh5jyWHXe4_IQlzKp70hhCly5zoLLgBVOeuZXvHosOzqnORuCTE
+      VAPID_PRIVATE_KEY: ZJG45gSaJ8dspDQD7UCoECV0_IO4QSVLHiMwmikeJwk
+      VAPID_EMAIL: mailto:admin@chorhub.de
+
+    # ports:
+    #   - "3000:3000"
     volumes:
       - ./backend/src:/app/src
       - ./backend/prisma:/app/prisma
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy && npm run start:dev"
+    networks:
+      - app
 
   frontend:
     build:
       context: ./frontend
-      target: development
+      target: production
+      args:
+        BASE_PATH: /chorhub/
+        VITE_API_URL: https://popchor.rub.de/chorhub/api
     restart: unless-stopped
-    environment:
-      VITE_API_URL: http://localhost:3000
-    ports:
-      - "5173:5173"
+    # ports:
+    #   - "5173:5173"
     volumes:
       - ./frontend/src:/app/src
     depends_on:
       - backend
+    networks:
+      - app
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.chorhub.entrypoints=webNoAuth
+      - traefik.http.routers.chorhub.rule=Host(`popchor.rub.de`) && PathPrefix(`/chorhub`)
+      - "traefik.http.routers.chorhub.middlewares=chorhub-stripprefix@docker"
+      - "traefik.http.middlewares.chorhub-stripprefix.stripprefix.prefixes=/chorhub"
+      - traefik.http.routers.chorhub.service=chorhub-service
+      - traefik.http.services.chorhub-service.loadbalancer.server.port=80
 
   mailhog:
     image: mailhog/mailhog:latest
     restart: unless-stopped
-    ports:
-      - "1025:1025"
-      - "8025:8025"
+    # ports:
+    #   - "1025:1025"
+    #   - "8025:8025"
+    networks:
+      - app
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mailhog.entrypoints=web
+      - traefik.http.routers.mailhog.rule=Host(`mailhog.alphanudel.de`)
+      - traefik.http.routers.mailhog.service=mailhog-service
+      - traefik.http.services.mailhog-service.loadbalancer.server.port=8025
 
 volumes:
   pgdata:
+
+networks:
+  app:
+  traefik:
+    external: true

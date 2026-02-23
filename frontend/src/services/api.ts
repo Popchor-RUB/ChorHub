@@ -27,10 +27,10 @@ api.interceptors.response.use(
       const state = useAuthStore.getState();
       if (state.adminSession) {
         state.logoutAdmin();
-        window.location.href = '/admin/login';
+        window.location.href = `/admin/login`;
       } else if (state.memberSession) {
         state.logoutMember();
-        window.location.href = '/login';
+        window.location.href = `/login`;
       }
     }
     return Promise.reject(error);
@@ -104,5 +104,14 @@ export const adminMembersApi = {
 
 export const generalInfoApi = {
   get: () => api.get('/general-info'),
-  update: (markdownContent: string) => api.patch('/general-info', { markdownContent }),
+  update: (markdownContent: string, sendPushNotification = false) =>
+    api.patch('/general-info', { markdownContent, sendPushNotification }),
+};
+
+export const pushApi = {
+  getVapidPublicKey: () => api.get<{ publicKey: string }>('/push/vapid-public-key'),
+  subscribe: (sub: { endpoint: string; p256dh: string; auth: string }) =>
+    api.post('/push/subscribe', sub),
+  unsubscribe: (endpoint: string) =>
+    api.delete('/push/unsubscribe', { data: { endpoint } }),
 };
