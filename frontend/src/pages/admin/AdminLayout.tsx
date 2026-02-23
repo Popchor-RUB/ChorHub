@@ -7,6 +7,7 @@ import {
   Button,
 } from '@heroui/react';
 import { useAuthStore } from '../../store/authStore';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 const navItems = [
   { to: '/admin/mitglieder', label: 'Mitglieder' },
@@ -50,6 +51,9 @@ export function AdminLayout() {
         <NavbarContent justify="end">
           <NavbarItem>
             <span className="text-sm text-default-500 hidden sm:block">{adminSession?.username}</span>
+          </NavbarItem>
+          <NavbarItem>
+            <ThemeToggle />
           </NavbarItem>
           <NavbarItem>
             <Button variant="flat" size="sm" onPress={handleLogout}>

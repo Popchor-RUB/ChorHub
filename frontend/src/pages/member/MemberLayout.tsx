@@ -7,6 +7,7 @@ import {
   Button,
 } from '@heroui/react';
 import { useAuthStore } from '../../store/authStore';
+import { ThemeToggle } from '../../components/ThemeToggle';
 
 export function MemberLayout() {
   const { memberSession, logoutMember } = useAuthStore();
@@ -50,6 +51,9 @@ export function MemberLayout() {
             <span className="text-sm text-default-500 hidden sm:block">
               {memberSession?.firstName} {memberSession?.lastName}
             </span>
+          </NavbarItem>
+          <NavbarItem>
+            <ThemeToggle />
           </NavbarItem>
           <NavbarItem>
             <Button variant="flat" size="sm" onPress={handleLogout}>
