@@ -35,6 +35,11 @@ export class AdminController {
     return this.adminService.searchMembers(query);
   }
 
+  @Get('members/:id/rehearsals')
+  getMemberRehearsals(@Param('id') id: string) {
+    return this.adminService.getMemberRehearsals(id);
+  }
+
   @Get('members/:id/history')
   getMemberHistory(@Param('id') id: string) {
     return this.adminService.getMemberHistory(id);

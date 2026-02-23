@@ -66,7 +66,8 @@ export const memberAuthApi = {
 
 export const rehearsalsApi = {
   getUpcoming: () => api.get('/rehearsals'),
-  getAll: () => api.get('/rehearsals/all'),
+  getAllForMember: () => api.get('/rehearsals?all=true'), // member auth, returns past + upcoming
+  getAll: () => api.get('/rehearsals/all'),              // admin auth only
   create: (data: { date: string; title: string; description?: string }) =>
     api.post('/rehearsals', data),
   update: (id: string, data: Partial<{ date: string; title: string; description: string }>) =>
@@ -77,6 +78,8 @@ export const rehearsalsApi = {
 export const attendanceApi = {
   setPlan: (rehearsalId: string, response: 'CONFIRMED' | 'DECLINED') =>
     api.put(`/attendance/plans/${rehearsalId}`, { response }),
+  deletePlan: (rehearsalId: string) =>
+    api.delete(`/attendance/plans/${rehearsalId}`),
   getRecords: (rehearsalId: string) => api.get(`/attendance/records/${rehearsalId}`),
   bulkSetRecords: (rehearsalId: string, memberIds: string[]) =>
     api.put(`/attendance/records/${rehearsalId}`, { memberIds }),
@@ -95,6 +98,7 @@ export const adminMembersApi = {
   list: () => api.get('/admin/members'),
   search: (q: string) => api.get(`/admin/members/search?q=${encodeURIComponent(q)}`),
   history: (id: string) => api.get(`/admin/members/${id}/history`),
+  rehearsals: (id: string) => api.get(`/admin/members/${id}/rehearsals`),
 };
 
 export const generalInfoApi = {

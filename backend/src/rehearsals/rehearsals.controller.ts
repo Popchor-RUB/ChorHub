@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { RehearsalsService } from './rehearsals.service';
@@ -21,7 +22,13 @@ export class RehearsalsController {
 
   @Get()
   @UseGuards(MemberTokenGuard)
-  getUpcoming(@CurrentUser() user: any) {
+  getForMember(
+    @CurrentUser() user: any,
+    @Query('all') all?: string,
+  ) {
+    if (all === 'true') {
+      return this.rehearsalsService.findAllForMember(user.id);
+    }
     return this.rehearsalsService.findUpcoming(user.id);
   }
 

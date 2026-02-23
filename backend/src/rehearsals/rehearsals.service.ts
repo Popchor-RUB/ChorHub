@@ -8,27 +8,50 @@ export class RehearsalsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findUpcoming(memberId?: string) {
+    return this.findForMember(memberId, false);
+  }
+
+  async findAllForMember(memberId: string) {
+    return this.findForMember(memberId, true);
+  }
+
+  private async findForMember(memberId: string | undefined, includeAll: boolean) {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
     const rehearsals = await this.prisma.rehearsal.findMany({
-      where: { date: { gte: new Date() } },
-      orderBy: { date: 'asc' },
+      where: includeAll ? undefined : { date: { gte: startOfToday } },
+      orderBy: { date: includeAll ? 'desc' : 'asc' },
       include: memberId
         ? {
             attendancePlans: {
               where: { memberId },
               select: { response: true },
             },
+            attendanceRecords: {
+              where: { memberId },
+              select: { id: true },
+            },
+            _count: {
+              select: { attendanceRecords: true },
+            },
           }
         : undefined,
     });
-    return rehearsals.map((r) => ({
-      id: r.id,
-      date: r.date,
-      title: r.title,
-      description: r.description,
-      myPlan: memberId
-        ? ((r as any).attendancePlans[0]?.response ?? null)
-        : undefined,
-    }));
+    return rehearsals.map((r) => {
+      const anyRecorded = memberId ? (r as any)._count.attendanceRecords > 0 : false;
+      return {
+        id: r.id,
+        date: r.date,
+        title: r.title,
+        description: r.description,
+        myPlan: memberId
+          ? ((r as any).attendancePlans[0]?.response ?? null)
+          : undefined,
+        myAttended: memberId
+          ? (anyRecorded ? (r as any).attendanceRecords.length > 0 : null)
+          : undefined,
+      };
+    });
   }
 
   async findAll() {

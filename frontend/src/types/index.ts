@@ -16,6 +16,7 @@ export interface Rehearsal {
   title: string;
   description: string | null;
   myPlan?: AttendanceResponse | null;
+  myAttended?: boolean | null;
 }
 
 export interface AttendancePlan {
@@ -27,6 +28,15 @@ export interface AttendancePlan {
 
 export interface MemberOverview extends Member {
   attendanceCount: number;
+  unexcusedAbsenceCount: number;
+}
+
+export interface MemberRehearsalEntry {
+  id: string;
+  date: string;
+  title: string;
+  attended: boolean;
+  plan: AttendanceResponse | null;
 }
 
 export interface MemberSearchResult {

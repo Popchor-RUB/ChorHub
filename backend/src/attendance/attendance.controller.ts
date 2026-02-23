@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Put, UseGuards } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { SetAttendancePlanDto, BulkAttendanceRecordDto } from './dto/attendance.dto';
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
@@ -17,6 +17,15 @@ export class AttendanceController {
     @Body() dto: SetAttendancePlanDto,
   ) {
     return this.attendanceService.setAttendancePlan(user.id, rehearsalId, dto);
+  }
+
+  @Delete('plans/:rehearsalId')
+  @UseGuards(MemberTokenGuard)
+  deleteAttendancePlan(
+    @CurrentUser() user: any,
+    @Param('rehearsalId') rehearsalId: string,
+  ) {
+    return this.attendanceService.deleteAttendancePlan(user.id, rehearsalId);
   }
 
   @Get('records/:rehearsalId')

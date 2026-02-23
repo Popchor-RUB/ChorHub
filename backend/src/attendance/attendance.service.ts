@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceResponse, ChoirVoice } from '@prisma/client';
 import { SetAttendancePlanDto } from './dto/attendance.dto';
@@ -8,12 +8,26 @@ export class AttendanceService {
   constructor(private readonly prisma: PrismaService) {}
 
   async setAttendancePlan(memberId: string, rehearsalId: string, dto: SetAttendancePlanDto) {
-    await this.ensureRehearsalExists(rehearsalId);
+    const rehearsal = await this.ensureRehearsalExists(rehearsalId);
+    if (rehearsal.date <= new Date()) {
+      throw new ForbiddenException('Probe hat bereits begonnen oder ist vergangen');
+    }
     return this.prisma.attendancePlan.upsert({
       where: { memberId_rehearsalId: { memberId, rehearsalId } },
       create: { memberId, rehearsalId, response: dto.response },
       update: { response: dto.response },
     });
+  }
+
+  async deleteAttendancePlan(memberId: string, rehearsalId: string) {
+    const rehearsal = await this.ensureRehearsalExists(rehearsalId);
+    if (rehearsal.date <= new Date()) {
+      throw new ForbiddenException('Probe hat bereits begonnen oder ist vergangen');
+    }
+    await this.prisma.attendancePlan.deleteMany({
+      where: { memberId, rehearsalId },
+    });
+    return { deleted: true };
   }
 
   async getRecordsForRehearsal(rehearsalId: string) {
@@ -57,8 +71,10 @@ export class AttendanceService {
   }
 
   async getFutureOverview() {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
     const rehearsals = await this.prisma.rehearsal.findMany({
-      where: { date: { gte: new Date() } },
+      where: { date: { gte: startOfToday } },
       orderBy: { date: 'asc' },
       include: {
         attendancePlans: {
@@ -80,8 +96,10 @@ export class AttendanceService {
   }
 
   async getPastOverview() {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
     const rehearsals = await this.prisma.rehearsal.findMany({
-      where: { date: { lt: new Date() } },
+      where: { date: { lt: startOfToday } },
       orderBy: { date: 'desc' },
       include: {
         attendanceRecords: {

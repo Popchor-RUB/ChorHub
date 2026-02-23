@@ -30,7 +30,7 @@ export class AdminService {
         columns: true,
         skip_empty_lines: true,
         trim: true,
-      }) as CsvRow[];
+      });
     } catch {
       throw new BadRequestException('Ungültiges CSV-Format');
     }
@@ -75,11 +75,14 @@ export class AdminService {
           },
         });
 
-        const magicUrl = `${this.config.get('APP_URL')}/auth/verify?token=${rawToken}`;
-        await this.mailService.sendMemberInvite(member, magicUrl);
-
-        if (existing) results.updated++;
-        else results.created++;
+        // Only send invitation email to newly created members
+        if (!existing) {
+          const magicUrl = `${this.config.get('APP_URL')}/auth/verify?token=${rawToken}`;
+          await this.mailService.sendMemberInvite(member, magicUrl);
+          results.created++;
+        } else {
+          results.updated++;
+        }
       } catch (e: any) {
         results.failed.push({ email: row.email, reason: e.message });
       }
@@ -89,41 +92,85 @@ export class AdminService {
   }
 
   async getMemberOverview() {
-    const members = await this.prisma.member.findMany({
-      orderBy: [{ choirVoice: 'asc' }, { lastName: 'asc' }],
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        choirVoice: true,
-        createdAt: true,
-        _count: { select: { attendanceRecords: true } },
-      },
-    });
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
-    return members.map((m) => ({
-      id: m.id,
-      firstName: m.firstName,
-      lastName: m.lastName,
-      email: m.email,
-      choirVoice: m.choirVoice,
-      createdAt: m.createdAt,
-      attendanceCount: m._count.attendanceRecords,
-    }));
+    const [totalPastRehearsals, members] = await Promise.all([
+      this.prisma.rehearsal.count({ where: { date: { lt: startOfToday } } }),
+      this.prisma.member.findMany({
+        orderBy: [{ lastName: 'asc' }],
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          choirVoice: true,
+          createdAt: true,
+          _count: { select: { attendanceRecords: true } },
+          attendanceRecords: {
+            where: { rehearsal: { date: { lt: startOfToday } } },
+            select: { rehearsalId: true },
+          },
+          attendancePlans: {
+            where: { response: 'DECLINED', rehearsal: { date: { lt: startOfToday } } },
+            select: { rehearsalId: true },
+          },
+        },
+      }),
+    ]);
+
+    return members.map((m) => {
+      const attendedPastIds = new Set(m.attendanceRecords.map((r) => r.rehearsalId));
+      const declinedPastIds = new Set(m.attendancePlans.map((p) => p.rehearsalId));
+      const declinedNotAttended = [...declinedPastIds].filter((id) => !attendedPastIds.has(id)).length;
+      const unexcusedAbsenceCount = Math.max(0, totalPastRehearsals - attendedPastIds.size - declinedNotAttended);
+
+      return {
+        id: m.id,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        email: m.email,
+        choirVoice: m.choirVoice,
+        createdAt: m.createdAt,
+        attendanceCount: m._count.attendanceRecords,
+        unexcusedAbsenceCount,
+      };
+    });
   }
 
   async searchMembers(query: string) {
     const q = query.trim();
     if (!q) return [];
-    return this.prisma.member.findMany({
-      where: {
-        OR: [
-          { firstName: { contains: q, mode: 'insensitive' } },
-          { lastName: { contains: q, mode: 'insensitive' } },
-          { email: { contains: q, mode: 'insensitive' } },
+
+    // Split on commas or whitespace to detect combined-name queries
+    const parts = q.split(/[,\s]+/).filter(Boolean);
+
+    const conditions = [
+      { firstName: { contains: q, mode: 'insensitive' as const } },
+      { lastName: { contains: q, mode: 'insensitive' as const } },
+      { email: { contains: q, mode: 'insensitive' as const } },
+    ];
+
+    if (parts.length >= 2) {
+      const [a, b] = parts;
+      // "FirstName LastName" / "FirstName, LastName"
+      conditions.push({
+        AND: [
+          { firstName: { contains: a, mode: 'insensitive' as const } },
+          { lastName: { contains: b, mode: 'insensitive' as const } },
         ],
-      },
+      } as any);
+      // "LastName, FirstName" / "LastName FirstName"
+      conditions.push({
+        AND: [
+          { firstName: { contains: b, mode: 'insensitive' as const } },
+          { lastName: { contains: a, mode: 'insensitive' as const } },
+        ],
+      } as any);
+    }
+
+    return this.prisma.member.findMany({
+      where: { OR: conditions },
       select: {
         id: true,
         firstName: true,
@@ -132,7 +179,32 @@ export class AdminService {
         email: true,
       },
       take: 10,
+      orderBy: [{lastName: "asc"}, {firstName: "asc"}]
     });
+  }
+
+  async getMemberRehearsals(memberId: string) {
+    const rehearsals = await this.prisma.rehearsal.findMany({
+      orderBy: { date: 'asc' },
+      include: {
+        attendanceRecords: {
+          where: { memberId },
+          select: { id: true },
+        },
+        attendancePlans: {
+          where: { memberId },
+          select: { response: true },
+        },
+      },
+    });
+
+    return rehearsals.map((r) => ({
+      id: r.id,
+      date: r.date,
+      title: r.title,
+      attended: r.attendanceRecords.length > 0,
+      plan: r.attendancePlans[0]?.response ?? null,
+    }));
   }
 
   async getMemberHistory(memberId: string) {
