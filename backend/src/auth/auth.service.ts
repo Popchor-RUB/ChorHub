@@ -58,7 +58,7 @@ export class AuthService {
     });
 
     const magicUrl = `${this.config.get('APP_URL')}/auth/verify?token=${rawToken}`;
-    await this.mailService.sendMagicLink(member, magicUrl);
+    await this.mailService.sendMagicLink(member, magicUrl, rawToken);
   }
 
   async verifyMagicLink(rawToken: string) {

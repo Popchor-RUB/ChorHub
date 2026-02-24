@@ -1,20 +1,40 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardBody, CardHeader, Input, Button } from '@heroui/react';
 import { memberAuthApi } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
+
+const isToken = (v: string) => /^[0-9a-f]{64}$/i.test(v);
 
 export function MagicLinkRequestPage() {
-  const [email, setEmail] = useState('');
+  const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const { setMemberSession } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    const trimmed = value.trim();
     try {
-      await memberAuthApi.requestMagicLink(email);
-      setSent(true);
+      if (isToken(trimmed)) {
+        const res = await memberAuthApi.verifyMagicLink(trimmed);
+        const { token: rawToken, member } = res.data;
+        setMemberSession({
+          token: rawToken,
+          memberId: member.id,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          choirVoice: member.choirVoice,
+        });
+        navigate('/', { replace: true });
+      } else {
+        await memberAuthApi.requestMagicLink(trimmed);
+        setSent(true);
+      }
     } catch {
       setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
     } finally {
@@ -34,25 +54,29 @@ export function MagicLinkRequestPage() {
             <div className="text-center py-4">
               <p className="text-success font-medium mb-2">E-Mail versendet!</p>
               <p className="text-default-600 text-sm">
-                Falls Ihre E-Mail-Adresse bekannt ist, erhalten Sie in Kürze einen Anmeldelink.
+                Falls Ihre E-Mail-Adresse bekannt ist, erhalten Sie in Kürze eine E-Mail.
+                Klicken Sie auf den Link oder kopieren Sie den Token aus der E-Mail und fügen Sie ihn hier ein.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <p className="text-default-600 text-sm">
-                Geben Sie Ihre E-Mail-Adresse ein. Sie erhalten einen persönlichen Anmeldelink.
+                Geben Sie Ihre E-Mail-Adresse ein oder fügen Sie den Token aus der Anmelde-E-Mail direkt ein.
               </p>
               <Input
-                type="email"
-                label="E-Mail-Adresse"
-                value={email}
-                onValueChange={setEmail}
+                type="text"
+                label="E-Mail-Adresse oder Token"
+                value={value}
+                onValueChange={setValue}
                 isRequired
                 placeholder="ihre@email.de"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
               />
               {error && <p className="text-danger text-sm">{error}</p>}
               <Button type="submit" color="primary" isLoading={loading} fullWidth>
-                Anmeldelink anfordern
+                {isToken(value.trim()) ? 'Anmelden' : 'Anmeldelink anfordern'}
               </Button>
             </form>
           )}

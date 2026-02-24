@@ -25,13 +25,16 @@ export function usePushNotifications() {
 
     const swPath = __BASE_PATH__ + 'sw.js';
     navigator.serviceWorker
-      .register(swPath)
+      .register(swPath, { updateViaCache: 'none' })
       .then((reg) => {
         registrationRef.current = reg;
         return reg.pushManager.getSubscription();
       })
       .then((sub) => {
         setIsSubscribed(sub !== null);
+        if (sub === null && Notification.permission === 'default') {
+          subscribe();
+        }
       })
       .catch(() => {
         // SW registration failed (e.g. in dev without HTTPS) — silently ignore

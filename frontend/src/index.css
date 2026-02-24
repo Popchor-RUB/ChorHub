@@ -11,6 +11,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Prevent iOS from zooming in when an input is focused (requires >= 16px) */
+input:not([type="range"]), textarea, select {
+  font-size: max(16px, 1em);
+}
+
+/* Mobile bottom padding: fixed nav height + iOS home-bar safe area */
+.mobile-nav-pb {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 640px) {
+  .mobile-nav-pb {
+    padding-bottom: 1.5rem;
+  }
+}
+
 /* Prose styles for markdown rendering */
 .prose h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
 .prose h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.5rem; }

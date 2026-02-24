@@ -108,6 +108,12 @@ export const generalInfoApi = {
     api.patch('/general-info', { markdownContent, sendPushNotification }),
 };
 
+export const adminPushApi = {
+  getStats: () => api.get<{ subscriberCount: number }>('/push/admin/stats'),
+  sendToAll: (title: string, body: string, url?: string) =>
+    api.post('/push/admin/send', { title, body, url }),
+};
+
 export const pushApi = {
   getVapidPublicKey: () => api.get<{ publicKey: string }>('/push/vapid-public-key'),
   subscribe: (sub: { endpoint: string; p256dh: string; auth: string }) =>

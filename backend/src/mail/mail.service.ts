@@ -6,7 +6,7 @@ import { Member } from '@prisma/client';
 export class MailService {
   constructor(private readonly mailerService: MailerService) {}
 
-  async sendMagicLink(member: Member, magicUrl: string): Promise<void> {
+  async sendMagicLink(member: Member, magicUrl: string, rawToken: string): Promise<void> {
     await this.mailerService.sendMail({
       to: member.email,
       subject: 'Ihr Anmeldelink für ChorHub',
@@ -14,6 +14,7 @@ export class MailService {
       context: {
         firstName: member.firstName,
         magicUrl,
+        rawToken,
       },
     });
   }

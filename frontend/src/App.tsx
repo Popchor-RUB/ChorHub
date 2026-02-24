@@ -2,7 +2,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { MemberLayout } from './pages/member/MemberLayout';
 import { AdminLayout } from './pages/admin/AdminLayout';
-import { DashboardPage } from './pages/member/DashboardPage';
+import { InformationenPage } from './pages/member/DashboardPage';
 import { RehearsalsPage } from './pages/member/RehearsalsPage';
 import { MagicLinkRequestPage } from './pages/auth/MagicLinkRequestPage';
 import { MagicLinkVerifyPage } from './pages/auth/MagicLinkVerifyPage';
@@ -12,6 +12,7 @@ import { ImportMembersPage } from './pages/admin/ImportMembersPage';
 import { GeneralInfoPage } from './pages/admin/GeneralInfoPage';
 import { AttendancePage } from './pages/admin/AttendancePage';
 import { RehearsalOverviewPage } from './pages/admin/RehearsalOverviewPage';
+import { PushNotificationsPage } from './pages/admin/PushNotificationsPage';
 
 // Get basename from Vite's __BASE_PATH__ (defaults to '/')
 const basename = __BASE_PATH__;
@@ -27,8 +28,9 @@ const router = createBrowserRouter(
         </ProtectedRoute>
       ),
       children: [
-        { index: true, element: <DashboardPage /> },
+        { index: true, element: <Navigate to="/proben" replace /> },
         { path: 'proben', element: <RehearsalsPage /> },
+        { path: 'informationen', element: <InformationenPage /> },
       ],
     },
 
@@ -47,6 +49,7 @@ const router = createBrowserRouter(
         { path: 'proben', element: <RehearsalOverviewPage /> },
         { path: 'anwesenheit', element: <AttendancePage /> },
         { path: 'informationen', element: <GeneralInfoPage /> },
+        { path: 'benachrichtigungen', element: <PushNotificationsPage /> },
       ],
     },
 

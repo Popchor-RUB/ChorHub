@@ -1,5 +1,5 @@
 // Auto-generated service worker - do not edit manually
-const BASE_PATH = '/chorhub/';
+const BASE_PATH = '/';
 
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};

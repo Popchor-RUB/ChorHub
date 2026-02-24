@@ -14,6 +14,7 @@ const navItems = [
   { to: '/admin/proben', label: 'Proben' },
   { to: '/admin/anwesenheit', label: 'Anwesenheit' },
   { to: '/admin/informationen', label: 'Informationen' },
+  { to: '/admin/benachrichtigungen', label: 'Benachrichtigungen' },
 ];
 
 export function AdminLayout() {

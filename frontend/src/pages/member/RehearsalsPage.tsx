@@ -28,9 +28,31 @@ export function RehearsalsPage() {
     return <div className="flex justify-center pt-16"><Spinner size="lg" /></div>;
   }
 
+  const recorded = past.filter((r) => r.myAttended != null);
+  const attended = recorded.filter((r) => r.myAttended === true).length;
+  const excused = recorded.filter((r) => r.myAttended === false && r.myPlan === 'DECLINED').length;
+  const unexcused = recorded.filter((r) => r.myAttended === false && r.myPlan !== 'DECLINED').length;
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Alle Proben</h1>
+      <h1 className="text-2xl font-bold">Proben</h1>
+
+      {recorded.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="flex flex-col items-center justify-center gap-1 bg-success-50 dark:bg-success-50/10 rounded-xl p-3 border border-success-200 dark:border-success-800">
+            <span className="text-2xl font-bold text-success">{attended}</span>
+            <span className="text-xs text-success-700 dark:text-success-400 text-center">Anwesend</span>
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1 bg-warning-50 dark:bg-warning-50/10 rounded-xl p-3 border border-warning-200 dark:border-warning-800">
+            <span className="text-2xl font-bold text-warning">{excused}</span>
+            <span className="text-xs text-warning-700 dark:text-warning-400 text-center">Entschuldigt</span>
+          </div>
+          <div className="flex flex-col items-center justify-center gap-1 bg-danger-50 dark:bg-danger-50/10 rounded-xl p-3 border border-danger-200 dark:border-danger-800">
+            <span className="text-2xl font-bold text-danger">{unexcused}</span>
+            <span className="text-xs text-danger-700 dark:text-danger-400 text-center leading-tight">Unentschuldigt</span>
+          </div>
+        </div>
+      )}
 
       {/* Upcoming rehearsals */}
       <section>

@@ -28,22 +28,22 @@ export function MemberLayout() {
         <NavbarContent className="hidden sm:flex gap-4" justify="center">
           <NavbarItem>
             <NavLink
-              to="/"
-              className={({ isActive }) =>
-                isActive ? 'text-primary font-medium' : 'text-default-600'
-              }
-            >
-              Übersicht
-            </NavLink>
-          </NavbarItem>
-          <NavbarItem>
-            <NavLink
               to="/proben"
               className={({ isActive }) =>
                 isActive ? 'text-primary font-medium' : 'text-default-600'
               }
             >
               Proben
+            </NavLink>
+          </NavbarItem>
+          <NavbarItem>
+            <NavLink
+              to="/informationen"
+              className={({ isActive }) =>
+                isActive ? 'text-primary font-medium' : 'text-default-600'
+              }
+            >
+              Informationen
             </NavLink>
           </NavbarItem>
         </NavbarContent>
@@ -68,16 +68,7 @@ export function MemberLayout() {
       </Navbar>
 
       {/* Mobile bottom nav */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-divider flex">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) =>
-            `flex-1 py-3 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
-          }
-        >
-          Übersicht
-        </NavLink>
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-divider flex" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <NavLink
           to="/proben"
           className={({ isActive }) =>
@@ -86,9 +77,17 @@ export function MemberLayout() {
         >
           Proben
         </NavLink>
+        <NavLink
+          to="/informationen"
+          className={({ isActive }) =>
+            `flex-1 py-3 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
+          }
+        >
+          Informationen
+        </NavLink>
       </nav>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 pb-20 sm:pb-6">
+      <main className="max-w-2xl mx-auto px-4 py-6 mobile-nav-pb">
         <Outlet />
       </main>
     </div>

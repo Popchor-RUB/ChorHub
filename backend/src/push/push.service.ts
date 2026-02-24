@@ -42,6 +42,12 @@ export class PushService {
     });
   }
 
+  async getSubscriberCount(): Promise<number> {
+    return this.prisma.member.count({
+      where: { pushSubscriptions: { some: {} } },
+    });
+  }
+
   async sendToMember(memberId: string, payload: PushPayload): Promise<void> {
     const subs = await this.prisma.pushSubscription.findMany({
       where: { memberId },
