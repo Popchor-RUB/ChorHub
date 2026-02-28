@@ -48,6 +48,7 @@ export function AttendancePage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null);
+  const [ctrlHeld, setCtrlHeld] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -57,6 +58,8 @@ export function AttendancePage() {
   recordsRef.current = records;
   const selectedRehearsalIdRef = useRef(selectedRehearsalId);
   selectedRehearsalIdRef.current = selectedRehearsalId;
+  const savingRef = useRef(saving);
+  savingRef.current = saving;
 
   useEffect(() => {
     rehearsalsApi.getAll().then((res) => setRehearsals(res.data as Rehearsal[]));
@@ -76,6 +79,18 @@ export function AttendancePage() {
       setRecords(res.data as AttendanceRecord[]);
       setLoadingRecords(false);
     });
+  }, [selectedRehearsalId]);
+
+  // Poll for remote changes every 5 s so multiple admins stay in sync
+  useEffect(() => {
+    if (!selectedRehearsalId) return;
+    const interval = setInterval(() => {
+      if (savingRef.current) return;
+      attendanceApi.getRecords(selectedRehearsalId).then((res) => {
+        if (!savingRef.current) setRecords(res.data as AttendanceRecord[]);
+      });
+    }, 5000);
+    return () => clearInterval(interval);
   }, [selectedRehearsalId]);
 
   const startOfToday = new Date();
@@ -146,6 +161,11 @@ export function AttendancePage() {
       const target = e.target as HTMLElement;
       const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
 
+      if (e.key === 'Control') {
+        setCtrlHeld(true);
+        return;
+      }
+
       if (e.key === '/' && !isInInput) {
         e.preventDefault();
         searchInputRef.current?.focus();
@@ -157,16 +177,15 @@ export function AttendancePage() {
         return;
       }
 
-      // Voice filter shortcuts: 1–6
-      if (!isInInput && e.key >= '1' && e.key <= '6') {
-        const voice = VOICE_ORDER[parseInt(e.key) - 1];
-        if (voice) {
-          setVoiceFilter((prev) => (prev === voice ? null : voice));
-        }
+      // Ctrl+1–9: toggle attendance for the Nth visible member
+      if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
+        e.preventDefault();
+        const member = visibleMembersRef.current[parseInt(e.key) - 1];
+        if (member) toggleAttendanceRef.current(member.id, member.attended);
         return;
       }
 
-      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !isInInput) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         const vm = visibleMembersRef.current;
         if (vm.length === 0) return;
@@ -185,15 +204,23 @@ export function AttendancePage() {
         return;
       }
 
-      if ((e.key === ' ' || e.key === 'Enter') && !isInInput && focusedMemberIdRef.current) {
+      if ((e.key === ' ' && !isInInput || e.key === 'Enter') && focusedMemberIdRef.current) {
         e.preventDefault();
         const member = recordsRef.current.find((r) => r.id === focusedMemberIdRef.current);
         if (member) toggleAttendanceRef.current(member.id, member.attended);
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control') setCtrlHeld(false);
+    };
+
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
   }, []);
 
   const toggleVoiceCollapse = (voice: ChoirVoice) => {
@@ -270,7 +297,7 @@ export function AttendancePage() {
               >
                 Alle
               </Chip>
-              {VOICE_ORDER.map((voice, i) => (
+              {VOICE_ORDER.map((voice) => (
                 <Chip
                   key={voice}
                   size="sm"
@@ -279,7 +306,6 @@ export function AttendancePage() {
                   className="cursor-pointer select-none"
                   onClick={() => setVoiceFilter((prev) => (prev === voice ? null : voice))}
                 >
-                  <span className="hidden sm:inline text-default-400 mr-0.5">{i + 1} · </span>
                   {CHOIR_VOICE_LABELS[voice]}
                 </Chip>
               ))}
@@ -330,6 +356,8 @@ export function AttendancePage() {
                       const isLast = idx === group.members.length - 1;
                       const isFocused = focusedMemberId === member.id;
                       const isSaving = saving === member.id;
+                      const visibleIdx = visibleMembers.findIndex((m) => m.id === member.id);
+                      const shortcutNum = ctrlHeld && visibleIdx >= 0 && visibleIdx < 9 ? visibleIdx + 1 : null;
                       return (
                         <div
                           key={member.id}
@@ -363,7 +391,12 @@ export function AttendancePage() {
                           </p>
 
                           {/* Toggle button */}
-                          <div className="flex justify-end">
+                          <div className="flex justify-end items-center gap-1.5">
+                            {shortcutNum !== null && (
+                              <span className="hidden sm:block text-xs font-mono text-default-400 w-4 text-center">
+                                {shortcutNum}
+                              </span>
+                            )}
                             <Button
                               size="sm"
                               color={member.attended ? 'success' : 'default'}
@@ -385,7 +418,7 @@ export function AttendancePage() {
 
           {/* Keyboard shortcut hint — desktop only */}
           <p className="hidden sm:block text-xs text-default-400 text-center">
-            ↑↓ navigieren · Leertaste umschalten · / suchen · 1–6 Stimme filtern
+            ↑↓ navigieren · Leertaste/Enter umschalten · / suchen · Strg+1–9 erfassen
           </p>
         </>
       )}
