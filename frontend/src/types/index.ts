@@ -62,6 +62,7 @@ export interface AttendanceRecord {
   choirVoice: ChoirVoice;
   attended: boolean;
   plan: AttendanceResponse | null;
+  lastAttendedRehearsalsAgo: number | null;
 }
 
 export interface VoiceBreakdown {

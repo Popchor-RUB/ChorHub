@@ -66,6 +66,62 @@ describe('AttendanceService', () => {
     });
   });
 
+  describe('getRecordsForRehearsal', () => {
+    const rehearsalA = { ...mockRehearsal, id: 'r-a', date: new Date('2025-01-01') };
+    const rehearsalB = { ...mockRehearsal, id: 'r-b', date: new Date('2025-02-01') };
+    const rehearsalC = { ...mockRehearsal, id: 'r-c', date: new Date('2025-03-01') };
+
+    it('throws NotFoundException when rehearsal does not exist', async () => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue(null);
+      await expect(service.getRecordsForRehearsal('bad-id')).rejects.toThrow(NotFoundException);
+    });
+
+    it('computes lastAttendedRehearsalsAgo correctly', async () => {
+      // Current rehearsal is C; past rehearsals are B (1 ago) and A (2 ago)
+      prismaMock.rehearsal.findUnique.mockResolvedValue(rehearsalC);
+      prismaMock.rehearsal.findMany.mockResolvedValue([rehearsalB, rehearsalA] as any);
+      prismaMock.member.findMany.mockResolvedValue([
+        { ...mockMember, attendanceRecords: [], attendancePlans: [] },
+      ] as any);
+      // Member attended rehearsal A (2 ago) and B (1 ago)
+      prismaMock.attendanceRecord.findMany.mockResolvedValue([
+        { memberId: mockMember.id, rehearsalId: 'r-b' },
+        { memberId: mockMember.id, rehearsalId: 'r-a' },
+      ] as any);
+
+      const result = await service.getRecordsForRehearsal('r-c');
+
+      // Most recent past attendance is B = 1 ago
+      expect(result[0].lastAttendedRehearsalsAgo).toBe(1);
+    });
+
+    it('returns null when member has never attended', async () => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue(rehearsalC);
+      prismaMock.rehearsal.findMany.mockResolvedValue([rehearsalB] as any);
+      prismaMock.member.findMany.mockResolvedValue([
+        { ...mockMember, attendanceRecords: [], attendancePlans: [] },
+      ] as any);
+      prismaMock.attendanceRecord.findMany.mockResolvedValue([] as any);
+
+      const result = await service.getRecordsForRehearsal('r-c');
+
+      expect(result[0].lastAttendedRehearsalsAgo).toBeNull();
+    });
+
+    it('returns null when there are no past rehearsals', async () => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue(rehearsalA);
+      prismaMock.rehearsal.findMany.mockResolvedValue([] as any);
+      prismaMock.member.findMany.mockResolvedValue([
+        { ...mockMember, attendanceRecords: [{ id: 'rec-1' }], attendancePlans: [] },
+      ] as any);
+
+      const result = await service.getRecordsForRehearsal('r-a');
+
+      expect(result[0].attended).toBe(true);
+      expect(result[0].lastAttendedRehearsalsAgo).toBeNull();
+    });
+  });
+
   describe('bulkSetAttendanceRecords', () => {
     it('throws NotFoundException when rehearsal does not exist', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue(null);

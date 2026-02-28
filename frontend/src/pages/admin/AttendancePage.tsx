@@ -1,19 +1,18 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Select,
   SelectItem,
+  SelectSection,
   Input,
   Button,
-  Card,
-  CardBody,
   Chip,
   Spinner,
-  Divider,
-  SelectSection,
 } from '@heroui/react';
-import { rehearsalsApi, attendanceApi, adminMembersApi } from '../../services/api';
-import type { Rehearsal, AttendanceRecord, MemberSearchResult, MemberHistory } from '../../types';
+import { rehearsalsApi, attendanceApi } from '../../services/api';
+import type { Rehearsal, AttendanceRecord, ChoirVoice } from '../../types';
 import { CHOIR_VOICE_LABELS } from '../../types';
+
+const VOICE_ORDER: ChoirVoice[] = ['SOPRAN', 'MEZZOSOPRAN', 'ALT', 'TENOR', 'BARITON', 'BASS'];
 
 const formatDate = (d: string) =>
   new Intl.DateTimeFormat('de-DE', {
@@ -30,288 +29,365 @@ const formatDateShort = (d: string) =>
     year: 'numeric',
   }).format(new Date(d));
 
+function formatLastAttended(ago: number | null): string {
+  if (ago === null) return 'Noch nie';
+  if (ago === 1) return 'Letzte Probe';
+  return `Vor ${ago} Proben`;
+}
+
 export function AttendancePage() {
-  // ── Step 1: Rehearsal selection ──────────────────────────────────────────
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
-  const [selectedRehearsalId, setSelectedRehearsalId] = useState<string>('');
-  const [currentRecords, setCurrentRecords] = useState<AttendanceRecord[]>([]);
+  const [selectedRehearsalId, setSelectedRehearsalId] = useState('');
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
 
-  // ── Step 2: Member autocomplete ──────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<MemberSearchResult[]>([]);
-  const [selectedMember, setSelectedMember] = useState<MemberHistory | null>(null);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [savedFeedback, setSavedFeedback] = useState<'confirmed' | 'removed' | null>(null);
+  const [nameFilter, setNameFilter] = useState('');
+  const [voiceFilter, setVoiceFilter] = useState<ChoirVoice | null>(null);
+  const [collapsedVoices, setCollapsedVoices] = useState<Set<ChoirVoice>>(new Set());
 
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null);
 
-  // Load all rehearsals on mount
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Stable refs to avoid stale closures in keyboard handler
+  const recordsRef = useRef(records);
+  recordsRef.current = records;
+  const selectedRehearsalIdRef = useRef(selectedRehearsalId);
+  selectedRehearsalIdRef.current = selectedRehearsalId;
+
   useEffect(() => {
-    rehearsalsApi.getAll().then(res => {
-      setRehearsals(res.data as Rehearsal[])
-    })
+    rehearsalsApi.getAll().then((res) => setRehearsals(res.data as Rehearsal[]));
   }, []);
 
-  // Split rehearsals into past and future
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const pastRehearsals = rehearsals
-    .filter(r => new Date(r.date) < startOfToday)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // descending (most recent first)
-  const futureRehearsals = rehearsals
-    .filter(r => new Date(r.date) >= startOfToday)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // ascending (soonest first)
-
-  // Load attendance records whenever rehearsal changes
   useEffect(() => {
     if (!selectedRehearsalId) {
-      setCurrentRecords([]);
+      setRecords([]);
       return;
     }
     setLoadingRecords(true);
-    setSelectedMember(null);
-    setSearchQuery('');
-    setSearchResults([]);
+    setNameFilter('');
+    setVoiceFilter(null);
+    setCollapsedVoices(new Set());
+    setFocusedMemberId(null);
     attendanceApi.getRecords(selectedRehearsalId).then((res) => {
-      setCurrentRecords(res.data as AttendanceRecord[]);
+      setRecords(res.data as AttendanceRecord[]);
       setLoadingRecords(false);
     });
   }, [selectedRehearsalId]);
 
-  // Debounced member search
-  const handleSearch = (q: string) => {
-    setSearchQuery(q);
-    setSelectedMember(null);
-    setSavedFeedback(null);
-
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    if (!q.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    searchDebounceRef.current = setTimeout(async () => {
-      const res = await adminMembersApi.search(q);
-      setSearchResults(res.data as MemberSearchResult[]);
-    }, 250);
-  };
-
-  const handleSelectMember = async (member: MemberSearchResult) => {
-    setSearchQuery(`${member.firstName} ${member.lastName}`);
-    setSearchResults([]);
-    setLoadingHistory(true);
-    setSavedFeedback(null);
-    const res = await adminMembersApi.history(member.id);
-    setSelectedMember(res.data as MemberHistory);
-    setLoadingHistory(false);
-  };
-
-  // Determine if the currently-selected member is already attended
-  const isMemberAttended = selectedMember
-    ? currentRecords.find((r) => r.id === selectedMember.id)?.attended ?? false
-    : false;
-
-  const toggleAttendance = async () => {
-    if (!selectedMember || !selectedRehearsalId) return;
-    setSaving(true);
-
-    const updatedIds = isMemberAttended
-      ? currentRecords.filter((r) => r.attended && r.id !== selectedMember.id).map((r) => r.id)
-      : [
-          ...currentRecords.filter((r) => r.attended).map((r) => r.id),
-          selectedMember.id,
-        ];
-
-    await attendanceApi.bulkSetRecords(selectedRehearsalId, updatedIds);
-
-    // Update local records state
-    setCurrentRecords((prev) =>
-      prev.map((r) =>
-        r.id === selectedMember.id ? { ...r, attended: !isMemberAttended } : r,
-      ),
-    );
-    setSavedFeedback(isMemberAttended ? 'removed' : 'confirmed');
-    setSaving(false);
-  };
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const pastRehearsals = rehearsals
+    .filter((r) => new Date(r.date) < startOfToday)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const futureRehearsals = rehearsals
+    .filter((r) => new Date(r.date) >= startOfToday)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const selectedRehearsal = rehearsals.find((r) => r.id === selectedRehearsalId);
-  const attendedCount = currentRecords.filter((r) => r.attended).length;
+  const attendedCount = records.filter((r) => r.attended).length;
+
+  const filteredRecords = records.filter((r) => {
+    const q = nameFilter.toLowerCase();
+    const matchesName =
+      !q ||
+      `${r.lastName} ${r.firstName}`.toLowerCase().includes(q) ||
+      `${r.firstName} ${r.lastName}`.toLowerCase().includes(q);
+    return matchesName && (!voiceFilter || r.choirVoice === voiceFilter);
+  });
+
+  const groups = VOICE_ORDER.map((voice) => ({
+    voice,
+    members: filteredRecords.filter((r) => r.choirVoice === voice),
+  })).filter((g) => g.members.length > 0);
+
+  const visibleMembers = groups
+    .filter((g) => !collapsedVoices.has(g.voice))
+    .flatMap((g) => g.members);
+
+  const visibleMembersRef = useRef(visibleMembers);
+  visibleMembersRef.current = visibleMembers;
+  const focusedMemberIdRef = useRef(focusedMemberId);
+  focusedMemberIdRef.current = focusedMemberId;
+
+  const toggleAttendance = async (memberId: string, currentlyAttended: boolean) => {
+    if (saving) return;
+    setSaving(memberId);
+    setSaveError(null);
+
+    const newAttendedIds = currentlyAttended
+      ? recordsRef.current.filter((r) => r.attended && r.id !== memberId).map((r) => r.id)
+      : [...recordsRef.current.filter((r) => r.attended).map((r) => r.id), memberId];
+
+    setRecords((prev) =>
+      prev.map((r) => (r.id === memberId ? { ...r, attended: !currentlyAttended } : r)),
+    );
+
+    try {
+      await attendanceApi.bulkSetRecords(selectedRehearsalIdRef.current, newAttendedIds);
+    } catch {
+      setRecords((prev) =>
+        prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),
+      );
+      setSaveError('Speichern fehlgeschlagen');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const toggleAttendanceRef = useRef(toggleAttendance);
+  toggleAttendanceRef.current = toggleAttendance;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+
+      if (e.key === '/' && !isInInput) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (e.key === 'Escape' && isInInput) {
+        (target as HTMLInputElement).blur();
+        return;
+      }
+
+      // Voice filter shortcuts: 1–6
+      if (!isInInput && e.key >= '1' && e.key <= '6') {
+        const voice = VOICE_ORDER[parseInt(e.key) - 1];
+        if (voice) {
+          setVoiceFilter((prev) => (prev === voice ? null : voice));
+        }
+        return;
+      }
+
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !isInInput) {
+        e.preventDefault();
+        const vm = visibleMembersRef.current;
+        if (vm.length === 0) return;
+        const currentIndex = vm.findIndex((m) => m.id === focusedMemberIdRef.current);
+        const newIndex =
+          e.key === 'ArrowDown'
+            ? currentIndex < vm.length - 1
+              ? currentIndex + 1
+              : 0
+            : currentIndex > 0
+              ? currentIndex - 1
+              : vm.length - 1;
+        const newMember = vm[newIndex];
+        setFocusedMemberId(newMember.id);
+        rowRefs.current.get(newMember.id)?.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+
+      if ((e.key === ' ' || e.key === 'Enter') && !isInInput && focusedMemberIdRef.current) {
+        e.preventDefault();
+        const member = recordsRef.current.find((r) => r.id === focusedMemberIdRef.current);
+        if (member) toggleAttendanceRef.current(member.id, member.attended);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const toggleVoiceCollapse = (voice: ChoirVoice) => {
+    setCollapsedVoices((prev) => {
+      const next = new Set(prev);
+      if (next.has(voice)) next.delete(voice);
+      else next.add(voice);
+      return next;
+    });
+  };
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
+    <div className="flex flex-col gap-4 max-w-2xl">
       <h1 className="text-2xl font-bold">Anwesenheit erfassen</h1>
 
-      {/* ── Step 1: Rehearsal ── */}
-      <Card>
-        <CardBody className="gap-3">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold shrink-0">
-              1
-            </span>
-            <h2 className="font-semibold">Probe auswählen</h2>
-          </div>
-          <Select
-            label="Probe"
-            placeholder="Probe auswählen..."
-            selectedKeys={selectedRehearsalId ? [selectedRehearsalId] : []}
-            onSelectionChange={(keys) => {
-              const id = Array.from(keys)[0] as string;
-              setSelectedRehearsalId(id ?? '');
-            }}
-          >
-            <SelectSection showDivider title="Kommende Proben">
-              {futureRehearsals.map((r) => (
-                <SelectItem key={r.id} textValue={`${formatDateShort(r.date)} – ${r.title}`}>
-                  {formatDateShort(r.date)} – {r.title}
-                </SelectItem>
-              ))}
-            </SelectSection>
-            <SelectSection title="Vergangene Proben">
-              {pastRehearsals.map((r) => (
-                <SelectItem key={r.id} textValue={`${formatDateShort(r.date)} – ${r.title}`}>
-                  {formatDateShort(r.date)} – {r.title}
-                </SelectItem>
-              ))}
-            </SelectSection>
-          </Select>
+      {/* Rehearsal selector */}
+      <div className="flex flex-col gap-2">
+        <Select
+          label="Probe"
+          placeholder="Probe auswählen..."
+          selectedKeys={selectedRehearsalId ? [selectedRehearsalId] : []}
+          onSelectionChange={(keys) => {
+            const id = Array.from(keys)[0] as string;
+            setSelectedRehearsalId(id ?? '');
+          }}
+        >
+          <SelectSection showDivider title="Kommende Proben">
+            {futureRehearsals.map((r) => (
+              <SelectItem key={r.id} textValue={`${formatDateShort(r.date)} – ${r.title}`}>
+                {formatDateShort(r.date)} – {r.title}
+              </SelectItem>
+            ))}
+          </SelectSection>
+          <SelectSection title="Vergangene Proben">
+            {pastRehearsals.map((r) => (
+              <SelectItem key={r.id} textValue={`${formatDateShort(r.date)} – ${r.title}`}>
+                {formatDateShort(r.date)} – {r.title}
+              </SelectItem>
+            ))}
+          </SelectSection>
+        </Select>
 
-          {selectedRehearsal && !loadingRecords && (
-            <p className="text-sm text-default-500">
-              {formatDate(selectedRehearsal.date)} ·{' '}
-              <span className="font-medium text-success-600">{attendedCount}</span> von{' '}
-              {currentRecords.length} Mitgliedern anwesend
-            </p>
-          )}
-          {loadingRecords && <Spinner size="sm" />}
-        </CardBody>
-      </Card>
+        {selectedRehearsal && !loadingRecords && (
+          <p className="text-sm text-default-500 px-1">
+            {formatDate(selectedRehearsal.date)} ·{' '}
+            <span className="font-medium text-success-600">{attendedCount}</span> von{' '}
+            {records.length} anwesend
+          </p>
+        )}
+        {loadingRecords && <Spinner size="sm" />}
+      </div>
 
-      {/* ── Step 2: Member autocomplete ── */}
+      {/* Roll call table */}
       {selectedRehearsalId && !loadingRecords && (
-        <Card className="overflow-visible">
-          <CardBody className="gap-3 overflow-visible">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-xs font-bold shrink-0">
-                2
-              </span>
-              <h2 className="font-semibold">Mitglied suchen</h2>
+        <>
+          {/* Filters */}
+          <div className="flex flex-col gap-2">
+            <Input
+              ref={searchInputRef}
+              placeholder="Name filtern…"
+              value={nameFilter}
+              onValueChange={setNameFilter}
+              onClear={() => setNameFilter('')}
+              isClearable
+              size="sm"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              <Chip
+                size="sm"
+                variant={!voiceFilter ? 'solid' : 'flat'}
+                color={!voiceFilter ? 'primary' : 'default'}
+                className="cursor-pointer select-none"
+                onClick={() => setVoiceFilter(null)}
+              >
+                Alle
+              </Chip>
+              {VOICE_ORDER.map((voice, i) => (
+                <Chip
+                  key={voice}
+                  size="sm"
+                  variant={voiceFilter === voice ? 'solid' : 'flat'}
+                  color={voiceFilter === voice ? 'primary' : 'default'}
+                  className="cursor-pointer select-none"
+                  onClick={() => setVoiceFilter((prev) => (prev === voice ? null : voice))}
+                >
+                  <span className="hidden sm:inline text-default-400 mr-0.5">{i + 1} · </span>
+                  {CHOIR_VOICE_LABELS[voice]}
+                </Chip>
+              ))}
+            </div>
+          </div>
+
+          {saveError && (
+            <p className="text-sm text-danger text-center">{saveError}</p>
+          )}
+
+          {/* Member table */}
+          <div className="rounded-xl border border-divider overflow-hidden">
+            {/* Column headers — desktop only */}
+            <div className="hidden sm:grid sm:grid-cols-[1fr_160px_110px] px-4 py-2 bg-default-50 border-b border-divider text-xs font-semibold text-default-500 uppercase tracking-wide">
+              <span>Name</span>
+              <span>Letzte Probe</span>
+              <span className="text-right">Anwesenheit</span>
             </div>
 
-            <div className="relative">
-              <Input
-                placeholder="Name eingeben..."
-                value={searchQuery}
-                onValueChange={handleSearch}
-                onClear={() => {
-                  setSearchQuery('');
-                  setSearchResults([]);
-                  setSelectedMember(null);
-                  setSavedFeedback(null);
-                }}
-                label="Mitglied"
-                autoComplete="off"
-                isClearable
-              />
-              {searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-50 bg-content1 border border-divider rounded-xl shadow-lg mt-1 overflow-hidden">
-                  {searchResults.map((m) => (
-                    <button
-                      key={m.id}
-                      className="w-full text-left px-4 py-2.5 hover:bg-default-100 text-sm flex items-center justify-between"
-                      onMouseDown={(e) => e.preventDefault()} // prevents input blur before click
-                      onClick={() => handleSelectMember(m)}
-                    >
-                      <span className="font-medium">
-                        {m.lastName}, {m.firstName}
-                      </span>
-                      <Chip size="sm" variant="flat">
-                        {CHOIR_VOICE_LABELS[m.choirVoice]}
-                      </Chip>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Member detail card */}
-            {loadingHistory && (
-              <div className="flex justify-center py-4">
-                <Spinner size="sm" />
-              </div>
+            {groups.length === 0 && (
+              <p className="text-center text-default-400 py-10 text-sm">
+                Keine Mitglieder gefunden
+              </p>
             )}
 
-            {selectedMember && !loadingHistory && (
-              <div className="flex flex-col gap-3 mt-1 p-4 bg-default-50 rounded-xl border border-divider">
-                {/* Member info */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-base">
-                      {selectedMember.firstName} {selectedMember.lastName}
-                    </p>
-                  </div>
-                  <Chip size="sm" variant="flat" color="secondary">
-                    {CHOIR_VOICE_LABELS[selectedMember.choirVoice]}
-                  </Chip>
-                </div>
-
-                <Divider />
-
-                {/* Last attended rehearsal */}
-                <div>
-                  <p className="text-xs text-default-400 uppercase tracking-wide mb-1">
-                    Zuletzt anwesend
-                  </p>
-                  {selectedMember.recentAttendance.length > 0 ? (
-                    <p className="text-sm text-default-700">
-                      {formatDateShort(selectedMember.recentAttendance[0].date)} –{' '}
-                      {selectedMember.recentAttendance[0].title}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-default-400 italic">Noch nie anwesend</p>
-                  )}
-                </div>
-
-                <Divider />
-
-                {/* Current status + action */}
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-default-400 uppercase tracking-wide mb-0.5">
-                      Diese Probe
-                    </p>
-                    {isMemberAttended ? (
-                      <Chip color="success" variant="flat" size="sm">
-                        Anwesend ✓
-                      </Chip>
-                    ) : (
-                      <Chip color="default" variant="flat" size="sm">
-                        Nicht erfasst
-                      </Chip>
-                    )}
-                  </div>
-                  <Button
-                    color={isMemberAttended ? 'danger' : 'success'}
-                    variant={isMemberAttended ? 'bordered' : 'solid'}
-                    isLoading={saving}
-                    onPress={toggleAttendance}
-                    size="sm"
+            {groups.map((group) => {
+              const isCollapsed = collapsedVoices.has(group.voice);
+              const groupAttended = group.members.filter((m) => m.attended).length;
+              return (
+                <div key={group.voice}>
+                  {/* Section header */}
+                  <button
+                    className="w-full flex items-center justify-between px-4 py-2 bg-default-100 hover:bg-default-200 transition-colors border-b border-divider text-sm font-semibold text-default-700"
+                    onClick={() => toggleVoiceCollapse(group.voice)}
                   >
-                    {isMemberAttended ? 'Anwesenheit entfernen' : 'Anwesenheit bestätigen'}
-                  </Button>
-                </div>
+                    <span className="flex items-center gap-2">
+                      <span className="text-default-400">{isCollapsed ? '▸' : '▾'}</span>
+                      <span>{CHOIR_VOICE_LABELS[group.voice]}</span>
+                    </span>
+                    <span className="text-xs font-normal text-default-500">
+                      {groupAttended} / {group.members.length} anwesend
+                    </span>
+                  </button>
 
-                {savedFeedback && (
-                  <p className="text-xs text-center text-default-500">
-                    {savedFeedback === 'confirmed'
-                      ? '✓ Anwesenheit gespeichert'
-                      : '✓ Anwesenheit entfernt'}
-                  </p>
-                )}
-              </div>
-            )}
-          </CardBody>
-        </Card>
+                  {/* Member rows */}
+                  {!isCollapsed &&
+                    group.members.map((member, idx) => {
+                      const isLast = idx === group.members.length - 1;
+                      const isFocused = focusedMemberId === member.id;
+                      const isSaving = saving === member.id;
+                      return (
+                        <div
+                          key={member.id}
+                          ref={(el) => {
+                            if (el) rowRefs.current.set(member.id, el);
+                            else rowRefs.current.delete(member.id);
+                          }}
+                          className={[
+                            'grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_160px_110px] items-center px-4 py-3 transition-colors',
+                            !isLast ? 'border-b border-divider' : '',
+                            member.attended ? 'bg-success-50 dark:bg-success-900/20' : 'bg-content1',
+                            isFocused ? 'ring-2 ring-inset ring-primary' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          onClick={() => setFocusedMemberId(member.id)}
+                        >
+                          {/* Name + secondary line on mobile */}
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {member.lastName}, {member.firstName}
+                            </p>
+                            <p className="text-xs text-default-400 sm:hidden mt-0.5">
+                              {formatLastAttended(member.lastAttendedRehearsalsAgo)}
+                            </p>
+                          </div>
+
+                          {/* Last attended — desktop only */}
+                          <p className="hidden sm:block text-sm text-default-500">
+                            {formatLastAttended(member.lastAttendedRehearsalsAgo)}
+                          </p>
+
+                          {/* Toggle button */}
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              color={member.attended ? 'success' : 'default'}
+                              variant={member.attended ? 'solid' : 'bordered'}
+                              isLoading={isSaving}
+                              onPress={() => toggleAttendance(member.id, member.attended)}
+                              className="min-w-[90px]"
+                            >
+                              {member.attended ? '✓ Anwesend' : '+ Erfassen'}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Keyboard shortcut hint — desktop only */}
+          <p className="hidden sm:block text-xs text-default-400 text-center">
+            ↑↓ navigieren · Leertaste umschalten · / suchen · 1–6 Stimme filtern
+          </p>
+        </>
       )}
     </div>
   );

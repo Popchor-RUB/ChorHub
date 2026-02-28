@@ -31,7 +31,16 @@ export class AttendanceService {
   }
 
   async getRecordsForRehearsal(rehearsalId: string) {
-    await this.ensureRehearsalExists(rehearsalId);
+    const rehearsal = await this.ensureRehearsalExists(rehearsalId);
+
+    // Past rehearsals ordered most-recent first — position i+1 = "i+1 rehearsals ago"
+    const pastRehearsals = await this.prisma.rehearsal.findMany({
+      where: { date: { lt: rehearsal.date } },
+      orderBy: { date: 'desc' },
+      select: { id: true },
+    });
+    const agoByRehearsalId = new Map(pastRehearsals.map((r, i) => [r.id, i + 1]));
+
     const members = await this.prisma.member.findMany({
       orderBy: [{ choirVoice: 'asc' }, { lastName: 'asc' }],
       include: {
@@ -45,6 +54,25 @@ export class AttendanceService {
         },
       },
     });
+
+    // Bulk fetch all past attendance records and find the most recent per member
+    const lastAttendedMap = new Map<string, number>();
+    if (pastRehearsals.length > 0) {
+      const pastAttendances = await this.prisma.attendanceRecord.findMany({
+        where: { rehearsalId: { in: pastRehearsals.map((r) => r.id) } },
+        select: { memberId: true, rehearsalId: true },
+      });
+      for (const rec of pastAttendances) {
+        const ago = agoByRehearsalId.get(rec.rehearsalId);
+        if (ago !== undefined) {
+          const current = lastAttendedMap.get(rec.memberId);
+          if (current === undefined || ago < current) {
+            lastAttendedMap.set(rec.memberId, ago);
+          }
+        }
+      }
+    }
+
     return members.map((m) => ({
       id: m.id,
       firstName: m.firstName,
@@ -52,6 +80,7 @@ export class AttendanceService {
       choirVoice: m.choirVoice,
       attended: m.attendanceRecords.length > 0,
       plan: m.attendancePlans[0]?.response ?? null,
+      lastAttendedRehearsalsAgo: lastAttendedMap.get(m.id) ?? null,
     }));
   }
 
