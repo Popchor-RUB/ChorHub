@@ -9,10 +9,13 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { NotificationBell } from '../../components/NotificationBell';
+import { IOSInstallGuide } from '../../components/IOSInstallGuide';
+import { useIOSInstallGuide } from '../../hooks/useIOSInstallGuide';
 
 export function MemberLayout() {
   const { memberSession, logoutMember } = useAuthStore();
   const navigate = useNavigate();
+  const { visible: showGuide, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-member');
 
   const handleLogout = () => {
     logoutMember();
@@ -21,6 +24,7 @@ export function MemberLayout() {
 
   return (
     <div className="min-h-screen bg-default-50">
+      {showGuide && <IOSInstallGuide onDismiss={dismissGuide} />}
       <Navbar isBordered>
         <NavbarBrand>
           <span className="font-bold text-inherit text-xl">🎵 ChorHub</span>

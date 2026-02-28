@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardBody, CardHeader, Input, Button } from '@heroui/react';
 import { memberAuthApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { IOSInstallGuide } from '../../components/IOSInstallGuide';
+import { useIOSInstallGuide } from '../../hooks/useIOSInstallGuide';
 
 const isToken = (v: string) => /^[0-9a-f]{64}$/i.test(v);
 
@@ -13,6 +15,7 @@ export function MagicLinkRequestPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { setMemberSession } = useAuthStore();
+  const { visible: showGuide, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-login');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +47,7 @@ export function MagicLinkRequestPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-default-50">
+      {showGuide && <IOSInstallGuide onDismiss={dismissGuide} />}
       <Card className="w-full max-w-md">
         <CardHeader className="flex flex-col items-start gap-1 pb-0">
           <h1 className="text-2xl font-bold">ChorHub</h1>
@@ -53,10 +57,13 @@ export function MagicLinkRequestPage() {
           {sent ? (
             <div className="text-center py-4">
               <p className="text-success font-medium mb-2">E-Mail versendet!</p>
-              <p className="text-default-600 text-sm">
+              <p className="text-default-600 text-sm mb-4">
                 Falls Ihre E-Mail-Adresse bekannt ist, erhalten Sie in Kürze eine E-Mail.
                 Klicken Sie auf den Link oder kopieren Sie den Token aus der E-Mail und fügen Sie ihn hier ein.
               </p>
+              <Button variant="flat" onPress={() => { setSent(false); setValue(''); }} fullWidth>
+                Zurück
+              </Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
