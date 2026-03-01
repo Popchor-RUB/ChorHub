@@ -1,4 +1,5 @@
 import { Button } from '@heroui/react';
+import type { ThemePreference } from '../store/themeStore';
 import { useThemeStore } from '../store/themeStore';
 
 const SunIcon = () => (
@@ -36,18 +37,18 @@ const AutoIcon = () => (
   </svg>
 );
 
-const CYCLE: Array<'system' | 'light' | 'dark'> = ['system', 'light', 'dark'];
+const CYCLE: ThemePreference[] = ['system', 'light', 'dark'];
 
-const ARIA_LABELS: Record<'system' | 'light' | 'dark', string> = {
+const ARIA_LABELS: Record<ThemePreference, string> = {
   system: 'Automatischer Modus (System)',
   light: 'Heller Modus',
   dark: 'Dunkler Modus',
 };
 
-const ICONS = {
-  system: <AutoIcon />,
-  light: <SunIcon />,
-  dark: <MoonIcon />,
+const ICONS: Record<ThemePreference, () => React.ReactElement> = {
+  system: AutoIcon,
+  light: SunIcon,
+  dark: MoonIcon,
 };
 
 export function ThemeToggle() {
@@ -58,6 +59,8 @@ export function ThemeToggle() {
     setPreference(CYCLE[(idx + 1) % CYCLE.length]);
   };
 
+  const Icon = ICONS[preference];
+
   return (
     <Button
       isIconOnly
@@ -66,7 +69,7 @@ export function ThemeToggle() {
       onPress={cycle}
       aria-label={ARIA_LABELS[preference]}
     >
-      {ICONS[preference]}
+      <Icon />
     </Button>
   );
 }
