@@ -21,24 +21,52 @@ const MoonIcon = () => (
   </svg>
 );
 
+// Sun (top-left) and moon (bottom-right) split by a diagonal "\" line
+const AutoIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {/* Sun rays and partial circle clipped to top-left triangle */}
+    <circle cx="6" cy="6" r="3" />
+    <line x1="6" y1="1" x2="6" y2="2.5" />
+    <line x1="1" y1="6" x2="2.5" y2="6" />
+    <line x1="2.64" y1="2.64" x2="3.7" y2="3.7" />
+    {/* Moon clipped to bottom-right triangle */}
+    <path d="M17 21a5 5 0 0 1-1-9.9A4 4 0 1 0 21 17a5 5 0 0 1-4 4z" />
+    {/* Diagonal divider */}
+    <line x1="3" y1="21" x2="21" y2="3" />
+  </svg>
+);
+
+const CYCLE: Array<'system' | 'light' | 'dark'> = ['system', 'light', 'dark'];
+
+const ARIA_LABELS: Record<'system' | 'light' | 'dark', string> = {
+  system: 'Automatischer Modus (System)',
+  light: 'Heller Modus',
+  dark: 'Dunkler Modus',
+};
+
+const ICONS = {
+  system: <AutoIcon />,
+  light: <SunIcon />,
+  dark: <MoonIcon />,
+};
+
 export function ThemeToggle() {
   const { preference, setPreference } = useThemeStore();
 
-  const isDark =
-    preference === 'dark' ||
-    (preference === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-  const toggle = () => setPreference(isDark ? 'light' : 'dark');
+  const cycle = () => {
+    const idx = CYCLE.indexOf(preference);
+    setPreference(CYCLE[(idx + 1) % CYCLE.length]);
+  };
 
   return (
     <Button
       isIconOnly
       variant="light"
       size="sm"
-      onPress={toggle}
-      aria-label={isDark ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'}
+      onPress={cycle}
+      aria-label={ARIA_LABELS[preference]}
     >
-      {isDark ? <SunIcon /> : <MoonIcon />}
+      {ICONS[preference]}
     </Button>
   );
 }
