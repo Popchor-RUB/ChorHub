@@ -2,12 +2,12 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { mockDeep } from 'jest-mock-extended';
-import { AttendanceResponse } from '@prisma/client';
+import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
+import { PrismaClient, AttendanceResponse } from '../generated/prisma/client';
 
 const mockRehearsal = {
   id: 'rehearsal-1',
-  date: new Date('2025-03-01'),
+  date: new Date('2030-01-01'),
   title: 'Probe 1',
   description: null,
   createdAt: new Date(),
@@ -27,10 +27,10 @@ const mockMember = {
 
 describe('AttendanceService', () => {
   let service: AttendanceService;
-  let prismaMock: ReturnType<typeof mockDeep<any>>;
+  let prismaMock: DeepMockProxy<PrismaClient>;
 
   beforeEach(async () => {
-    prismaMock = mockDeep();
+    prismaMock = mockDeep<PrismaClient>();
     const module = await Test.createTestingModule({
       providers: [
         AttendanceService,

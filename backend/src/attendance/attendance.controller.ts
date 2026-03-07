@@ -4,6 +4,7 @@ import { SetAttendancePlanDto, BulkAttendanceRecordDto } from './dto/attendance.
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { MemberUser } from '../auth/types/auth-user.types';
 
 @Controller('attendance')
 export class AttendanceController {
@@ -12,7 +13,7 @@ export class AttendanceController {
   @Put('plans/:rehearsalId')
   @UseGuards(MemberTokenGuard)
   setAttendancePlan(
-    @CurrentUser() user: any,
+    @CurrentUser() user: MemberUser,
     @Param('rehearsalId') rehearsalId: string,
     @Body() dto: SetAttendancePlanDto,
   ) {
@@ -22,7 +23,7 @@ export class AttendanceController {
   @Delete('plans/:rehearsalId')
   @UseGuards(MemberTokenGuard)
   deleteAttendancePlan(
-    @CurrentUser() user: any,
+    @CurrentUser() user: MemberUser,
     @Param('rehearsalId') rehearsalId: string,
   ) {
     return this.attendanceService.deleteAttendancePlan(user.id, rehearsalId);

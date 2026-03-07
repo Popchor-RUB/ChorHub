@@ -1,11 +1,12 @@
-import { Body, Controller, Delete, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { PushService } from './push.service';
 import { SubscribeDto } from './dto/subscribe.dto';
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { OrGuard } from '../auth/guards/or.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { IsOptional, IsString } from 'class-validator';
-import type { Request } from 'express';
+import type { MemberUser } from '../auth/types/auth-user.types';
 
 class UnsubscribeDto {
   @IsString()
@@ -51,16 +52,14 @@ export class PushController {
   @Post('subscribe')
   @HttpCode(204)
   @UseGuards(MemberTokenGuard)
-  async subscribe(@Req() req: Request, @Body() dto: SubscribeDto) {
-    const user = req.user as { id: string };
+  async subscribe(@CurrentUser() user: MemberUser, @Body() dto: SubscribeDto) {
     await this.pushService.subscribe(user.id, dto);
   }
 
   @Delete('unsubscribe')
   @HttpCode(204)
   @UseGuards(MemberTokenGuard)
-  async unsubscribe(@Req() req: Request, @Body() dto: UnsubscribeDto) {
-    const user = req.user as { id: string };
+  async unsubscribe(@CurrentUser() user: MemberUser, @Body() dto: UnsubscribeDto) {
     await this.pushService.unsubscribe(user.id, dto.endpoint);
   }
 }

@@ -6,15 +6,19 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { AdminLoginDto } from './dto/admin-login.dto';
 import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
 import { PasskeyChallengeDto, PasskeyVerifyDto, PasskeyRegisterVerifyDto } from './dto/passkey.dto';
 import { LocalAdminGuard } from './guards/local-admin.guard';
 import { JwtAdminGuard } from './guards/jwt-admin.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import type { AdminUser } from './types/auth-user.types';
 
+// All auth endpoints are rate-limited to 10 requests per 15 minutes per IP.
+@UseGuards(ThrottlerGuard)
+@Throttle({ default: { limit: 10, ttl: 900_000 } })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -22,7 +26,7 @@ export class AuthController {
   @Public()
   @UseGuards(LocalAdminGuard)
   @Post('admin/login')
-  async adminLogin(@CurrentUser() user: any) {
+  adminLogin(@CurrentUser() user: AdminUser) {
     const token = this.authService.signAdminJwt(user);
     return { token };
   }
@@ -35,29 +39,24 @@ export class AuthController {
 
   @Public()
   @Post('admin/passkey/verify')
-  async passkeyVerify(
-    @Body() body: { adminId: string; assertion: Record<string, unknown> },
-  ) {
-    const token = await this.authService.verifyPasskeyAuth(
-      body.adminId,
-      body.assertion as any,
-    );
+  async passkeyVerify(@Body() dto: PasskeyVerifyDto) {
+    const token = await this.authService.verifyPasskeyAuth(dto.sessionId, dto.assertion);
     return { token };
   }
 
   @UseGuards(JwtAdminGuard)
   @Post('admin/passkey/register/challenge')
-  async passkeyRegisterChallenge(@CurrentUser() user: any) {
+  async passkeyRegisterChallenge(@CurrentUser() user: AdminUser) {
     return this.authService.getPasskeyRegisterChallenge(user.id);
   }
 
   @UseGuards(JwtAdminGuard)
   @Post('admin/passkey/register/verify')
   async passkeyRegisterVerify(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AdminUser,
     @Body() dto: PasskeyRegisterVerifyDto,
   ) {
-    return this.authService.verifyPasskeyRegister(user.id, dto.attestation as any);
+    return this.authService.verifyPasskeyRegister(user.id, dto.attestation);
   }
 
   @Public()

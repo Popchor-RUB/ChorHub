@@ -31,7 +31,7 @@ export class PushService {
   async subscribe(memberId: string, dto: SubscribeDto): Promise<void> {
     await this.prisma.pushSubscription.upsert({
       where: { endpoint: dto.endpoint },
-      update: { p256dh: dto.p256dh, auth: dto.auth },
+      update: { memberId, p256dh: dto.p256dh, auth: dto.auth },
       create: { memberId, endpoint: dto.endpoint, p256dh: dto.p256dh, auth: dto.auth },
     });
   }

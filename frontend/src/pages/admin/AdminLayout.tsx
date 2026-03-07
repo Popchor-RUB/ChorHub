@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   Navbar,
@@ -8,6 +9,9 @@ import {
 } from '@heroui/react';
 import { useAuthStore } from '../../store/authStore';
 import { ThemeToggle } from '../../components/ThemeToggle';
+import { useIdleTimeout } from '../../hooks/useIdleTimeout';
+
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 const navItems = [
   { to: '/admin/mitglieder', label: 'Mitglieder' },
@@ -25,6 +29,13 @@ export function AdminLayout() {
     logoutAdmin();
     navigate('/admin/login');
   };
+
+  const handleIdleLogout = useCallback(() => {
+    logoutAdmin();
+    navigate('/admin/login');
+  }, [logoutAdmin, navigate]);
+
+  useIdleTimeout(handleIdleLogout, IDLE_TIMEOUT_MS);
 
   return (
     <div className="min-h-screen bg-default-50">

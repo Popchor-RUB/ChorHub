@@ -1,4 +1,4 @@
-import { ChoirVoice } from '@prisma/client';
+import { ChoirVoice } from '../../generated/prisma/client';
 
 export class MemberResponseDto {
   id: string;

@@ -15,6 +15,7 @@ import { UpdateRehearsalDto } from './dto/update-rehearsal.dto';
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { MemberUser } from '../auth/types/auth-user.types';
 
 @Controller('rehearsals')
 export class RehearsalsController {
@@ -23,7 +24,7 @@ export class RehearsalsController {
   @Get()
   @UseGuards(MemberTokenGuard)
   getForMember(
-    @CurrentUser() user: any,
+    @CurrentUser() user: MemberUser,
     @Query('all') all?: string,
   ) {
     if (all === 'true') {

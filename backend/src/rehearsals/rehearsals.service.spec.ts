@@ -2,7 +2,8 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { RehearsalsService } from './rehearsals.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { mockDeep } from 'jest-mock-extended';
+import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
+import { PrismaClient } from '../generated/prisma/client';
 
 const mockRehearsal = {
   id: 'rehearsal-1',
@@ -15,10 +16,10 @@ const mockRehearsal = {
 
 describe('RehearsalsService', () => {
   let service: RehearsalsService;
-  let prismaMock: ReturnType<typeof mockDeep<any>>;
+  let prismaMock: DeepMockProxy<PrismaClient>;
 
   beforeEach(async () => {
-    prismaMock = mockDeep();
+    prismaMock = mockDeep<PrismaClient>();
     const module = await Test.createTestingModule({
       providers: [
         RehearsalsService,
@@ -42,11 +43,11 @@ describe('RehearsalsService', () => {
 
     it('includes attendancePlans when memberId provided', async () => {
       prismaMock.rehearsal.findMany.mockResolvedValue([
-        { ...mockRehearsal, attendancePlans: [] },
-      ]);
+        { ...mockRehearsal, attendancePlans: [], attendanceRecords: [], _count: { attendanceRecords: 0 } },
+      ] as any);
       await service.findUpcoming('member-1');
       const call = prismaMock.rehearsal.findMany.mock.calls[0][0];
-      expect(call.include).toBeDefined();
+      expect(call?.include).toBeDefined();
     });
 
     it('maps myPlan from attendancePlans', async () => {
@@ -54,16 +55,18 @@ describe('RehearsalsService', () => {
         {
           ...mockRehearsal,
           attendancePlans: [{ response: 'CONFIRMED' }],
+          attendanceRecords: [],
+          _count: { attendanceRecords: 0 },
         },
-      ]);
+      ] as any);
       const result = await service.findUpcoming('member-1');
       expect(result[0].myPlan).toBe('CONFIRMED');
     });
 
     it('returns null myPlan when no plan set', async () => {
       prismaMock.rehearsal.findMany.mockResolvedValue([
-        { ...mockRehearsal, attendancePlans: [] },
-      ]);
+        { ...mockRehearsal, attendancePlans: [], attendanceRecords: [], _count: { attendanceRecords: 0 } },
+      ] as any);
       const result = await service.findUpcoming('member-1');
       expect(result[0].myPlan).toBeNull();
     });

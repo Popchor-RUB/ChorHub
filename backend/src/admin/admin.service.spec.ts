@@ -1,17 +1,17 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
-import { mockDeep } from 'jest-mock-extended';
+import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
+import { PrismaClient } from '../generated/prisma/client';
 
 const mockMember = (overrides: Partial<any> = {}) => ({
   id: 'member-1',
   firstName: 'Anna',
   lastName: 'Müller',
   email: 'anna@choir.de',
-  choirVoice: 'SOPRAN',
+  choirVoice: 'SOPRAN' as const,
   loginToken: 'hashed',
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -20,15 +20,15 @@ const mockMember = (overrides: Partial<any> = {}) => ({
 
 describe('AdminService', () => {
   let service: AdminService;
-  let prismaMock: ReturnType<typeof mockDeep<any>>;
+  let prismaMock: DeepMockProxy<PrismaClient>;
   let mailService: jest.Mocked<MailService>;
 
   beforeEach(async () => {
-    prismaMock = mockDeep();
+    prismaMock = mockDeep<PrismaClient>();
     mailService = {
       sendMagicLink: jest.fn().mockResolvedValue(undefined),
       sendMemberInvite: jest.fn().mockResolvedValue(undefined),
-    } as any;
+    } as unknown as jest.Mocked<MailService>;
 
     const module = await Test.createTestingModule({
       providers: [
@@ -47,7 +47,6 @@ describe('AdminService', () => {
 
   describe('importMembersFromCsv', () => {
     it('throws BadRequestException for malformed CSV', async () => {
-      const buffer = Buffer.from('not valid csv \x00\x01\x02');
       // csv-parse may not throw on simple text - test with truly malformed
       // Instead test missing columns scenario
       const csvMissingCols = Buffer.from('name,email\nAnna,anna@test.de\n');

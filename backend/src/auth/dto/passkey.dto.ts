@@ -1,4 +1,8 @@
 import { IsObject, IsString } from 'class-validator';
+import type {
+  AuthenticationResponseJSON,
+  RegistrationResponseJSON,
+} from '@simplewebauthn/types';
 
 export class PasskeyChallengeDto {
   @IsString()
@@ -6,11 +10,14 @@ export class PasskeyChallengeDto {
 }
 
 export class PasskeyVerifyDto {
+  @IsString()
+  sessionId: string;
+
   @IsObject()
-  assertion: Record<string, unknown>;
+  assertion: AuthenticationResponseJSON;
 }
 
 export class PasskeyRegisterVerifyDto {
   @IsObject()
-  attestation: Record<string, unknown>;
+  attestation: RegistrationResponseJSON;
 }

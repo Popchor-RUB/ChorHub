@@ -9,6 +9,7 @@ import {
   Chip,
   Button,
   Spinner,
+  Input,
   Modal,
   ModalContent,
   ModalHeader,
@@ -170,9 +171,20 @@ export function MemberOverviewPage() {
   const [members, setMembers] = useState<MemberOverview[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [search, setSearch] = useState('');
   const [selectedMember, setSelectedMember] = useState<MemberOverview | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
+
+  const filteredMembers = search.trim()
+    ? members.filter((m) => {
+        const q = search.trim().toLowerCase();
+        return (
+          m.firstName.toLowerCase().includes(q) ||
+          m.lastName.toLowerCase().includes(q)
+        );
+      })
+    : members;
 
   useEffect(() => {
     adminMembersApi.list().then((res) => {
@@ -209,9 +221,9 @@ export function MemberOverviewPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Mitglieder</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button
             size="sm"
             variant="flat"
@@ -229,6 +241,13 @@ export function MemberOverviewPage() {
           </Button>
         </div>
       </div>
+      <Input
+        size="sm"
+        placeholder="Name suchen…"
+        value={search}
+        onValueChange={setSearch}
+        isClearable
+      />
 
       {loading ? (
         <div className="flex justify-center pt-8">
@@ -252,7 +271,7 @@ export function MemberOverviewPage() {
             <TableColumn>Unentsch. gefehlt</TableColumn>
           </TableHeader>
           <TableBody emptyContent="Keine Mitglieder vorhanden.">
-            {members.map((m) => (
+            {filteredMembers.map((m) => (
               <TableRow key={m.id}>
                 <TableCell>{m.lastName}, {m.firstName}</TableCell>
                 <TableCell className="text-sm text-default-500">{m.email}</TableCell>

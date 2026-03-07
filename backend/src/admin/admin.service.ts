@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
-import { ChoirVoice } from '@prisma/client';
+import { ChoirVoice } from '../generated/prisma/client';
 import { randomBytes, createHash } from 'crypto';
 import { parse } from 'csv-parse/sync';
 import * as ExcelJS from 'exceljs';
@@ -93,8 +93,8 @@ export class AdminService {
         } else {
           results.updated++;
         }
-      } catch (e: any) {
-        results.failed.push({ email: row.email, reason: e.message });
+      } catch (e: unknown) {
+        results.failed.push({ email: row.email, reason: e instanceof Error ? e.message : String(e) });
       }
     }
 

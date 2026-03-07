@@ -18,40 +18,39 @@ export class RehearsalsService {
   private async findForMember(memberId: string | undefined, includeAll: boolean) {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    const rehearsals = await this.prisma.rehearsal.findMany({
+    const base = {
       where: includeAll ? undefined : { date: { gte: startOfToday } },
-      orderBy: { date: includeAll ? 'desc' : 'asc' },
-      include: memberId
-        ? {
-            attendancePlans: {
-              where: { memberId },
-              select: { response: true },
-            },
-            attendanceRecords: {
-              where: { memberId },
-              select: { id: true },
-            },
-            _count: {
-              select: { attendanceRecords: true },
-            },
-          }
-        : undefined,
-    });
-    return rehearsals.map((r) => {
-      const anyRecorded = memberId ? (r as any)._count.attendanceRecords > 0 : false;
-      return {
+      orderBy: { date: includeAll ? ('desc' as const) : ('asc' as const) },
+    };
+
+    if (memberId) {
+      const rehearsals = await this.prisma.rehearsal.findMany({
+        ...base,
+        include: {
+          attendancePlans: { where: { memberId }, select: { response: true } },
+          attendanceRecords: { where: { memberId }, select: { id: true } },
+          _count: { select: { attendanceRecords: true } },
+        },
+      });
+      return rehearsals.map((r) => ({
         id: r.id,
         date: r.date,
         title: r.title,
         description: r.description,
-        myPlan: memberId
-          ? ((r as any).attendancePlans[0]?.response ?? null)
-          : undefined,
-        myAttended: memberId
-          ? (anyRecorded ? (r as any).attendanceRecords.length > 0 : null)
-          : undefined,
-      };
-    });
+        myPlan: r.attendancePlans[0]?.response ?? null,
+        myAttended: r._count.attendanceRecords > 0 ? r.attendanceRecords.length > 0 : null,
+      }));
+    }
+
+    const rehearsals = await this.prisma.rehearsal.findMany(base);
+    return rehearsals.map((r) => ({
+      id: r.id,
+      date: r.date,
+      title: r.title,
+      description: r.description,
+      myPlan: undefined,
+      myAttended: undefined,
+    }));
   }
 
   async findAll() {

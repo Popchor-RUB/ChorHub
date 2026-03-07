@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 
 type MockPrisma = DeepMockProxy<PrismaClient>;
@@ -33,10 +33,10 @@ describe('AuthService', () => {
     mailService = {
       sendMagicLink: jest.fn().mockResolvedValue(undefined),
       sendMemberInvite: jest.fn().mockResolvedValue(undefined),
-    } as any;
+    } as unknown as jest.Mocked<MailService>;
     jwtService = {
       sign: jest.fn().mockReturnValue('signed-jwt-token'),
-    } as any;
+    } as unknown as jest.Mocked<JwtService>;
 
     const module = await Test.createTestingModule({
       providers: [
@@ -46,7 +46,10 @@ describe('AuthService', () => {
         { provide: MailService, useValue: mailService },
         {
           provide: ConfigService,
-          useValue: { get: jest.fn((key: string, def?: string) => def ?? 'http://localhost:5173') },
+          useValue: {
+            get: jest.fn((_k: string, def?: string) => def ?? 'http://localhost:5173'),
+            getOrThrow: jest.fn(() => 'http://localhost:5173'),
+          },
         },
       ],
     }).compile();
@@ -121,6 +124,7 @@ describe('AuthService', () => {
       expect(mailService.sendMagicLink).toHaveBeenCalledWith(
         mockMember,
         expect.stringContaining('/auth/verify?token='),
+        expect.any(String),
       );
     });
 
@@ -128,13 +132,10 @@ describe('AuthService', () => {
       prismaMock.member.findUnique.mockResolvedValue(mockMember);
       prismaMock.member.update.mockResolvedValue(mockMember);
 
-      let storedToken: string | undefined;
-      (prismaMock.member.update as any).mockImplementation(async (args: any) => {
-        storedToken = args.data.loginToken;
-        return mockMember;
-      });
-
       await service.requestMagicLink('anna@choir.de');
+
+      const updateCall = prismaMock.member.update.mock.calls[0][0];
+      const storedToken = (updateCall.data as Record<string, unknown>).loginToken as string;
 
       const mailCall = mailService.sendMagicLink.mock.calls[0];
       const magicUrl = mailCall[1];

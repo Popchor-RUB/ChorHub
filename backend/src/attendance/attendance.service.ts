@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AttendanceResponse, ChoirVoice } from '@prisma/client';
+import { AttendanceResponse, ChoirVoice } from '../generated/prisma/client';
 import { SetAttendancePlanDto } from './dto/attendance.dto';
 
 @Injectable()

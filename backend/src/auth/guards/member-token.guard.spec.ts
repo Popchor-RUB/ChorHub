@@ -2,7 +2,8 @@ import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MemberTokenGuard } from './member-token.guard';
 import { PrismaService } from '../../prisma/prisma.service';
-import { mockDeep } from 'jest-mock-extended';
+import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
+import { PrismaClient } from '../../generated/prisma/client';
 
 const buildContext = (headers: Record<string, string>): ExecutionContext => {
   const request = { headers, user: undefined as any };
@@ -24,10 +25,10 @@ const mockMember = {
 
 describe('MemberTokenGuard', () => {
   let guard: MemberTokenGuard;
-  let prismaMock: ReturnType<typeof mockDeep<any>>;
+  let prismaMock: DeepMockProxy<PrismaClient>;
 
   beforeEach(async () => {
-    prismaMock = mockDeep();
+    prismaMock = mockDeep<PrismaClient>();
     const module = await Test.createTestingModule({
       providers: [
         MemberTokenGuard,
