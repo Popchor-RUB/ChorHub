@@ -9,6 +9,7 @@ import {
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
+import { VerifyCodeDto } from './dto/verify-code.dto';
 import { PasskeyChallengeDto, PasskeyVerifyDto, PasskeyRegisterVerifyDto } from './dto/passkey.dto';
 import { LocalAdminGuard } from './guards/local-admin.guard';
 import { JwtAdminGuard } from './guards/jwt-admin.guard';
@@ -70,5 +71,11 @@ export class AuthController {
   @Get('magic-link/verify')
   async verifyMagicLink(@Query('token') token: string) {
     return this.authService.verifyMagicLink(token);
+  }
+
+  @Public()
+  @Post('magic-link/verify-code')
+  async verifyCode(@Body() dto: VerifyCodeDto) {
+    return this.authService.verifyCode(dto.email, dto.code);
   }
 }

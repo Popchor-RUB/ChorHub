@@ -54,14 +54,17 @@ export const adminApi = {
     api.post('/auth/admin/passkey/register/verify', { attestation }),
 };
 
+type MemberAuthResponse = { token: string; member: { id: string; firstName: string; lastName: string; choirVoice: string } };
+
 export const memberAuthApi = {
   requestMagicLink: (email: string) =>
     api.post('/auth/magic-link/request', { email }),
 
   verifyMagicLink: (token: string) =>
-    api.get<{ token: string; member: { id: string; firstName: string; lastName: string; choirVoice: string } }>(
-      `/auth/magic-link/verify?token=${token}`,
-    ),
+    api.get<MemberAuthResponse>(`/auth/magic-link/verify?token=${token}`),
+
+  verifyCode: (email: string, code: string) =>
+    api.post<MemberAuthResponse>('/auth/magic-link/verify-code', { email, code }),
 };
 
 export const rehearsalsApi = {

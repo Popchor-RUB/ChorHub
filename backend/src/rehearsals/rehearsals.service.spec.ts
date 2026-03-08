@@ -72,6 +72,89 @@ describe('RehearsalsService', () => {
     });
   });
 
+  describe('findAllForMember', () => {
+    const pastRehearsal = {
+      ...mockRehearsal,
+      date: new Date('2020-01-01'), // clearly in the past
+    };
+
+    it('returns myAttended=null when admin has not recorded attendance for anyone', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        { ...pastRehearsal, attendancePlans: [], attendanceRecords: [], _count: { attendanceRecords: 0 } },
+      ] as any);
+      const result = await service.findAllForMember('member-1');
+      expect(result[0].myAttended).toBeNull();
+    });
+
+    it('returns myAttended=true when this member has an attendance record', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        {
+          ...pastRehearsal,
+          attendancePlans: [],
+          attendanceRecords: [{ id: 'rec-1' }],
+          _count: { attendanceRecords: 1 },
+        },
+      ] as any);
+      const result = await service.findAllForMember('member-1');
+      expect(result[0].myAttended).toBe(true);
+    });
+
+    it('returns myAttended=false when admin recorded others but not this member', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        {
+          ...pastRehearsal,
+          attendancePlans: [],
+          attendanceRecords: [], // this member not recorded
+          _count: { attendanceRecords: 3 }, // but others were
+        },
+      ] as any);
+      const result = await service.findAllForMember('member-1');
+      expect(result[0].myAttended).toBe(false);
+    });
+
+    it('returns myPlan=DECLINED when member declined — counts as entschuldigt', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        {
+          ...pastRehearsal,
+          attendancePlans: [{ response: 'DECLINED' }],
+          attendanceRecords: [],
+          _count: { attendanceRecords: 1 },
+        },
+      ] as any);
+      const result = await service.findAllForMember('member-1');
+      expect(result[0].myAttended).toBe(false);
+      expect(result[0].myPlan).toBe('DECLINED');
+    });
+
+    it('returns myPlan=CONFIRMED when member confirmed but did not attend — counts as unentschuldigt', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        {
+          ...pastRehearsal,
+          attendancePlans: [{ response: 'CONFIRMED' }],
+          attendanceRecords: [],
+          _count: { attendanceRecords: 1 },
+        },
+      ] as any);
+      const result = await service.findAllForMember('member-1');
+      expect(result[0].myAttended).toBe(false);
+      expect(result[0].myPlan).toBe('CONFIRMED');
+    });
+
+    it('returns myPlan=null when member set no plan and did not attend — counts as unentschuldigt', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        {
+          ...pastRehearsal,
+          attendancePlans: [],
+          attendanceRecords: [],
+          _count: { attendanceRecords: 1 },
+        },
+      ] as any);
+      const result = await service.findAllForMember('member-1');
+      expect(result[0].myAttended).toBe(false);
+      expect(result[0].myPlan).toBeNull();
+    });
+  });
+
   describe('create', () => {
     it('creates rehearsal with correct data', async () => {
       prismaMock.rehearsal.create.mockResolvedValue(mockRehearsal);

@@ -8,38 +8,71 @@ import { useIOSInstallGuide } from '../../hooks/useIOSInstallGuide';
 
 const isToken = (v: string) => /^[0-9a-f]{64}$/i.test(v);
 
+type View = 'email' | 'code';
+
 export function MagicLinkRequestPage() {
-  const [value, setValue] = useState('');
+  const [view, setView] = useState<View>('email');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { setMemberSession } = useAuthStore();
   const { visible: showGuide, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-login');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSession = (token: string, member: { id: string; firstName: string; lastName: string; choirVoice: string }) => {
+    setMemberSession({
+      token,
+      memberId: member.id,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      choirVoice: member.choirVoice,
+    });
+    navigate('/', { replace: true });
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const trimmed = value.trim();
+    const trimmed = email.trim();
     try {
       if (isToken(trimmed)) {
         const res = await memberAuthApi.verifyMagicLink(trimmed);
-        const { token: rawToken, member } = res.data;
-        setMemberSession({
-          token: rawToken,
-          memberId: member.id,
-          firstName: member.firstName,
-          lastName: member.lastName,
-          choirVoice: member.choirVoice,
-        });
-        navigate('/', { replace: true });
+        handleSession(res.data.token, res.data.member);
       } else {
         await memberAuthApi.requestMagicLink(trimmed);
-        setSent(true);
+        setView('code');
       }
     } catch {
       setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const res = await memberAuthApi.verifyCode(email.trim(), code.trim());
+      handleSession(res.data.token, res.data.member);
+    } catch {
+      setError('Ungültiger oder abgelaufener Code. Bitte prüfen Sie die Eingabe.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setLoading(true);
+    setError('');
+    setCode('');
+    try {
+      await memberAuthApi.requestMagicLink(email.trim());
+    } catch {
+      // Silent — same security policy as backend
     } finally {
       setLoading(false);
     }
@@ -54,37 +87,64 @@ export function MagicLinkRequestPage() {
           <p className="text-default-500">Mitglieder-Anmeldung</p>
         </CardHeader>
         <CardBody>
-          {sent ? (
-            <div className="text-center py-4">
-              <p className="text-success font-medium mb-2">E-Mail versendet!</p>
-              <p className="text-default-600 text-sm mb-4">
-                Falls Ihre E-Mail-Adresse bekannt ist, erhalten Sie in Kürze eine E-Mail.
-                Klicken Sie auf den Link oder kopieren Sie den Token aus der E-Mail und fügen Sie ihn hier ein.
-              </p>
-              <Button variant="flat" onPress={() => { setSent(false); setValue(''); }} fullWidth>
-                Zurück
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {view === 'email' ? (
+            <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
               <p className="text-default-600 text-sm">
-                Geben Sie Ihre E-Mail-Adresse ein oder fügen Sie den Token aus der Anmelde-E-Mail direkt ein.
+                Geben Sie Ihre E-Mail-Adresse ein. Sie erhalten dann einen Anmeldelink und einen 6-stelligen Code.
               </p>
               <Input
                 type="text"
                 label="E-Mail-Adresse oder Token"
-                value={value}
-                onValueChange={setValue}
+                value={email}
+                onValueChange={setEmail}
                 isRequired
                 placeholder="ihre@email.de"
-                autoComplete="off"
+                autoComplete="email"
                 autoCorrect="off"
                 autoCapitalize="none"
               />
               {error && <p className="text-danger text-sm">{error}</p>}
               <Button type="submit" color="primary" isLoading={loading} fullWidth>
-                {isToken(value.trim()) ? 'Anmelden' : 'Anmeldelink anfordern'}
+                {isToken(email.trim()) ? 'Anmelden' : 'Weiter'}
               </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleCodeSubmit} className="flex flex-col gap-4">
+              <p className="text-default-600 text-sm">
+                Eine E-Mail wurde an <strong>{email.trim()}</strong> gesendet.
+              </p>
+              <p className="text-default-600 text-sm">
+                Geben Sie den <strong>6-stelligen Code</strong> aus der E-Mail ein. Der Code ist 15 Minuten gültig.
+                Alternativ können Sie auch den Link in der E-Mail direkt öffnen.
+              </p>
+              <Input
+                type="text"
+                inputMode="numeric"
+                label="6-stelliger Code"
+                value={code}
+                onValueChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+                isRequired
+                placeholder="123456"
+                autoComplete="one-time-code"
+                maxLength={6}
+                classNames={{ input: 'text-center text-2xl tracking-[0.5em] font-mono' }}
+              />
+              {error && <p className="text-danger text-sm">{error}</p>}
+              <Button type="submit" color="primary" isLoading={loading} isDisabled={code.length !== 6} fullWidth>
+                Anmelden
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="flat"
+                  onPress={() => { setView('email'); setCode(''); setError(''); }}
+                  fullWidth
+                >
+                  Zurück
+                </Button>
+                <Button variant="flat" onPress={handleResend} isLoading={loading} fullWidth>
+                  Erneut senden
+                </Button>
+              </div>
             </form>
           )}
         </CardBody>

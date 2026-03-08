@@ -56,25 +56,74 @@ export class AuthService {
     const rawToken = randomBytes(32).toString('hex');
     const hashedToken = createHash('sha256').update(rawToken).digest('hex');
 
-    await this.prisma.member.update({
-      where: { email },
-      data: { loginToken: hashedToken },
-    });
+    const rawCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedCode = createHash('sha256').update(rawCode).digest('hex');
+    const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await this.prisma.$transaction([
+      this.prisma.memberLoginToken.create({
+        data: { memberId: member.id, hashedToken },
+      }),
+      this.prisma.member.update({
+        where: { email },
+        data: { loginCode: hashedCode, loginCodeExpiresAt: codeExpiresAt },
+      }),
+    ]);
 
     const magicUrl = `${this.config.getOrThrow<string>('APP_URL')}/auth/verify?token=${rawToken}`;
-    await this.mailService.sendMagicLink(member, magicUrl, rawToken);
+    await this.mailService.sendMagicLink(member, magicUrl, rawToken, rawCode);
+  }
+
+  async verifyCode(email: string, code: string) {
+    const hashedCode = createHash('sha256').update(code).digest('hex');
+    const member = await this.prisma.member.findUnique({ where: { email } });
+
+    if (
+      !member ||
+      member.loginCode !== hashedCode ||
+      !member.loginCodeExpiresAt ||
+      member.loginCodeExpiresAt < new Date()
+    ) {
+      throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
+    }
+
+    // Issue a permanent session token and clear the one-time code
+    const rawToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+    await this.prisma.$transaction([
+      this.prisma.memberLoginToken.create({
+        data: { memberId: member.id, hashedToken },
+      }),
+      this.prisma.member.update({
+        where: { id: member.id },
+        data: { loginCode: null, loginCodeExpiresAt: null },
+      }),
+    ]);
+
+    return {
+      token: rawToken,
+      member: {
+        id: member.id,
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+        choirVoice: member.choirVoice,
+      },
+    };
   }
 
   async verifyMagicLink(rawToken: string) {
     const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-    const member = await this.prisma.member.findUnique({
-      where: { loginToken: hashedToken },
+    const tokenRecord = await this.prisma.memberLoginToken.findUnique({
+      where: { hashedToken },
+      include: { member: true },
     });
 
-    if (!member) {
+    if (!tokenRecord) {
       throw new UnauthorizedException('Ungültiger oder abgelaufener Link');
     }
 
+    const { member } = tokenRecord;
     return {
       token: rawToken,
       member: {

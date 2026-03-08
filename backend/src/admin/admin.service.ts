@@ -63,9 +63,6 @@ export class AdminService {
       }
 
       try {
-        const rawToken = randomBytes(32).toString('hex');
-        const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-
         const existing = await this.prisma.member.findUnique({ where: { email: row.email } });
 
         const member = await this.prisma.member.upsert({
@@ -75,18 +72,21 @@ export class AdminService {
             lastName: row.lastName,
             email: row.email,
             choirVoice: normalizedVoice as ChoirVoice,
-            loginToken: hashedToken,
           },
           update: {
             firstName: row.firstName,
             lastName: row.lastName,
             choirVoice: normalizedVoice as ChoirVoice,
-            loginToken: hashedToken,
           },
         });
 
         // Only send invitation email to newly created members
         if (!existing) {
+          const rawToken = randomBytes(32).toString('hex');
+          const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+          await this.prisma.memberLoginToken.create({
+            data: { memberId: member.id, hashedToken },
+          });
           const magicUrl = `${this.config.get('APP_URL')}/auth/verify?token=${rawToken}`;
           await this.mailService.sendMemberInvite(member, magicUrl);
           results.created++;
@@ -267,16 +267,23 @@ export class AdminService {
     ]);
     headerRow.font = { bold: true };
 
+    // Rehearsals where the admin actually recorded attendance for at least one member.
+    // Matches the member view which uses _count.attendanceRecords > 0 (myAttended != null).
+    const rehearsalIdsWithRecords = new Set(
+      members.flatMap((m) => m.attendanceRecords.map((r) => r.rehearsalId)),
+    );
+
     for (const m of members) {
       const attendedIds = new Set(m.attendanceRecords.map((r) => r.rehearsalId));
       const declinedIds = new Set(m.attendancePlans.map((p) => p.rehearsalId));
 
       const attendanceCount = attendedIds.size;
       const unexcusedCount = rehearsals.filter(
-        (r) => !attendedIds.has(r.id) && !declinedIds.has(r.id),
+        (r) => rehearsalIdsWithRecords.has(r.id) && !attendedIds.has(r.id) && !declinedIds.has(r.id),
       ).length;
 
       const rehearsalStatuses = rehearsals.map((r) => {
+        if (!rehearsalIdsWithRecords.has(r.id)) return '–';
         if (attendedIds.has(r.id)) return 'ja';
         if (declinedIds.has(r.id)) return 'nein';
         return 'unentschuldigt';

@@ -12,7 +12,8 @@ const mockMember = (overrides: Partial<any> = {}) => ({
   lastName: 'Müller',
   email: 'anna@choir.de',
   choirVoice: 'SOPRAN' as const,
-  loginToken: 'hashed',
+  loginCode: null,
+  loginCodeExpiresAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
@@ -115,6 +116,148 @@ describe('AdminService', () => {
       const result = await service.importMembersFromCsv(csv);
       expect(result.updated).toBe(1);
       expect(result.created).toBe(0);
+    });
+  });
+
+  describe('getMemberOverview', () => {
+    const mockMemberRow = (overrides: {
+      attendanceRecords?: { rehearsalId: string }[];
+      attendancePlans?: { rehearsalId: string }[];
+    } = {}) => ({
+      id: 'member-1',
+      firstName: 'Anna',
+      lastName: 'Müller',
+      email: 'anna@choir.de',
+      choirVoice: 'SOPRAN' as const,
+      createdAt: new Date(),
+      _count: { attendanceRecords: overrides.attendanceRecords?.length ?? 0 },
+      attendanceRecords: overrides.attendanceRecords ?? [],
+      attendancePlans: overrides.attendancePlans ?? [],
+    });
+
+    it('returns unexcusedAbsenceCount=0 when member attended all rehearsals', async () => {
+      prismaMock.rehearsal.count.mockResolvedValue(2);
+      prismaMock.member.findMany.mockResolvedValue([
+        mockMemberRow({
+          attendanceRecords: [{ rehearsalId: 'r-1' }, { rehearsalId: 'r-2' }],
+        }),
+      ] as any);
+
+      const result = await service.getMemberOverview();
+      expect(result[0].unexcusedAbsenceCount).toBe(0);
+    });
+
+    it('counts missed rehearsals with no plan as unentschuldigt', async () => {
+      prismaMock.rehearsal.count.mockResolvedValue(3);
+      prismaMock.member.findMany.mockResolvedValue([
+        mockMemberRow({
+          attendanceRecords: [{ rehearsalId: 'r-1' }],
+          attendancePlans: [],
+        }),
+      ] as any);
+
+      const result = await service.getMemberOverview();
+      // attended 1, no excuses → 2 unentschuldigt
+      expect(result[0].unexcusedAbsenceCount).toBe(2);
+    });
+
+    it('reduces unexcusedAbsenceCount for DECLINED plans (entschuldigt)', async () => {
+      prismaMock.rehearsal.count.mockResolvedValue(3);
+      prismaMock.member.findMany.mockResolvedValue([
+        mockMemberRow({
+          attendanceRecords: [{ rehearsalId: 'r-1' }],
+          attendancePlans: [{ rehearsalId: 'r-2' }], // DECLINED (only DECLINED is fetched)
+        }),
+      ] as any);
+
+      const result = await service.getMemberOverview();
+      // attended r-1, excused r-2 → only r-3 is unentschuldigt
+      expect(result[0].unexcusedAbsenceCount).toBe(1);
+    });
+
+    it('does NOT reduce unexcusedAbsenceCount for CONFIRMED plans (unentschuldigt)', async () => {
+      // The query filters attendancePlans to DECLINED only, so a CONFIRMED plan
+      // never appears in attendancePlans here — absence remains unentschuldigt.
+      prismaMock.rehearsal.count.mockResolvedValue(2);
+      prismaMock.member.findMany.mockResolvedValue([
+        mockMemberRow({
+          attendanceRecords: [],
+          attendancePlans: [], // CONFIRMED plan is excluded by the DB query filter
+        }),
+      ] as any);
+
+      const result = await service.getMemberOverview();
+      expect(result[0].unexcusedAbsenceCount).toBe(2);
+    });
+  });
+
+  describe('getMemberRehearsals', () => {
+    const mockRehearsalRow = (overrides: {
+      attendanceRecords?: { id: string }[];
+      attendancePlans?: { response: string }[];
+    } = {}) => ({
+      id: 'rehearsal-1',
+      date: new Date('2025-06-01'),
+      title: 'Probe 1',
+      description: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      attendanceRecords: overrides.attendanceRecords ?? [],
+      attendancePlans: overrides.attendancePlans ?? [],
+    });
+
+    it('returns attended=true when member has a record', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        mockRehearsalRow({ attendanceRecords: [{ id: 'rec-1' }] }),
+      ] as any);
+
+      const result = await service.getMemberRehearsals('member-1');
+      expect(result[0].attended).toBe(true);
+    });
+
+    it('returns attended=false and plan=DECLINED → entschuldigt', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        mockRehearsalRow({ attendancePlans: [{ response: 'DECLINED' }] }),
+      ] as any);
+
+      const result = await service.getMemberRehearsals('member-1');
+      expect(result[0].attended).toBe(false);
+      expect(result[0].plan).toBe('DECLINED');
+    });
+
+    it('returns attended=false and plan=CONFIRMED → unentschuldigt', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        mockRehearsalRow({ attendancePlans: [{ response: 'CONFIRMED' }] }),
+      ] as any);
+
+      const result = await service.getMemberRehearsals('member-1');
+      expect(result[0].attended).toBe(false);
+      expect(result[0].plan).toBe('CONFIRMED');
+    });
+
+    it('returns attended=false and plan=null → unentschuldigt', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        mockRehearsalRow(),
+      ] as any);
+
+      const result = await service.getMemberRehearsals('member-1');
+      expect(result[0].attended).toBe(false);
+      expect(result[0].plan).toBeNull();
+    });
+
+    it('returns correct shape for a mix of past rehearsals', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        mockRehearsalRow({ attendanceRecords: [{ id: 'rec-1' }] }),
+        mockRehearsalRow({ attendancePlans: [{ response: 'DECLINED' }] }),
+        mockRehearsalRow({ attendancePlans: [{ response: 'CONFIRMED' }] }),
+        mockRehearsalRow(),
+      ] as any);
+
+      const result = await service.getMemberRehearsals('member-1');
+      expect(result[0]).toMatchObject({ attended: true, plan: null });
+      expect(result[1]).toMatchObject({ attended: false, plan: 'DECLINED' });
+      expect(result[2]).toMatchObject({ attended: false, plan: 'CONFIRMED' });
+      expect(result[3]).toMatchObject({ attended: false, plan: null });
     });
   });
 

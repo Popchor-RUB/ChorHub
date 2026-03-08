@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -27,15 +28,27 @@ model Member {
   lastName   String
   email      String     @unique
   choirVoice ChoirVoice
-  loginToken String?    @unique // SHA-256 hash of raw token (permanent, no expiry)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  loginCode          String?   // SHA-256 hash of 6-digit OTP
+  loginCodeExpiresAt DateTime? // 15-minute expiry window
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
+  loginTokens       MemberLoginToken[]
   attendancePlans   AttendancePlan[]
   attendanceRecords AttendanceRecord[]
   pushSubscriptions PushSubscription[]
 
   @@map("members")
+}
+
+model MemberLoginToken {
+  id          String   @id @default(uuid())
+  memberId    String
+  hashedToken String   @unique
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@map("member_login_tokens")
 }
 
 model PushSubscription {

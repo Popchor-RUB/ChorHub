@@ -18,9 +18,18 @@ const mockMember = {
   lastName: 'Müller',
   email: 'anna@choir.de',
   choirVoice: 'SOPRAN' as const,
-  loginToken: 'hashed-token',
+  loginCode: null,
+  loginCodeExpiresAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
+};
+
+const mockTokenRecord = {
+  id: 'token-1',
+  memberId: 'member-1',
+  hashedToken: 'hashed-token',
+  createdAt: new Date(),
+  member: mockMember,
 };
 
 describe('MemberTokenGuard', () => {
@@ -44,13 +53,13 @@ describe('MemberTokenGuard', () => {
   });
 
   it('throws UnauthorizedException for invalid token', async () => {
-    prismaMock.member.findUnique.mockResolvedValue(null);
+    prismaMock.memberLoginToken.findUnique.mockResolvedValue(null);
     const ctx = buildContext({ 'x-member-token': 'invalid-token' });
     await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
   });
 
   it('sets request.user and returns true for valid token', async () => {
-    prismaMock.member.findUnique.mockResolvedValue(mockMember);
+    prismaMock.memberLoginToken.findUnique.mockResolvedValue(mockTokenRecord as any);
     const request = { headers: { 'x-member-token': 'valid-raw-token' }, user: undefined as any };
     const ctx = {
       switchToHttp: () => ({ getRequest: () => request }),
@@ -64,7 +73,7 @@ describe('MemberTokenGuard', () => {
   });
 
   it('accepts token from Authorization Bearer header', async () => {
-    prismaMock.member.findUnique.mockResolvedValue(mockMember);
+    prismaMock.memberLoginToken.findUnique.mockResolvedValue(mockTokenRecord as any);
     const request = {
       headers: { authorization: 'Bearer valid-raw-token' },
       user: undefined as any,

@@ -26,15 +26,16 @@ export class MemberTokenGuard implements CanActivate {
     }
 
     const hashedToken = createHash('sha256').update(token).digest('hex');
-    const member = await this.prisma.member.findUnique({
-      where: { loginToken: hashedToken },
+    const tokenRecord = await this.prisma.memberLoginToken.findUnique({
+      where: { hashedToken },
+      include: { member: true },
     });
 
-    if (!member) {
+    if (!tokenRecord) {
       throw new UnauthorizedException('Ungültiger Zugriffstoken');
     }
 
-    request.user = { id: member.id, role: 'member' as const, member };
+    request.user = { id: tokenRecord.member.id, role: 'member' as const, member: tokenRecord.member };
     return true;
   }
 
