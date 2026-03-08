@@ -1,7 +1,7 @@
 import { Card, CardBody, CardHeader, Button, Chip } from '@heroui/react';
 import type { Rehearsal, AttendanceResponse } from '../../types';
 import { attendanceApi } from '../../services/api';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface Props {
   rehearsal: Rehearsal;
@@ -25,6 +25,8 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
 
   const hasStarted = new Date(rehearsal.date) <= new Date();
   const buttonsDisabled = readOnly || hasStarted;
+
+
 
   const setPlan = async (response: AttendanceResponse) => {
     if (buttonsDisabled) return;

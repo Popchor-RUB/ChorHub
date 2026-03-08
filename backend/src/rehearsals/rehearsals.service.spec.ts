@@ -75,7 +75,11 @@ describe('RehearsalsService', () => {
   describe('findAllForMember', () => {
     const pastRehearsal = {
       ...mockRehearsal,
-      date: new Date('2020-01-01'), // clearly in the past
+      date: new Date('2020-01-01'), // clearly in the past (> 1 hour ago)
+    };
+    const recentRehearsal = {
+      ...mockRehearsal,
+      date: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago (< 1 hour)
     };
 
     it('returns myAttended=null when admin has not recorded attendance for anyone', async () => {
@@ -138,6 +142,19 @@ describe('RehearsalsService', () => {
       const result = await service.findAllForMember('member-1');
       expect(result[0].myAttended).toBe(false);
       expect(result[0].myPlan).toBe('CONFIRMED');
+    });
+
+    it('returns myAttended=null when admin recorded others but rehearsal started < 1 hour ago', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        {
+          ...recentRehearsal,
+          attendancePlans: [],
+          attendanceRecords: [], // this member not recorded
+          _count: { attendanceRecords: 3 }, // but others were
+        },
+      ] as any);
+      const result = await service.findAllForMember('member-1');
+      expect(result[0].myAttended).toBeNull();
     });
 
     it('returns myPlan=null when member set no plan and did not attend — counts as unentschuldigt', async () => {

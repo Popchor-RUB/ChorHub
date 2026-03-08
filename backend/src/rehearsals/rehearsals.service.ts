@@ -32,13 +32,19 @@ export class RehearsalsService {
           _count: { select: { attendanceRecords: true } },
         },
       });
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
       return rehearsals.map((r) => ({
         id: r.id,
         date: r.date,
         title: r.title,
         description: r.description,
         myPlan: r.attendancePlans[0]?.response ?? null,
-        myAttended: r._count.attendanceRecords > 0 ? r.attendanceRecords.length > 0 : null,
+        myAttended:
+          r.attendanceRecords.length > 0
+            ? true
+            : r._count.attendanceRecords > 0 && r.date < oneHourAgo
+              ? false
+              : null,
       }));
     }
 
