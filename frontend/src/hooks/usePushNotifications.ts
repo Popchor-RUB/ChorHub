@@ -23,7 +23,7 @@ export function usePushNotifications() {
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
-    const swPath = __BASE_PATH__ + 'sw.js';
+    const swPath = (import.meta.env.VITE_BASE_PATH ?? '/') + 'sw.js';
     navigator.serviceWorker
       .register(swPath, { updateViaCache: 'none' })
       .then((reg) => {

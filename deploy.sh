@@ -10,6 +10,7 @@ rsync -av \
   --exclude ".DS_Store" \
   --exclude "node_modules" \
   --exclude ".git" \
+  --exclude "pgdata" \
   --progress \
   --delete \
   ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"

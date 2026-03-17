@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const basePath = process.env.BASE_PATH ?? '/';
+const basePath = process.env.VITE_BASE_PATH ?? '/';
 
 const manifest = {
   name: 'ChorHub',

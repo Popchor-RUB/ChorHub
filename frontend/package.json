@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/generate-manifest.cjs && node scripts/generate-sw.cjs && vite",
-    "build": "node scripts/generate-manifest.cjs && node scripts/generate-sw.cjs && tsc -b && vite build",
+    "dev": "node --env-file-if-exists .env.development scripts/generate-manifest.cjs && node --env-file-if-exists .env.development scripts/generate-sw.cjs && vite",
+    "build": "node --env-file-if-exists .env.production scripts/generate-manifest.cjs && node --env-file-if-exists .env.production scripts/generate-sw.cjs && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -4,14 +4,11 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const basePath = env.BASE_PATH ?? '/'
-  
+  const basePath = env.VITE_BASE_PATH ?? '/'
+
   return {
     base: basePath,
     plugins: [react(), tailwindcss()],
-    define: {
-      __BASE_PATH__: JSON.stringify(basePath),
-    },
     server: {
       port: 5173,
       proxy: {

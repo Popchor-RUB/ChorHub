@@ -15,8 +15,7 @@ import { RehearsalOverviewPage } from './pages/admin/RehearsalOverviewPage';
 import { PushNotificationsPage } from './pages/admin/PushNotificationsPage';
 import { OptionsPage } from './pages/admin/OptionsPage';
 
-// Get basename from Vite's __BASE_PATH__ (defaults to '/')
-const basename = __BASE_PATH__;
+const basename = import.meta.env.VITE_BASE_PATH ?? '/';
 
 const router = createBrowserRouter(
   [
