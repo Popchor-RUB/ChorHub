@@ -167,9 +167,9 @@ describe('AttendanceService', () => {
           ...mockRehearsal,
           date: new Date(Date.now() + 86400000),
           attendancePlans: [
-            { response: 'CONFIRMED', member: { choirVoice: 'SOPRAN' } },
-            { response: 'CONFIRMED', member: { choirVoice: 'SOPRAN' } },
-            { response: 'CONFIRMED', member: { choirVoice: 'BASS' } },
+            { response: 'CONFIRMED', member: { choirVoice: { name: 'Sopran' } } },
+            { response: 'CONFIRMED', member: { choirVoice: { name: 'Sopran' } } },
+            { response: 'CONFIRMED', member: { choirVoice: { name: 'Bass' } } },
           ],
         },
       ] as any);
@@ -177,8 +177,8 @@ describe('AttendanceService', () => {
       const result = await service.getFutureOverview();
 
       expect(result[0].totalConfirmed).toBe(3);
-      expect(result[0].byVoice.SOPRAN).toBe(2);
-      expect(result[0].byVoice.BASS).toBe(1);
+      expect(result[0].byVoice['Sopran']).toBe(2);
+      expect(result[0].byVoice['Bass']).toBe(1);
     });
   });
 
@@ -189,9 +189,9 @@ describe('AttendanceService', () => {
           ...mockRehearsal,
           date: new Date('2024-01-01'),
           attendanceRecords: [
-            { member: { choirVoice: 'ALT' } },
-            { member: { choirVoice: 'TENOR' } },
-            { member: { choirVoice: 'ALT' } },
+            { member: { choirVoice: { name: 'Alt' } } },
+            { member: { choirVoice: { name: 'Tenor' } } },
+            { member: { choirVoice: { name: 'Alt' } } },
           ],
         },
       ] as any);
@@ -199,8 +199,8 @@ describe('AttendanceService', () => {
       const result = await service.getPastOverview();
 
       expect(result[0].totalAttended).toBe(3);
-      expect(result[0].byVoice.ALT).toBe(2);
-      expect(result[0].byVoice.TENOR).toBe(1);
+      expect(result[0].byVoice['Alt']).toBe(2);
+      expect(result[0].byVoice['Tenor']).toBe(1);
     });
   });
 });

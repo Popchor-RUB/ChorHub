@@ -11,7 +11,7 @@ const mockMember = (overrides: Partial<any> = {}) => ({
   firstName: 'Anna',
   lastName: 'Müller',
   email: 'anna@choir.de',
-  choirVoice: 'SOPRAN' as const,
+  choirVoiceId: null,
   loginCode: null,
   loginCodeExpiresAt: null,
   createdAt: new Date(),
@@ -47,6 +47,19 @@ describe('AdminService', () => {
   });
 
   describe('importMembersFromCsv', () => {
+    const mockVoices = [
+      { id: 'v1', name: 'Sopran', sortOrder: 1, createdAt: new Date() },
+      { id: 'v2', name: 'Mezzosopran', sortOrder: 2, createdAt: new Date() },
+      { id: 'v3', name: 'Alt', sortOrder: 3, createdAt: new Date() },
+      { id: 'v4', name: 'Tenor', sortOrder: 4, createdAt: new Date() },
+      { id: 'v5', name: 'Bariton', sortOrder: 5, createdAt: new Date() },
+      { id: 'v6', name: 'Bass', sortOrder: 6, createdAt: new Date() },
+    ];
+
+    beforeEach(() => {
+      prismaMock.choirVoice.findMany.mockResolvedValue(mockVoices);
+    });
+
     it('throws BadRequestException for malformed CSV', async () => {
       // csv-parse may not throw on simple text - test with truly malformed
       // Instead test missing columns scenario
@@ -128,7 +141,7 @@ describe('AdminService', () => {
       firstName: 'Anna',
       lastName: 'Müller',
       email: 'anna@choir.de',
-      choirVoice: 'SOPRAN' as const,
+      choirVoiceId: null,
       createdAt: new Date(),
       _count: { attendanceRecords: overrides.attendanceRecords?.length ?? 0 },
       attendanceRecords: overrides.attendanceRecords ?? [],

@@ -6,7 +6,6 @@ interface MemberSession {
   memberId: string;
   firstName: string;
   lastName: string;
-  choirVoice: string;
 }
 
 interface AdminSession {

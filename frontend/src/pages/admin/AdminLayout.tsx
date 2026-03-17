@@ -7,18 +7,33 @@ import {
   NavbarItem,
   Button,
 } from '@heroui/react';
+import {
+  UsersIcon,
+  MusicalNoteIcon,
+  CheckCircleIcon,
+  InformationCircleIcon,
+  BellIcon,
+  Cog6ToothIcon,
+} from '@heroicons/react/24/outline';
+import type { ComponentType, SVGProps } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { useIdleTimeout } from '../../hooks/useIdleTimeout';
 
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
-const navItems = [
-  { to: '/admin/mitglieder', label: 'Mitglieder' },
-  { to: '/admin/proben', label: 'Proben' },
-  { to: '/admin/anwesenheit', label: 'Anwesenheit' },
-  { to: '/admin/informationen', label: 'Informationen' },
-  { to: '/admin/benachrichtigungen', label: 'Benachrichtigungen' },
+const navItems: {
+  to: string;
+  label: string;
+  mobileLabel: string;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+}[] = [
+  { to: '/admin/mitglieder', label: 'Mitglieder', mobileLabel: 'Mitglieder', icon: UsersIcon },
+  { to: '/admin/proben', label: 'Proben', mobileLabel: 'Proben', icon: MusicalNoteIcon },
+  { to: '/admin/anwesenheit', label: 'Anwesenheit', mobileLabel: 'Anwesenheit', icon: CheckCircleIcon },
+  { to: '/admin/informationen', label: 'Informationen', mobileLabel: 'Infos', icon: InformationCircleIcon },
+  { to: '/admin/benachrichtigungen', label: 'Benachrichtigungen', mobileLabel: 'Mitteil.', icon: BellIcon },
+  { to: '/admin/einstellungen', label: 'Einstellungen', mobileLabel: 'Einst.', icon: Cog6ToothIcon },
 ];
 
 export function AdminLayout() {
@@ -76,16 +91,20 @@ export function AdminLayout() {
       </Navbar>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-divider flex z-50">
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-divider flex z-50"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex-1 py-3 text-center text-xs ${isActive ? 'text-primary font-semibold' : 'text-default-500'}`
+              `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-primary font-semibold' : 'text-default-500'}`
             }
           >
-            {item.label}
+            <item.icon className="w-6 h-6 mb-0.5" />
+            <span>{item.mobileLabel}</span>
           </NavLink>
         ))}
       </nav>

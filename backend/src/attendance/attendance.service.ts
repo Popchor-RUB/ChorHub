@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AttendanceResponse, ChoirVoice } from '../generated/prisma/client';
+import { AttendanceResponse } from '../generated/prisma/client';
 import { SetAttendancePlanDto } from './dto/attendance.dto';
 
 @Injectable()
@@ -42,8 +42,9 @@ export class AttendanceService {
     const agoByRehearsalId = new Map(pastRehearsals.map((r, i) => [r.id, i + 1]));
 
     const members = await this.prisma.member.findMany({
-      orderBy: [{ choirVoice: 'asc' }, { lastName: 'asc' }],
+      orderBy: [{ choirVoice: { sortOrder: 'asc' } }, { lastName: 'asc' }],
       include: {
+        choirVoice: { select: { id: true, name: true } },
         attendanceRecords: {
           where: { rehearsalId },
           select: { id: true },
@@ -108,7 +109,7 @@ export class AttendanceService {
       include: {
         attendancePlans: {
           where: { response: AttendanceResponse.CONFIRMED },
-          include: { member: { select: { choirVoice: true } } },
+          include: { member: { select: { choirVoice: { select: { name: true } } } } },
         },
       },
     });
@@ -119,7 +120,7 @@ export class AttendanceService {
       title: r.title,
       totalConfirmed: r.attendancePlans.length,
       byVoice: this.groupByVoice(
-        r.attendancePlans.map((p) => p.member.choirVoice),
+        r.attendancePlans.map((p) => p.member.choirVoice?.name),
       ),
     }));
   }
@@ -132,7 +133,7 @@ export class AttendanceService {
       orderBy: { date: 'desc' },
       include: {
         attendanceRecords: {
-          include: { member: { select: { choirVoice: true } } },
+          include: { member: { select: { choirVoice: { select: { name: true } } } } },
         },
       },
     });
@@ -143,14 +144,15 @@ export class AttendanceService {
       title: r.title,
       totalAttended: r.attendanceRecords.length,
       byVoice: this.groupByVoice(
-        r.attendanceRecords.map((rec) => rec.member.choirVoice),
+        r.attendanceRecords.map((rec) => rec.member.choirVoice?.name),
       ),
     }));
   }
 
-  private groupByVoice(voices: ChoirVoice[]): Record<string, number> {
+  private groupByVoice(voices: (string | null | undefined)[]): Record<string, number> {
     const result: Record<string, number> = {};
     for (const voice of voices) {
+      if (!voice) continue;
       result[voice] = (result[voice] ?? 0) + 1;
     }
     return result;

@@ -13,11 +13,30 @@ export class MembersService {
         firstName: true,
         lastName: true,
         email: true,
-        choirVoice: true,
+        choirVoice: { select: { id: true, name: true, sortOrder: true } },
         createdAt: true,
       },
     });
     if (!member) throw new NotFoundException('Mitglied nicht gefunden');
     return member;
+  }
+
+  async updateVoice(memberId: string, voiceId: string | null) {
+    if (voiceId !== null) {
+      const voice = await this.prisma.choirVoice.findUnique({ where: { id: voiceId } });
+      if (!voice) throw new NotFoundException('Stimmlage nicht gefunden');
+    }
+    return this.prisma.member.update({
+      where: { id: memberId },
+      data: { choirVoiceId: voiceId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        choirVoice: { select: { id: true, name: true, sortOrder: true } },
+        createdAt: true,
+      },
+    });
   }
 }

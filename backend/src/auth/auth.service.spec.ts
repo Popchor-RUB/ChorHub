@@ -16,7 +16,7 @@ const mockMember = {
   firstName: 'Anna',
   lastName: 'Müller',
   email: 'anna@choir.de',
-  choirVoice: 'SOPRAN' as const,
+  choirVoiceId: null,
   loginCode: null,
   loginCodeExpiresAt: null,
   createdAt: new Date(),

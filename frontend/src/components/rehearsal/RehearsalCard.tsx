@@ -1,7 +1,7 @@
 import { Card, CardBody, CardHeader, Button, Chip } from '@heroui/react';
 import type { Rehearsal, AttendanceResponse } from '../../types';
 import { attendanceApi } from '../../services/api';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 interface Props {
   rehearsal: Rehearsal;

@@ -8,15 +8,6 @@ datasource db {
   provider = "postgresql"
 }
 
-enum ChoirVoice {
-  SOPRAN
-  MEZZOSOPRAN
-  ALT
-  TENOR
-  BARITON
-  BASS
-}
-
 enum AttendanceResponse {
   CONFIRMED
   DECLINED
@@ -26,8 +17,9 @@ model Member {
   id         String     @id @default(uuid())
   firstName  String
   lastName   String
-  email      String     @unique
-  choirVoice ChoirVoice
+  email        String      @unique
+  choirVoiceId String?     @map("choir_voice_id")
+  choirVoice   ChoirVoice? @relation(fields: [choirVoiceId], references: [id])
   loginCode          String?   // SHA-256 hash of 6-digit OTP
   loginCodeExpiresAt DateTime? // 15-minute expiry window
   createdAt          DateTime  @default(now())
@@ -139,4 +131,14 @@ model GeneralInfo {
   updatedAt       DateTime @updatedAt
 
   @@map("general_info")
+}
+
+model ChoirVoice {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  members   Member[]
+
+  @@map("choir_voices")
 }

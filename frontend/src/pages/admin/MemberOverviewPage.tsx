@@ -19,7 +19,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { adminMembersApi } from '../../services/api';
 import type { MemberOverview, MemberRehearsalEntry } from '../../types';
-import { CHOIR_VOICE_LABELS } from '../../types';
 
 const formatDate = (d: string) =>
   new Intl.DateTimeFormat('de-DE', {
@@ -63,7 +62,7 @@ function MemberDetailModal({
             {member.firstName} {member.lastName}
           </span>
           <span className="text-sm font-normal text-default-500">
-            {CHOIR_VOICE_LABELS[member.choirVoice]} · {member.email}
+            {member.choirVoice?.name ?? '—'} · {member.email}
           </span>
         </ModalHeader>
         <ModalBody className="pb-6">
@@ -277,7 +276,7 @@ export function MemberOverviewPage() {
                 <TableCell className="text-sm text-default-500">{m.email}</TableCell>
                 <TableCell>
                   <Chip size="sm" variant="flat">
-                    {CHOIR_VOICE_LABELS[m.choirVoice]}
+                    {m.choirVoice?.name ?? '—'}
                   </Chip>
                 </TableCell>
                 <TableCell>{m.attendanceCount}</TableCell>

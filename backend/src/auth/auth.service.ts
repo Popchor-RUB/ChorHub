@@ -107,7 +107,6 @@ export class AuthService {
         firstName: member.firstName,
         lastName: member.lastName,
         email: member.email,
-        choirVoice: member.choirVoice,
       },
     };
   }
@@ -131,7 +130,6 @@ export class AuthService {
         firstName: member.firstName,
         lastName: member.lastName,
         email: member.email,
-        choirVoice: member.choirVoice,
       },
     };
   }

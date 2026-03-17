@@ -1,12 +1,18 @@
-export type ChoirVoice = 'SOPRAN' | 'MEZZOSOPRAN' | 'ALT' | 'TENOR' | 'BARITON' | 'BASS';
 export type AttendanceResponse = 'CONFIRMED' | 'DECLINED';
+
+export interface ChoirVoice {
+  id: string;
+  name: string;
+  sortOrder: number;
+  memberCount?: number;
+}
 
 export interface Member {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  choirVoice: ChoirVoice;
+  choirVoice: ChoirVoice | null;
   createdAt: string;
 }
 
@@ -43,7 +49,7 @@ export interface MemberSearchResult {
   id: string;
   firstName: string;
   lastName: string;
-  choirVoice: ChoirVoice;
+  choirVoice: ChoirVoice | null;
   email: string;
 }
 
@@ -51,7 +57,7 @@ export interface MemberHistory {
   id: string;
   firstName: string;
   lastName: string;
-  choirVoice: ChoirVoice;
+  choirVoice: ChoirVoice | null;
   recentAttendance: { id: string; date: string; title: string }[];
 }
 
@@ -59,7 +65,7 @@ export interface AttendanceRecord {
   id: string;
   firstName: string;
   lastName: string;
-  choirVoice: ChoirVoice;
+  choirVoice: ChoirVoice | null;
   attended: boolean;
   plan: AttendanceResponse | null;
   lastAttendedRehearsalsAgo: number | null;
@@ -83,12 +89,3 @@ export interface GeneralInfo {
   markdownContent: string;
   updatedAt: string;
 }
-
-export const CHOIR_VOICE_LABELS: Record<ChoirVoice, string> = {
-  SOPRAN: 'Sopran',
-  MEZZOSOPRAN: 'Mezzosopran',
-  ALT: 'Alt',
-  TENOR: 'Tenor',
-  BARITON: 'Bariton',
-  BASS: 'Bass',
-};

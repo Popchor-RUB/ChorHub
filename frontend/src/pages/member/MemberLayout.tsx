@@ -6,6 +6,7 @@ import {
   NavbarItem,
   Button,
 } from '@heroui/react';
+import { MusicalNoteIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { NotificationBell } from '../../components/NotificationBell';
@@ -76,18 +77,20 @@ export function MemberLayout() {
         <NavLink
           to="/proben"
           className={({ isActive }) =>
-            `flex-1 py-3 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
+            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
           }
         >
-          Proben
+          <MusicalNoteIcon className="w-6 h-6 mb-0.5" />
+          <span>Proben</span>
         </NavLink>
         <NavLink
           to="/informationen"
           className={({ isActive }) =>
-            `flex-1 py-3 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
+            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
           }
         >
-          Informationen
+          <InformationCircleIcon className="w-6 h-6 mb-0.5" />
+          <span>Informationen</span>
         </NavLink>
       </nav>
 

@@ -26,7 +26,6 @@ export function MagicLinkVerifyPage() {
           memberId: member.id,
           firstName: member.firstName,
           lastName: member.lastName,
-          choirVoice: member.choirVoice,
         });
         navigate('/', { replace: true });
       })

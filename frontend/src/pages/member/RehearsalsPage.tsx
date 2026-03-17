@@ -1,27 +1,61 @@
 import { useEffect, useState } from 'react';
-import { Spinner } from '@heroui/react';
-import { rehearsalsApi } from '../../services/api';
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Spinner,
+  useDisclosure,
+} from '@heroui/react';
+import { rehearsalsApi, membersApi, choirVoicesApi } from '../../services/api';
 import { RehearsalCard } from '../../components/rehearsal/RehearsalCard';
-import type { Rehearsal } from '../../types';
+import type { ChoirVoice, Member, Rehearsal } from '../../types';
 
 export function RehearsalsPage() {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
+  const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadRehearsals = async () => {
-    // Fetch all rehearsals (past + upcoming) using ?all=true (member auth)
-    const res = await rehearsalsApi.getAllForMember().catch(() => ({ data: [] }));
-    setRehearsals(res.data as Rehearsal[]);
+  const [availableVoices, setAvailableVoices] = useState<ChoirVoice[]>([]);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  const [savingVoice, setSavingVoice] = useState(false);
+  const voiceModal = useDisclosure();
+
+  const loadData = async () => {
+    const [rehearsalRes, memberRes] = await Promise.all([
+      rehearsalsApi.getAllForMember().catch(() => ({ data: [] })),
+      membersApi.me().catch(() => ({ data: null })),
+    ]);
+    setRehearsals(rehearsalRes.data as Rehearsal[]);
+    setMember(memberRes.data as Member);
     setLoading(false);
   };
 
-  useEffect(() => { loadRehearsals(); }, []);
+  useEffect(() => { loadData(); }, []);
+
+  const openVoiceModal = async () => {
+    setSelectedVoiceId(member?.choirVoice?.id ?? null);
+    const res = await choirVoicesApi.list().catch(() => ({ data: [] }));
+    setAvailableVoices(res.data as ChoirVoice[]);
+    voiceModal.onOpen();
+  };
+
+  const handleSaveVoice = async () => {
+    setSavingVoice(true);
+    try {
+      const res = await membersApi.updateVoice(selectedVoiceId);
+      setMember(res.data as Member);
+      voiceModal.onClose();
+    } finally {
+      setSavingVoice(false);
+    }
+  };
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  // upcoming rehearsals should be sorted ascending
   const upcoming = rehearsals.filter((r) => new Date(r.date) >= startOfToday).reverse();
-  // past rehearsals should be sorted descending (already sorted by the backend)
   const past = rehearsals.filter((r) => new Date(r.date) < startOfToday);
 
   if (loading) {
@@ -36,6 +70,17 @@ export function RehearsalsPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">Proben</h1>
+
+      {/* Voice banner */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-default-100 dark:bg-default-100/10 rounded-xl text-sm border border-default-200">
+        <span className="text-default-500">Deine Stimmlage:</span>
+        <span className="font-medium flex-1">
+          {member?.choirVoice?.name ?? 'Nicht festgelegt'}
+        </span>
+        <Button size="sm" variant="flat" onPress={openVoiceModal}>
+          Ändern
+        </Button>
+      </div>
 
       {recorded.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
@@ -64,7 +109,7 @@ export function RehearsalsPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {upcoming.map((r) => (
-              <RehearsalCard key={r.id} rehearsal={r} onUpdated={loadRehearsals} />
+              <RehearsalCard key={r.id} rehearsal={r} onUpdated={loadData} />
             ))}
           </div>
         )}
@@ -81,13 +126,56 @@ export function RehearsalsPage() {
               <RehearsalCard
                 key={r.id}
                 rehearsal={r}
-                onUpdated={loadRehearsals}
+                onUpdated={loadData}
                 readOnly
               />
             ))}
           </div>
         </section>
       )}
+
+      {/* Voice change modal */}
+      <Modal isOpen={voiceModal.isOpen} onClose={voiceModal.onClose}>
+        <ModalContent>
+          <ModalHeader>Stimmlage ändern</ModalHeader>
+          <ModalBody>
+            {availableVoices.length === 0 ? (
+              <p className="text-default-400 text-sm">Keine Stimmlagen verfügbar.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {availableVoices.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setSelectedVoiceId(v.id)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm border transition-colors text-left ${
+                      selectedVoiceId === v.id
+                        ? 'bg-primary-50 border-primary-400 text-primary font-semibold'
+                        : 'bg-default-50 border-default-200 hover:bg-default-100'
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      selectedVoiceId === v.id ? 'border-primary bg-primary' : 'border-default-400'
+                    }`}>
+                      {selectedVoiceId === v.id && <span className="w-2 h-2 rounded-full bg-white" />}
+                    </span>
+                    <span className="flex-1">{v.name}</span>
+                    {v.memberCount !== undefined && (
+                      <span className="text-xs text-default-400">{v.memberCount} {v.memberCount === 1 ? 'Mitglied' : 'Mitglieder'}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" onPress={voiceModal.onClose}>Abbrechen</Button>
+            <Button color="primary" isLoading={savingVoice} onPress={handleSaveVoice}>
+              Speichern
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

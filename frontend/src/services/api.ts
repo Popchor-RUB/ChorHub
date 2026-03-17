@@ -54,7 +54,7 @@ export const adminApi = {
     api.post('/auth/admin/passkey/register/verify', { attestation }),
 };
 
-type MemberAuthResponse = { token: string; member: { id: string; firstName: string; lastName: string; choirVoice: string } };
+type MemberAuthResponse = { token: string; member: { id: string; firstName: string; lastName: string } };
 
 export const memberAuthApi = {
   requestMagicLink: (email: string) =>
@@ -123,4 +123,17 @@ export const pushApi = {
     api.post('/push/subscribe', sub),
   unsubscribe: (endpoint: string) =>
     api.delete('/push/unsubscribe', { data: { endpoint } }),
+};
+
+export const choirVoicesApi = {
+  list: () => api.get('/choir-voices'),
+  create: (name: string, sortOrder?: number) => api.post('/choir-voices', { name, sortOrder }),
+  update: (id: string, data: { name?: string; sortOrder?: number }) =>
+    api.patch(`/choir-voices/${id}`, data),
+  remove: (id: string) => api.delete(`/choir-voices/${id}`),
+};
+
+export const membersApi = {
+  me: () => api.get('/members/me'),
+  updateVoice: (voiceId: string | null) => api.patch('/members/me/voice', { voiceId }),
 };

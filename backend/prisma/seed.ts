@@ -1,4 +1,4 @@
-import { PrismaClient, ChoirVoice, AttendanceResponse } from '@prisma/client';
+import { PrismaClient, AttendanceResponse } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 
@@ -48,21 +48,24 @@ const LAST_NAMES = [
 ];
 
 // ── Voice distribution (total = 200) ─────────────────────────────────────────
-// Female voices: SOPRAN 52, MEZZOSOPRAN 20, ALT 38  → 110
-// Male voices:   TENOR 28, BARITON 30, BASS 32       →  90
+// Female voices: Sopran 52, Mezzosopran 20, Alt 38  → 110
+// Male voices:   Tenor 28, Bariton 30, Bass 32       →  90
 
-const VOICE_SLOTS: ChoirVoice[] = [
-  ...Array(52).fill(ChoirVoice.SOPRAN),
-  ...Array(20).fill(ChoirVoice.MEZZOSOPRAN),
-  ...Array(38).fill(ChoirVoice.ALT),
-  ...Array(28).fill(ChoirVoice.TENOR),
-  ...Array(30).fill(ChoirVoice.BARITON),
-  ...Array(32).fill(ChoirVoice.BASS),
+const VOICE_NAMES = ['Sopran', 'Mezzosopran', 'Alt', 'Tenor', 'Bariton', 'Bass'] as const;
+type VoiceName = typeof VOICE_NAMES[number];
+
+const VOICE_SLOTS: VoiceName[] = [
+  ...Array(52).fill('Sopran'),
+  ...Array(20).fill('Mezzosopran'),
+  ...Array(38).fill('Alt'),
+  ...Array(28).fill('Tenor'),
+  ...Array(30).fill('Bariton'),
+  ...Array(32).fill('Bass'),
 ];
 
 // Whether a voice is female (determines name pool)
-function isFemaleVoice(v: ChoirVoice): boolean {
-  return v === ChoirVoice.SOPRAN || v === ChoirVoice.MEZZOSOPRAN || v === ChoirVoice.ALT;
+function isFemaleVoice(v: VoiceName): boolean {
+  return v === 'Sopran' || v === 'Mezzosopran' || v === 'Alt';
 }
 
 // ── Rehearsal data ────────────────────────────────────────────────────────────
@@ -128,7 +131,18 @@ async function main() {
   await prisma.passkeyCredential.deleteMany();
   await prisma.adminUser.deleteMany();
   await prisma.generalInfo.deleteMany();
+  await prisma.choirVoice.deleteMany();
   console.log('   Done.');
+
+  // ── Choir voices ──────────────────────────────────────────────────────────
+  console.log('🎤 Seeding choir voices…');
+  const voiceRecords = await prisma.$transaction(
+    VOICE_NAMES.map((name, i) =>
+      prisma.choirVoice.create({ data: { name, sortOrder: i + 1 } }),
+    ),
+  );
+  const voiceByName = new Map(voiceRecords.map((v) => [v.name, v]));
+  console.log(`   ${voiceRecords.length} voices created.`);
 
   // ── Admin ──────────────────────────────────────────────────────────────────
   const passwordHash = await bcrypt.hash('admin123', 10);
@@ -160,7 +174,8 @@ async function main() {
     }
     usedEmails.add(email);
 
-    return { firstName, lastName, email, choirVoice: voice };
+    const voiceId = voiceByName.get(voice)!.id;
+    return { firstName, lastName, email, choirVoice: { connect: { id: voiceId } } };
   });
 
   const members = await prisma.$transaction(

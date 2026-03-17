@@ -22,9 +22,6 @@ import { CalendarDateTime } from '@internationalized/date';
 import type { DateValue } from '@internationalized/date';
 import { attendanceApi, rehearsalsApi } from '../../services/api';
 import type { RehearsalOverview, AttendanceRecord, Rehearsal } from '../../types';
-import { CHOIR_VOICE_LABELS, type ChoirVoice } from '../../types';
-
-const VOICES: ChoirVoice[] = ['SOPRAN', 'MEZZOSOPRAN', 'ALT', 'TENOR', 'BARITON', 'BASS'];
 
 const formatDate = (d: string) =>
   new Intl.DateTimeFormat('de-DE', {
@@ -72,10 +69,11 @@ function AttendanceDetailModal({
     });
   }, [isOpen, rehearsal.id]);
 
-  // Group records by voice for display
-  const byVoice = VOICES.map((voice) => ({
+  // Group records by voice for display (voices come back sorted by sortOrder from backend)
+  const voiceNames = [...new Set(records.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
+  const byVoice = voiceNames.map((voice) => ({
     voice,
-    members: records.filter((r) => r.choirVoice === voice),
+    members: records.filter((r) => r.choirVoice?.name === voice),
   })).filter((g) => g.members.length > 0);
 
   return (
@@ -127,7 +125,7 @@ function AttendanceDetailModal({
               {byVoice.map(({ voice, members }) => (
                 <div key={voice} className="mb-4">
                   <p className="text-xs font-semibold text-default-400 uppercase tracking-wide mb-1">
-                    {CHOIR_VOICE_LABELS[voice]}
+                    {voice}
                   </p>
                   <div className="flex flex-col gap-1">
                     {members.map((m) => {
@@ -431,13 +429,11 @@ function OverviewCard({
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-1">
-          {VOICES.map((v) =>
-            item.byVoice[v] ? (
-              <Chip key={v} size="sm" variant="flat">
-                {CHOIR_VOICE_LABELS[v]}: {item.byVoice[v]}
-              </Chip>
-            ) : null,
-          )}
+          {Object.entries(item.byVoice).map(([name, count]) => (
+            <Chip key={name} size="sm" variant="flat">
+              {name}: {count}
+            </Chip>
+          ))}
         </div>
       </CardBody>
     </Card>

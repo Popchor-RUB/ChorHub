@@ -12,6 +12,7 @@ import { AdminModule } from './admin/admin.module';
 import { GeneralInfoModule } from './general-info/general-info.module';
 import { MailModule } from './mail/mail.module';
 import { PushModule } from './push/push.module';
+import { ChoirVoicesModule } from './choir-voices/choir-voices.module';
 import { GlobalAuthGuard } from './auth/guards/global-auth.guard';
 
 @Module({
@@ -28,6 +29,7 @@ import { GlobalAuthGuard } from './auth/guards/global-auth.guard';
     AdminModule,
     GeneralInfoModule,
     PushModule,
+    ChoirVoicesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: GlobalAuthGuard },

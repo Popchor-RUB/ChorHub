@@ -2,21 +2,9 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
-import { ChoirVoice } from '../generated/prisma/client';
 import { randomBytes, createHash } from 'crypto';
 import { parse } from 'csv-parse/sync';
 import * as ExcelJS from 'exceljs';
-
-const CHOIR_VOICE_LABELS: Record<string, string> = {
-  SOPRAN: 'Sopran',
-  MEZZOSOPRAN: 'Mezzosopran',
-  ALT: 'Alt',
-  TENOR: 'Tenor',
-  BARITON: 'Bariton',
-  BASS: 'Bass',
-};
-
-const CHOIR_VOICES = Object.values(ChoirVoice);
 
 interface CsvRow {
   firstName: string;
@@ -45,6 +33,10 @@ export class AdminService {
       throw new BadRequestException('Ungültiges CSV-Format');
     }
 
+    // Load available voices for validation
+    const voices = await this.prisma.choirVoice.findMany();
+    const voiceMap = new Map(voices.map((v) => [v.name.toLowerCase(), v]));
+
     const results = { created: 0, updated: 0, failed: [] as { email: string; reason: string }[] };
 
     for (const row of records) {
@@ -53,8 +45,8 @@ export class AdminService {
         continue;
       }
 
-      const normalizedVoice = row.choirVoice.toUpperCase().replace(/\s+/g, '_');
-      if (!CHOIR_VOICES.includes(normalizedVoice as ChoirVoice)) {
+      const voice = voiceMap.get(row.choirVoice.toLowerCase());
+      if (!voice) {
         results.failed.push({
           email: row.email,
           reason: `Ungültige Stimmlage: ${row.choirVoice}`,
@@ -71,12 +63,12 @@ export class AdminService {
             firstName: row.firstName,
             lastName: row.lastName,
             email: row.email,
-            choirVoice: normalizedVoice as ChoirVoice,
+            choirVoiceId: voice.id,
           },
           update: {
             firstName: row.firstName,
             lastName: row.lastName,
-            choirVoice: normalizedVoice as ChoirVoice,
+            choirVoiceId: voice.id,
           },
         });
 
@@ -114,7 +106,7 @@ export class AdminService {
           firstName: true,
           lastName: true,
           email: true,
-          choirVoice: true,
+          choirVoice: { select: { id: true, name: true, sortOrder: true } },
           createdAt: true,
           _count: { select: { attendanceRecords: true } },
           attendanceRecords: {
@@ -152,7 +144,6 @@ export class AdminService {
     const q = query.trim();
     if (!q) return [];
 
-    // Split on commas or whitespace to detect combined-name queries
     const parts = q.split(/[,\s]+/).filter(Boolean);
 
     const conditions = [
@@ -163,14 +154,12 @@ export class AdminService {
 
     if (parts.length >= 2) {
       const [a, b] = parts;
-      // "FirstName LastName" / "FirstName, LastName"
       conditions.push({
         AND: [
           { firstName: { contains: a, mode: 'insensitive' as const } },
           { lastName: { contains: b, mode: 'insensitive' as const } },
         ],
       } as any);
-      // "LastName, FirstName" / "LastName FirstName"
       conditions.push({
         AND: [
           { firstName: { contains: b, mode: 'insensitive' as const } },
@@ -185,11 +174,11 @@ export class AdminService {
         id: true,
         firstName: true,
         lastName: true,
-        choirVoice: true,
+        choirVoice: { select: { id: true, name: true, sortOrder: true } },
         email: true,
       },
       take: 10,
-      orderBy: [{lastName: "asc"}, {firstName: "asc"}]
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
   }
 
@@ -234,7 +223,7 @@ export class AdminService {
           firstName: true,
           lastName: true,
           email: true,
-          choirVoice: true,
+          choirVoice: { select: { name: true } },
           attendanceRecords: {
             where: { rehearsal: { date: { lt: startOfToday } } },
             select: { rehearsalId: true },
@@ -267,8 +256,6 @@ export class AdminService {
     ]);
     headerRow.font = { bold: true };
 
-    // Rehearsals where the admin actually recorded attendance for at least one member.
-    // Matches the member view which uses _count.attendanceRecords > 0 (myAttended != null).
     const rehearsalIdsWithRecords = new Set(
       members.flatMap((m) => m.attendanceRecords.map((r) => r.rehearsalId)),
     );
@@ -292,7 +279,7 @@ export class AdminService {
       sheet.addRow([
         `${m.lastName}, ${m.firstName}`,
         m.email,
-        CHOIR_VOICE_LABELS[m.choirVoice] ?? m.choirVoice,
+        m.choirVoice?.name ?? '',
         attendanceCount,
         unexcusedCount,
         ...rehearsalStatuses,
@@ -314,7 +301,7 @@ export class AdminService {
         id: true,
         firstName: true,
         lastName: true,
-        choirVoice: true,
+        choirVoice: { select: { id: true, name: true, sortOrder: true } },
         attendanceRecords: {
           orderBy: { createdAt: 'desc' },
           take: 10,

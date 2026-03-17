@@ -20,13 +20,12 @@ export function MagicLinkRequestPage() {
   const { setMemberSession } = useAuthStore();
   const { visible: showGuide, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-login');
 
-  const handleSession = (token: string, member: { id: string; firstName: string; lastName: string; choirVoice: string }) => {
+  const handleSession = (token: string, member: { id: string; firstName: string; lastName: string }) => {
     setMemberSession({
       token,
       memberId: member.id,
       firstName: member.firstName,
       lastName: member.lastName,
-      choirVoice: member.choirVoice,
     });
     navigate('/', { replace: true });
   };

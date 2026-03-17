@@ -9,10 +9,7 @@ import {
   Spinner,
 } from '@heroui/react';
 import { rehearsalsApi, attendanceApi } from '../../services/api';
-import type { Rehearsal, AttendanceRecord, ChoirVoice } from '../../types';
-import { CHOIR_VOICE_LABELS } from '../../types';
-
-const VOICE_ORDER: ChoirVoice[] = ['SOPRAN', 'MEZZOSOPRAN', 'ALT', 'TENOR', 'BARITON', 'BASS'];
+import type { Rehearsal, AttendanceRecord } from '../../types';
 
 const formatDate = (d: string) =>
   new Intl.DateTimeFormat('de-DE', {
@@ -42,8 +39,8 @@ export function AttendancePage() {
   const [loadingRecords, setLoadingRecords] = useState(false);
 
   const [nameFilter, setNameFilter] = useState('');
-  const [voiceFilter, setVoiceFilter] = useState<ChoirVoice | null>(null);
-  const [collapsedVoices, setCollapsedVoices] = useState<Set<ChoirVoice>>(new Set());
+  const [voiceFilter, setVoiceFilter] = useState<string | null>(null);
+  const [collapsedVoices, setCollapsedVoices] = useState<Set<string>>(new Set());
 
   const [saving, setSaving] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -111,12 +108,14 @@ export function AttendancePage() {
       !q ||
       `${r.lastName} ${r.firstName}`.toLowerCase().includes(q) ||
       `${r.firstName} ${r.lastName}`.toLowerCase().includes(q);
-    return matchesName && (!voiceFilter || r.choirVoice === voiceFilter);
+    return matchesName && (!voiceFilter || r.choirVoice?.name === voiceFilter);
   });
 
-  const groups = VOICE_ORDER.map((voice) => ({
+  // Derive voice groups in the order they appear (backend sorts by sortOrder)
+  const voiceNames = [...new Set(records.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
+  const groups = voiceNames.map((voice) => ({
     voice,
-    members: filteredRecords.filter((r) => r.choirVoice === voice),
+    members: filteredRecords.filter((r) => r.choirVoice?.name === voice),
   })).filter((g) => g.members.length > 0);
 
   const visibleMembers = groups
@@ -223,7 +222,7 @@ export function AttendancePage() {
     };
   }, []);
 
-  const toggleVoiceCollapse = (voice: ChoirVoice) => {
+  const toggleVoiceCollapse = (voice: string) => {
     setCollapsedVoices((prev) => {
       const next = new Set(prev);
       if (next.has(voice)) next.delete(voice);
@@ -297,7 +296,7 @@ export function AttendancePage() {
               >
                 Alle
               </Chip>
-              {VOICE_ORDER.map((voice) => (
+              {voiceNames.map((voice) => (
                 <Chip
                   key={voice}
                   size="sm"
@@ -306,7 +305,7 @@ export function AttendancePage() {
                   className="cursor-pointer select-none"
                   onClick={() => setVoiceFilter((prev) => (prev === voice ? null : voice))}
                 >
-                  {CHOIR_VOICE_LABELS[voice]}
+                  {voice}
                 </Chip>
               ))}
             </div>
@@ -343,7 +342,7 @@ export function AttendancePage() {
                   >
                     <span className="flex items-center gap-2">
                       <span className="text-default-400">{isCollapsed ? '▸' : '▾'}</span>
-                      <span>{CHOIR_VOICE_LABELS[group.voice]}</span>
+                      <span>{group.voice}</span>
                     </span>
                     <span className="text-xs font-normal text-default-500">
                       {groupAttended} / {group.members.length} anwesend
