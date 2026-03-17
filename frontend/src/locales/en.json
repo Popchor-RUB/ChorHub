@@ -158,7 +158,8 @@
     "group_present": "{{attended}} / {{total}} present",
     "last_never": "Never",
     "last_previous": "Last rehearsal",
-    "last_ago": "{{count}} rehearsals ago"
+    "last_ago": "{{count}} rehearsals ago",
+    "no_voice_group": "No voice assigned"
   },
   "info": {
     "title": "General Information",

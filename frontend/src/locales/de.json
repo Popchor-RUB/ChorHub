@@ -158,7 +158,8 @@
     "group_present": "{{attended}} / {{total}} anwesend",
     "last_never": "Noch nie",
     "last_previous": "Letzte Probe",
-    "last_ago": "Vor {{count}} Proben"
+    "last_ago": "Vor {{count}} Proben",
+    "no_voice_group": "Ohne Stimmzuordnung"
   },
   "info": {
     "title": "Allgemeine Informationen",

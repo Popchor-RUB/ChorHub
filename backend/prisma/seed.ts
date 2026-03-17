@@ -179,10 +179,24 @@ async function main() {
     return { firstName, lastName, email, choirVoice: { connect: { id: voiceId } } };
   });
 
-  const members = await prisma.$transaction(
+  const voicedMembers = await prisma.$transaction(
     memberData.map(d => prisma.member.create({ data: d })),
   );
-  console.log(`   ${members.length} members created.`);
+
+  // A handful of members who haven't selected a choir voice yet
+  const UNVOICED = [
+    { firstName: 'Lara',   lastName: 'Sommer',   email: 'lara.sommer@example.com'   },
+    { firstName: 'Ben',    lastName: 'Kramer',   email: 'ben.kramer@example.com'    },
+    { firstName: 'Miriam', lastName: 'Vogt',     email: 'miriam.vogt@example.com'   },
+    { firstName: 'Erik',   lastName: 'Naumann',  email: 'erik.naumann@example.com'  },
+    { firstName: 'Tanja',  lastName: 'Brückner', email: 'tanja.brueckner@example.com' },
+  ];
+  const unvoicedMembers = await prisma.$transaction(
+    UNVOICED.map(d => prisma.member.create({ data: d })),
+  );
+
+  const members = [...voicedMembers, ...unvoicedMembers];
+  console.log(`   ${voicedMembers.length} members with voice + ${unvoicedMembers.length} without voice created.`);
 
   // ── Rehearsals ────────────────────────────────────────────────────────────
   console.log('🎵 Creating rehearsals…');

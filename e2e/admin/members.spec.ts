@@ -39,8 +39,8 @@ test.describe('Admin member overview', () => {
     ).toBeVisible();
   });
 
-  test('shows 200 seeded members (201 rows including header)', async ({ page }) => {
-    await expect(page.getByRole('row')).toHaveCount(201);
+  test('shows 205 seeded members (206 rows including header)', async ({ page }) => {
+    await expect(page.getByRole('row')).toHaveCount(206);
   });
 
   test('clicking a member row opens the detail modal', async ({ page }) => {
@@ -92,14 +92,14 @@ test.describe('Admin member overview', () => {
     await searchInput.fill('Müller');
 
     const rowCount = await page.getByRole('row').count();
-    // Some Müllers exist in 200 members; count is less than full 201
-    expect(rowCount).toBeLessThan(201);
+    // Some Müllers exist in 205 members; count is less than full 206
+    expect(rowCount).toBeLessThan(206);
     // But at least the header + 1 member
     expect(rowCount).toBeGreaterThanOrEqual(2);
 
     // Clear search restores all members
     await searchInput.clear();
-    await expect(page.getByRole('row')).toHaveCount(201);
+    await expect(page.getByRole('row')).toHaveCount(206);
   });
 
   test('voice filter chips are visible after members load', async ({ page }) => {
@@ -127,7 +127,7 @@ test.describe('Admin member overview', () => {
 
     // Click the same chip again to deactivate
     await chips.getByText('Sopran', { exact: true }).click();
-    await expect(page.getByRole('row')).toHaveCount(201);
+    await expect(page.getByRole('row')).toHaveCount(206);
   });
 
   test('clicking "Alle" resets the voice filter', async ({ page }) => {
@@ -137,7 +137,7 @@ test.describe('Admin member overview', () => {
     await expect(page.getByRole('row')).toHaveCount(39);
 
     await chips.getByText('Alle', { exact: true }).click();
-    await expect(page.getByRole('row')).toHaveCount(201);
+    await expect(page.getByRole('row')).toHaveCount(206);
   });
 
   test('voice filter and search input work together', async ({ page }) => {

@@ -18,6 +18,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
+  onCreatedWithId?: (memberId: string) => void;
 }
 
 interface FormState {
@@ -29,7 +30,7 @@ interface FormState {
 
 const EMPTY_FORM: FormState = { firstName: '', lastName: '', email: '', voiceId: '' };
 
-export function CreateMemberModal({ isOpen, onClose, onCreated }: Props) {
+export function CreateMemberModal({ isOpen, onClose, onCreated, onCreatedWithId }: Props) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [voices, setVoices] = useState<ChoirVoice[]>([]);
   const [saving, setSaving] = useState(false);
@@ -55,12 +56,14 @@ export function CreateMemberModal({ isOpen, onClose, onCreated }: Props) {
     setSaving(true);
     setError(null);
     try {
-      await adminMembersApi.create({
+      const res = await adminMembersApi.create({
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         ...(form.voiceId ? { voiceId: form.voiceId } : {}),
       });
+      const memberId = (res.data as { id: string }).id;
+      onCreatedWithId?.(memberId);
       onCreated();
       onClose();
     } catch (e: unknown) {

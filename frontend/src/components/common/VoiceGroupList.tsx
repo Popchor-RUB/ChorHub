@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 
 export interface VoiceGroupData {
   voice: string;
+  /** Optional display label – falls back to `voice` when omitted. */
+  label?: string;
   headerRight: ReactNode;
   rows: { key: string; content: ReactNode }[];
 }
@@ -22,7 +24,7 @@ export function VoiceGroupList({ groups, collapsedVoices, onToggle, header, empt
     <div className="rounded-xl border border-divider overflow-hidden">
       {header}
       {groups.length === 0 && emptyState}
-      {groups.map(({ voice, headerRight, rows }, groupIdx) => {
+      {groups.map(({ voice, label, headerRight, rows }, groupIdx) => {
         const isCollapsed = collapsedVoices.has(voice);
         const isLastGroup = groupIdx === groups.length - 1;
         return (
@@ -38,7 +40,7 @@ export function VoiceGroupList({ groups, collapsedVoices, onToggle, header, empt
             >
               <span className="flex items-center gap-2">
                 <span className="text-default-400">{isCollapsed ? '▸' : '▾'}</span>
-                <span>{voice} ({rows.length})</span>
+                <span>{label ?? voice} ({rows.length})</span>
               </span>
               {headerRight}
             </button>

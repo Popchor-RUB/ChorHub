@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Select, SelectItem, SelectSection, Input, Button, Spinner } from '@heroui/react';
+import { Select, SelectItem, SelectSection, Input, Button, Spinner, useDisclosure } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, attendanceApi } from '../../services/api';
+import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import type { Rehearsal, AttendanceRecord } from '../../types';
 import { VoiceGroupList, useCollapsedVoices } from '../../components/common/VoiceGroupList';
 import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
@@ -9,6 +10,8 @@ import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
 import { useAttendanceKeyboard } from '../../hooks/useAttendanceKeyboard';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateLong, formatDateNumeric } from '../../utils/dateFormatting';
+
+const NO_VOICE_KEY = '__no_voice__';
 
 export function AttendancePage() {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
@@ -26,6 +29,8 @@ export function AttendancePage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
 
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
@@ -99,9 +104,19 @@ export function AttendancePage() {
     }))
     .filter((g) => g.members.length > 0);
 
-  const visibleMembers = groups
-    .filter((g) => !collapsedVoices.has(g.voice))
-    .flatMap((g) => g.members);
+  // No-voice members are always shown regardless of the voice filter — only the name filter applies.
+  const noVoiceMembers = records.filter((r) => {
+    if (r.choirVoice) return false;
+    const q = nameFilter.toLowerCase();
+    return !q ||
+      `${r.lastName} ${r.firstName}`.toLowerCase().includes(q) ||
+      `${r.firstName} ${r.lastName}`.toLowerCase().includes(q);
+  });
+
+  const visibleMembers = [
+    ...groups.filter((g) => !collapsedVoices.has(g.voice)).flatMap((g) => g.members),
+    ...(noVoiceMembers.length > 0 && !collapsedVoices.has(NO_VOICE_KEY) ? noVoiceMembers : []),
+  ];
 
   const visibleMembersRef = useRef(visibleMembers);
   visibleMembersRef.current = visibleMembers;
@@ -137,6 +152,13 @@ export function AttendancePage() {
   const toggleAttendanceRef = useRef(toggleAttendance);
   toggleAttendanceRef.current = toggleAttendance;
 
+  const handleMemberCreatedWithId = async (memberId: string) => {
+    const currentAttendedIds = recordsRef.current.filter((r) => r.attended).map((r) => r.id);
+    await attendanceApi.bulkSetRecords(selectedRehearsalIdRef.current, [...currentAttendedIds, memberId]);
+    const res = await attendanceApi.getRecords(selectedRehearsalIdRef.current);
+    setRecords(res.data as AttendanceRecord[]);
+  };
+
   const { ctrlHeld } = useAttendanceKeyboard({
     recordsRef,
     visibleMembersRef,
@@ -153,71 +175,87 @@ export function AttendancePage() {
     return t('attendance.last_ago', { count: ago });
   };
 
-  const voiceGroupData: VoiceGroupData[] = groups.map((group) => {
-    const groupAttended = group.members.filter((m) => m.attended).length;
+  const buildMemberRow = (member: AttendanceRecord) => {
+    const isFocused = focusedMemberId === member.id;
+    const isSaving = saving === member.id;
+    const visibleIdx = visibleMembers.findIndex((m) => m.id === member.id);
+    const shortcutNum = ctrlHeld && visibleIdx >= 0 && visibleIdx < 9 ? visibleIdx + 1 : null;
     return {
-      voice: group.voice,
-      headerRight: (
-        <span className="text-xs font-normal text-default-500">
-          {t('attendance.group_present', { attended: groupAttended, total: group.members.length })}
-        </span>
-      ),
-      rows: group.members.map((member) => {
-        const isFocused = focusedMemberId === member.id;
-        const isSaving = saving === member.id;
-        const visibleIdx = visibleMembers.findIndex((m) => m.id === member.id);
-        const shortcutNum = ctrlHeld && visibleIdx >= 0 && visibleIdx < 9 ? visibleIdx + 1 : null;
-        return {
-          key: member.id,
-          content: (
-            <div
-              data-testid="attendance-member-row"
-              data-member-id={member.id}
-              ref={(el) => {
-                if (el) rowRefs.current.set(member.id, el);
-                else rowRefs.current.delete(member.id);
-              }}
-              className={[
-                'grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_160px_110px] items-center px-4 py-3 transition-colors',
-                member.attended ? 'bg-success-50 dark:bg-success-900/20' : 'bg-content1',
-                isFocused ? 'ring-2 ring-inset ring-primary' : '',
-              ].filter(Boolean).join(' ')}
-              onClick={() => setFocusedMemberId(member.id)}
+      key: member.id,
+      content: (
+        <div
+          data-testid="attendance-member-row"
+          data-member-id={member.id}
+          ref={(el) => {
+            if (el) rowRefs.current.set(member.id, el);
+            else rowRefs.current.delete(member.id);
+          }}
+          className={[
+            'grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_160px_110px] items-center px-4 py-3 transition-colors',
+            member.attended ? 'bg-success-50 dark:bg-success-900/20' : 'bg-content1',
+            isFocused ? 'ring-2 ring-inset ring-primary' : '',
+          ].filter(Boolean).join(' ')}
+          onClick={() => setFocusedMemberId(member.id)}
+        >
+          <div className="min-w-0">
+            <p className="font-medium text-sm truncate">
+              {member.lastName}, {member.firstName}
+            </p>
+            <p className="text-xs text-default-400 sm:hidden mt-0.5">
+              {formatLastAttended(member.lastAttendedRehearsalsAgo)}
+            </p>
+          </div>
+          <p className="hidden sm:block text-sm text-default-500">
+            {formatLastAttended(member.lastAttendedRehearsalsAgo)}
+          </p>
+          <div className="flex justify-end items-center gap-1.5">
+            {shortcutNum !== null && (
+              <span className="hidden sm:block text-xs font-mono text-default-400 w-4 text-center">
+                {shortcutNum}
+              </span>
+            )}
+            <Button
+              size="sm"
+              color={member.attended ? 'success' : 'default'}
+              variant={member.attended ? 'solid' : 'bordered'}
+              isLoading={isSaving}
+              onPress={() => toggleAttendance(member.id, member.attended)}
+              className="min-w-[90px]"
             >
-              <div className="min-w-0">
-                <p className="font-medium text-sm truncate">
-                  {member.lastName}, {member.firstName}
-                </p>
-                <p className="text-xs text-default-400 sm:hidden mt-0.5">
-                  {formatLastAttended(member.lastAttendedRehearsalsAgo)}
-                </p>
-              </div>
-              <p className="hidden sm:block text-sm text-default-500">
-                {formatLastAttended(member.lastAttendedRehearsalsAgo)}
-              </p>
-              <div className="flex justify-end items-center gap-1.5">
-                {shortcutNum !== null && (
-                  <span className="hidden sm:block text-xs font-mono text-default-400 w-4 text-center">
-                    {shortcutNum}
-                  </span>
-                )}
-                <Button
-                  size="sm"
-                  color={member.attended ? 'success' : 'default'}
-                  variant={member.attended ? 'solid' : 'bordered'}
-                  isLoading={isSaving}
-                  onPress={() => toggleAttendance(member.id, member.attended)}
-                  className="min-w-[90px]"
-                >
-                  {member.attended ? t('attendance.btn_present') : t('attendance.btn_record')}
-                </Button>
-              </div>
-            </div>
-          ),
-        };
-      }),
+              {member.attended ? t('attendance.btn_present') : t('attendance.btn_record')}
+            </Button>
+          </div>
+        </div>
+      ),
     };
-  });
+  };
+
+  const noVoiceGroupEntry: VoiceGroupData[] = noVoiceMembers.length > 0 ? [{
+    voice: NO_VOICE_KEY,
+    label: t('attendance.no_voice_group'),
+    headerRight: (
+      <span className="text-xs font-normal text-default-500">
+        {t('attendance.group_present', { attended: noVoiceMembers.filter((m) => m.attended).length, total: noVoiceMembers.length })}
+      </span>
+    ),
+    rows: noVoiceMembers.map(buildMemberRow),
+  }] : [];
+
+  const voiceGroupData: VoiceGroupData[] = [
+    ...groups.map((group) => {
+      const groupAttended = group.members.filter((m) => m.attended).length;
+      return {
+        voice: group.voice,
+        headerRight: (
+          <span className="text-xs font-normal text-default-500">
+            {t('attendance.group_present', { attended: groupAttended, total: group.members.length })}
+          </span>
+        ),
+        rows: group.members.map(buildMemberRow),
+      };
+    }),
+    ...noVoiceGroupEntry,
+  ];
 
   return (
     <div className="flex flex-col gap-4 max-w-2xl">
@@ -261,15 +299,21 @@ export function AttendancePage() {
       {selectedRehearsalId && !loadingRecords && (
         <>
           <div className="flex flex-col gap-2">
-            <Input
-              ref={searchInputRef}
-              placeholder={t('attendance.filter_name')}
-              value={nameFilter}
-              onValueChange={setNameFilter}
-              onClear={() => setNameFilter('')}
-              isClearable
-              size="sm"
-            />
+            <div className="flex gap-2">
+              <Input
+                ref={searchInputRef}
+                placeholder={t('attendance.filter_name')}
+                value={nameFilter}
+                onValueChange={setNameFilter}
+                onClear={() => setNameFilter('')}
+                isClearable
+                size="sm"
+                className="flex-1"
+              />
+              <Button size="sm" color="primary" onPress={onCreateOpen}>
+                {t('members.create_new')}
+              </Button>
+            </div>
             <VoiceFilterChips
               voices={voiceNames}
               selected={voiceFilter}
@@ -304,6 +348,13 @@ export function AttendancePage() {
           </p>
         </>
       )}
+
+      <CreateMemberModal
+        isOpen={isCreateOpen}
+        onClose={onCreateClose}
+        onCreated={() => {}}
+        onCreatedWithId={handleMemberCreatedWithId}
+      />
     </div>
   );
 }

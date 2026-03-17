@@ -19,6 +19,8 @@ interface Props {
   onClose: () => void;
 }
 
+const NO_VOICE_KEY = '__no_voice__';
+
 export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose }: Props) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,78 +36,88 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose }: Prop
       const data = res.data as AttendanceRecord[];
       setRecords(data);
       const voices = [...new Set(data.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
-      collapseAll(voices);
+      const collapseKeys = data.some((r) => !r.choirVoice) ? [...voices, NO_VOICE_KEY] : voices;
+      collapseAll(collapseKeys);
       setLoading(false);
     });
   }, [isOpen, rehearsal.id]);
 
+  const noVoiceRecords = records.filter((r) => !r.choirVoice);
   const voiceNames = [...new Set(records.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
-  const voiceGroupData: VoiceGroupData[] = voiceNames
-    .map((voice) => {
-      const members = records.filter((r) => r.choirVoice?.name === voice);
-      const total = members.length;
-      const confirmedCount = members.filter((m) => m.plan === 'CONFIRMED').length;
-      const attendedCount = members.filter((m) => m.attended).length;
-      const noChoiceCount = members.filter((m) => !m.plan).length;
-      const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
-      const primaryCount = type === 'future' ? confirmedCount : attendedCount;
-      const primaryLabel = type === 'future'
-        ? t('attendance_detail.label_confirmed')
-        : t('attendance_detail.label_present');
-      return {
-        voice,
-        headerRight: (
-          <span className="flex items-center gap-3 text-xs font-normal">
-            <span className="text-success-600">
-              {primaryCount} {primaryLabel} ({pct(primaryCount)} %)
-            </span>
-            <span className="text-default-400">
-              {noChoiceCount} {t('attendance_detail.label_no_response')} ({pct(noChoiceCount)} %)
-            </span>
+
+  const buildVoiceGroup = (voice: string, members: AttendanceRecord[], label?: string): VoiceGroupData => {
+    const total = members.length;
+    const confirmedCount = members.filter((m) => m.plan === 'CONFIRMED').length;
+    const attendedCount = members.filter((m) => m.attended).length;
+    const noChoiceCount = members.filter((m) => !m.plan).length;
+    const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+    const primaryCount = type === 'future' ? confirmedCount : attendedCount;
+    const primaryLabel = type === 'future'
+      ? t('attendance_detail.label_confirmed')
+      : t('attendance_detail.label_present');
+    return {
+      voice,
+      label,
+      headerRight: (
+        <span className="flex items-center gap-3 text-xs font-normal">
+          <span className="text-success-600">
+            {primaryCount} {primaryLabel} ({pct(primaryCount)} %)
           </span>
-        ),
-        rows: members.map((m) => {
-          const absent = isUnexpectedAbsence(m);
-          return {
-            key: m.id,
-            content: (
-              <div
-                className={[
-                  'flex items-center justify-between px-4 py-2.5 text-sm',
-                  type === 'past'
-                    ? m.attended
-                      ? 'bg-success-50 text-success-800'
-                      : absent
-                      ? 'bg-danger-50 text-danger-800'
-                      : 'bg-content1 text-default-500'
-                    : 'bg-content1',
-                ].filter(Boolean).join(' ')}
-              >
-                <span className="font-medium">{m.lastName}, {m.firstName}</span>
-                {type === 'past' ? (
-                  <span className="text-xs">
-                    {m.attended
-                      ? t('attendance_detail.row_present')
-                      : m.plan === 'DECLINED'
-                      ? t('attendance_detail.row_declined')
-                      : t('attendance_detail.row_absent')}
-                  </span>
-                ) : (
-                  <span className="text-xs">
-                    {m.plan === 'CONFIRMED'
-                      ? t('attendance_detail.row_plan_confirmed')
-                      : m.plan === 'DECLINED'
-                      ? t('attendance_detail.row_plan_declined')
-                      : t('attendance_detail.row_plan_none')}
-                  </span>
-                )}
-              </div>
-            ),
-          };
-        }),
-      };
-    })
-    .filter((g) => g.rows.length > 0);
+          <span className="text-default-400">
+            {noChoiceCount} {t('attendance_detail.label_no_response')} ({pct(noChoiceCount)} %)
+          </span>
+        </span>
+      ),
+      rows: members.map((m) => {
+        const absent = isUnexpectedAbsence(m);
+        return {
+          key: m.id,
+          content: (
+            <div
+              className={[
+                'flex items-center justify-between px-4 py-2.5 text-sm',
+                type === 'past'
+                  ? m.attended
+                    ? 'bg-success-50 text-success-800'
+                    : absent
+                    ? 'bg-danger-50 text-danger-800'
+                    : 'bg-content1 text-default-500'
+                  : 'bg-content1',
+              ].filter(Boolean).join(' ')}
+            >
+              <span className="font-medium">{m.lastName}, {m.firstName}</span>
+              {type === 'past' ? (
+                <span className="text-xs">
+                  {m.attended
+                    ? t('attendance_detail.row_present')
+                    : m.plan === 'DECLINED'
+                    ? t('attendance_detail.row_declined')
+                    : t('attendance_detail.row_absent')}
+                </span>
+              ) : (
+                <span className="text-xs">
+                  {m.plan === 'CONFIRMED'
+                    ? t('attendance_detail.row_plan_confirmed')
+                    : m.plan === 'DECLINED'
+                    ? t('attendance_detail.row_plan_declined')
+                    : t('attendance_detail.row_plan_none')}
+                </span>
+              )}
+            </div>
+          ),
+        };
+      }),
+    };
+  };
+
+  const voiceGroupData: VoiceGroupData[] = [
+    ...voiceNames.map((voice) =>
+      buildVoiceGroup(voice, records.filter((r) => r.choirVoice?.name === voice)),
+    ),
+    ...(noVoiceRecords.length > 0
+      ? [buildVoiceGroup(NO_VOICE_KEY, noVoiceRecords, t('attendance.no_voice_group'))]
+      : []),
+  ].filter((g) => g.rows.length > 0);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl">
