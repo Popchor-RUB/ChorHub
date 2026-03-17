@@ -2,6 +2,8 @@ import { Card, CardBody, CardHeader, Button, Chip } from '@heroui/react';
 import type { Rehearsal, AttendanceResponse } from '../../types';
 import { attendanceApi } from '../../services/api';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateTimeLong } from '../../utils/dateFormatting';
 
 interface Props {
@@ -13,11 +15,11 @@ interface Props {
 export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props) {
   const [loading, setLoading] = useState<AttendanceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const dateLocale = useDateLocale();
 
   const hasStarted = new Date(rehearsal.date) <= new Date();
   const buttonsDisabled = readOnly || hasStarted;
-
-
 
   const setPlan = async (response: AttendanceResponse) => {
     if (buttonsDisabled) return;
@@ -32,7 +34,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
       onUpdated();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Anmeldung konnte nicht gespeichert werden');
+      setError(msg ?? t('rehearsals.error_rsvp'));
     } finally {
       setLoading(null);
     }
@@ -45,36 +47,36 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
           <h3 className="text-lg font-semibold flex-1">{rehearsal.title}</h3>
           {readOnly && (
             <Chip size="sm" variant="flat" color="default">
-              Vergangen
+              {t('rehearsals.past_chip')}
             </Chip>
           )}
         </div>
-        <p className="text-sm text-default-500">{formatDateTimeLong(rehearsal.date)}</p>
+        <p className="text-sm text-default-500">{formatDateTimeLong(rehearsal.date, dateLocale)}</p>
       </CardHeader>
       <CardBody className="flex flex-col gap-3">
         {rehearsal.description && (
           <p className="text-sm text-default-600">{rehearsal.description}</p>
         )}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Meine Anmeldung:</span>
-          {rehearsal.myPlan === 'CONFIRMED' && <Chip color="success" size="sm">Zugesagt</Chip>}
-          {rehearsal.myPlan === 'DECLINED' && <Chip color="danger" size="sm">Abgesagt</Chip>}
-          {!rehearsal.myPlan && <Chip color="default" size="sm">Keine Angabe</Chip>}
+          <span className="text-sm font-medium">{t('rehearsals.my_rsvp')}</span>
+          {rehearsal.myPlan === 'CONFIRMED' && <Chip color="success" size="sm">{t('rehearsals.confirmed')}</Chip>}
+          {rehearsal.myPlan === 'DECLINED' && <Chip color="danger" size="sm">{t('rehearsals.declined')}</Chip>}
+          {!rehearsal.myPlan && <Chip color="default" size="sm">{t('rehearsals.no_response')}</Chip>}
         </div>
         {rehearsal.myAttended != null && (
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Anwesenheit:</span>
+            <span className="text-sm font-medium">{t('rehearsals.attendance_label')}</span>
             {rehearsal.myAttended === true && (
-              <Chip color="success" size="sm" variant="flat">Anwesend</Chip>
+              <Chip color="success" size="sm" variant="flat">{t('rehearsals.present')}</Chip>
             )}
             {rehearsal.myAttended === false && rehearsal.myPlan === 'DECLINED' && (
-              <Chip color="warning" size="sm" variant="flat">Entschuldigt</Chip>
+              <Chip color="warning" size="sm" variant="flat">{t('rehearsals.excused')}</Chip>
             )}
             {rehearsal.myAttended === false && rehearsal.myPlan !== 'DECLINED' && (
-              <Chip color="danger" size="sm">Unentschuldigt gefehlt</Chip>
+              <Chip color="danger" size="sm">{t('rehearsals.unexcused_absence')}</Chip>
             )}
             {rehearsal.myAttended === null && (
-              <Chip color="default" size="sm" variant="flat">Nicht erfasst</Chip>
+              <Chip color="default" size="sm" variant="flat">{t('rehearsals.not_recorded')}</Chip>
             )}
           </div>
         )}
@@ -87,7 +89,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             onPress={() => setPlan('CONFIRMED')}
             isDisabled={buttonsDisabled}
           >
-            Ich komme
+            {t('rehearsals.attending')}
           </Button>
           <Button
             size="sm"
@@ -97,7 +99,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             onPress={() => setPlan('DECLINED')}
             isDisabled={buttonsDisabled}
           >
-            Ich komme nicht
+            {t('rehearsals.not_attending')}
           </Button>
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}

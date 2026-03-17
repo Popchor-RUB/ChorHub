@@ -7,15 +7,18 @@ import {
   Button,
 } from '@heroui/react';
 import { MusicalNoteIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { NotificationBell } from '../../components/NotificationBell';
 import { IOSInstallGuide } from '../../components/IOSInstallGuide';
 import { useIOSInstallGuide } from '../../hooks/useIOSInstallGuide';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 
 export function MemberLayout() {
   const { memberSession, logoutMember } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { visible: showGuide, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-member');
 
   const handleLogout = () => {
@@ -38,7 +41,7 @@ export function MemberLayout() {
                 isActive ? 'text-primary font-medium' : 'text-default-600'
               }
             >
-              Proben
+              {t('nav.rehearsals')}
             </NavLink>
           </NavbarItem>
           <NavbarItem>
@@ -48,7 +51,7 @@ export function MemberLayout() {
                 isActive ? 'text-primary font-medium' : 'text-default-600'
               }
             >
-              Informationen
+              {t('nav.information')}
             </NavLink>
           </NavbarItem>
         </NavbarContent>
@@ -62,11 +65,14 @@ export function MemberLayout() {
             <NotificationBell />
           </NavbarItem>
           <NavbarItem>
+            <LanguageSwitcher />
+          </NavbarItem>
+          <NavbarItem>
             <ThemeToggle />
           </NavbarItem>
           <NavbarItem>
             <Button variant="flat" size="sm" onPress={handleLogout}>
-              Abmelden
+              {t('nav.logout')}
             </Button>
           </NavbarItem>
         </NavbarContent>
@@ -81,7 +87,7 @@ export function MemberLayout() {
           }
         >
           <MusicalNoteIcon className="w-6 h-6 mb-0.5" />
-          <span>Proben</span>
+          <span>{t('nav.rehearsals')}</span>
         </NavLink>
         <NavLink
           to="/informationen"
@@ -90,7 +96,7 @@ export function MemberLayout() {
           }
         >
           <InformationCircleIcon className="w-6 h-6 mb-0.5" />
-          <span>Informationen</span>
+          <span>{t('nav.info_short')}</span>
         </NavLink>
       </nav>
 

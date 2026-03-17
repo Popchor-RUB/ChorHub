@@ -1,18 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Select, SelectItem, SelectSection, Input, Button, Spinner } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, attendanceApi } from '../../services/api';
 import type { Rehearsal, AttendanceRecord } from '../../types';
 import { VoiceGroupList, useCollapsedVoices } from '../../components/common/VoiceGroupList';
 import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
 import { useAttendanceKeyboard } from '../../hooks/useAttendanceKeyboard';
+import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateLong, formatDateNumeric } from '../../utils/dateFormatting';
-
-function formatLastAttended(ago: number | null): string {
-  if (ago === null) return 'Noch nie';
-  if (ago === 1) return 'Letzte Probe';
-  return `Vor ${ago} Proben`;
-}
 
 export function AttendancePage() {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
@@ -30,6 +26,9 @@ export function AttendancePage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const { t } = useTranslation();
+  const dateLocale = useDateLocale();
 
   // Stable refs to avoid stale closures
   const recordsRef = useRef(records);
@@ -129,7 +128,7 @@ export function AttendancePage() {
       setRecords((prev) =>
         prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),
       );
-      setSaveError('Speichern fehlgeschlagen');
+      setSaveError(t('attendance.save_failed'));
     } finally {
       setSaving(null);
     }
@@ -148,13 +147,19 @@ export function AttendancePage() {
     setFocusedMemberId,
   });
 
+  const formatLastAttended = (ago: number | null): string => {
+    if (ago === null) return t('attendance.last_never');
+    if (ago === 1) return t('attendance.last_previous');
+    return t('attendance.last_ago', { count: ago });
+  };
+
   const voiceGroupData: VoiceGroupData[] = groups.map((group) => {
     const groupAttended = group.members.filter((m) => m.attended).length;
     return {
       voice: group.voice,
       headerRight: (
         <span className="text-xs font-normal text-default-500">
-          {groupAttended} / {group.members.length} anwesend
+          {t('attendance.group_present', { attended: groupAttended, total: group.members.length })}
         </span>
       ),
       rows: group.members.map((member) => {
@@ -204,7 +209,7 @@ export function AttendancePage() {
                   onPress={() => toggleAttendance(member.id, member.attended)}
                   className="min-w-[90px]"
                 >
-                  {member.attended ? '✓ Anwesend' : '+ Erfassen'}
+                  {member.attended ? t('attendance.btn_present') : t('attendance.btn_record')}
                 </Button>
               </div>
             </div>
@@ -216,29 +221,29 @@ export function AttendancePage() {
 
   return (
     <div className="flex flex-col gap-4 max-w-2xl">
-      <h1 className="text-2xl font-bold">Anwesenheit erfassen</h1>
+      <h1 className="text-2xl font-bold">{t('attendance.record_title')}</h1>
 
       <div className="flex flex-col gap-2">
         <Select
-          label="Probe"
-          placeholder="Probe auswählen..."
+          label={t('attendance.rehearsal_label')}
+          placeholder={t('attendance.select_rehearsal')}
           selectedKeys={selectedRehearsalId ? [selectedRehearsalId] : []}
           onSelectionChange={(keys) => {
             const id = Array.from(keys)[0] as string;
             setSelectedRehearsalId(id ?? '');
           }}
         >
-          <SelectSection showDivider title="Kommende Proben">
+          <SelectSection showDivider title={t('attendance.upcoming_rehearsals')}>
             {futureRehearsals.map((r) => (
-              <SelectItem key={r.id} textValue={`${formatDateNumeric(r.date)} – ${r.title}`}>
-                {formatDateNumeric(r.date)} – {r.title}
+              <SelectItem key={r.id} textValue={`${formatDateNumeric(r.date, dateLocale)} – ${r.title}`}>
+                {formatDateNumeric(r.date, dateLocale)} – {r.title}
               </SelectItem>
             ))}
           </SelectSection>
-          <SelectSection title="Vergangene Proben">
+          <SelectSection title={t('attendance.past_rehearsals')}>
             {pastRehearsals.map((r) => (
-              <SelectItem key={r.id} textValue={`${formatDateNumeric(r.date)} – ${r.title}`}>
-                {formatDateNumeric(r.date)} – {r.title}
+              <SelectItem key={r.id} textValue={`${formatDateNumeric(r.date, dateLocale)} – ${r.title}`}>
+                {formatDateNumeric(r.date, dateLocale)} – {r.title}
               </SelectItem>
             ))}
           </SelectSection>
@@ -246,9 +251,8 @@ export function AttendancePage() {
 
         {selectedRehearsal && !loadingRecords && (
           <p className="text-sm text-default-500 px-1">
-            {formatDateLong(selectedRehearsal.date)} ·{' '}
-            <span className="font-medium text-success-600">{attendedCount}</span> von{' '}
-            {records.length} anwesend
+            {formatDateLong(selectedRehearsal.date, dateLocale)} ·{' '}
+            {t('attendance.present_of', { attended: attendedCount, total: records.length })}
           </p>
         )}
         {loadingRecords && <Spinner size="sm" />}
@@ -259,7 +263,7 @@ export function AttendancePage() {
           <div className="flex flex-col gap-2">
             <Input
               ref={searchInputRef}
-              placeholder="Name filtern…"
+              placeholder={t('attendance.filter_name')}
               value={nameFilter}
               onValueChange={setNameFilter}
               onClear={() => setNameFilter('')}
@@ -283,20 +287,20 @@ export function AttendancePage() {
             onToggle={toggleVoiceCollapse}
             header={
               <div className="hidden sm:grid sm:grid-cols-[1fr_160px_110px] px-4 py-2 bg-default-50 border-b border-divider text-xs font-semibold text-default-500 uppercase tracking-wide">
-                <span>Name</span>
-                <span>Letzte Probe</span>
-                <span className="text-right">Anwesenheit</span>
+                <span>{t('members.col_name')}</span>
+                <span>{t('attendance.col_last_rehearsal')}</span>
+                <span className="text-right">{t('attendance.col_attendance')}</span>
               </div>
             }
             emptyState={
               <p className="text-center text-default-400 py-10 text-sm">
-                Keine Mitglieder gefunden
+                {t('attendance.no_members')}
               </p>
             }
           />
 
           <p className="hidden sm:block text-xs text-default-400 text-center">
-            ↑↓ navigieren · Leertaste/Enter umschalten · / suchen · Strg+1–9 erfassen
+            {t('attendance.keyboard_hint')}
           </p>
         </>
       )}

@@ -16,29 +16,34 @@ import {
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 import type { ComponentType, SVGProps } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { useIdleTimeout } from '../../hooks/useIdleTimeout';
+import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
-const navItems: {
+type NavItemDef = {
   to: string;
-  label: string;
-  mobileLabel: string;
+  labelKey: string;
+  mobileLabelKey: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
-}[] = [
-  { to: '/admin/mitglieder', label: 'Mitglieder', mobileLabel: 'Mitglieder', icon: UsersIcon },
-  { to: '/admin/proben', label: 'Proben', mobileLabel: 'Proben', icon: MusicalNoteIcon },
-  { to: '/admin/anwesenheit', label: 'Anwesenheit', mobileLabel: 'Anwesenheit', icon: CheckCircleIcon },
-  { to: '/admin/informationen', label: 'Informationen', mobileLabel: 'Infos', icon: InformationCircleIcon },
-  { to: '/admin/benachrichtigungen', label: 'Benachrichtigungen', mobileLabel: 'Mitteil.', icon: BellIcon },
-  { to: '/admin/einstellungen', label: 'Einstellungen', mobileLabel: 'Einst.', icon: Cog6ToothIcon },
+};
+
+const navItemDefs: NavItemDef[] = [
+  { to: '/admin/mitglieder', labelKey: 'nav.members', mobileLabelKey: 'nav.members', icon: UsersIcon },
+  { to: '/admin/proben', labelKey: 'nav.rehearsals', mobileLabelKey: 'nav.rehearsals', icon: MusicalNoteIcon },
+  { to: '/admin/anwesenheit', labelKey: 'nav.attendance', mobileLabelKey: 'nav.attendance', icon: CheckCircleIcon },
+  { to: '/admin/informationen', labelKey: 'nav.information', mobileLabelKey: 'nav.info_short', icon: InformationCircleIcon },
+  { to: '/admin/benachrichtigungen', labelKey: 'nav.notifications', mobileLabelKey: 'nav.notifications_short', icon: BellIcon },
+  { to: '/admin/einstellungen', labelKey: 'nav.settings', mobileLabelKey: 'nav.settings_short', icon: Cog6ToothIcon },
 ];
 
 export function AdminLayout() {
   const { adminSession, logoutAdmin } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleLogout = () => {
     logoutAdmin();
@@ -58,11 +63,11 @@ export function AdminLayout() {
         <NavbarBrand>
           <span className="font-bold text-xl">🎵 ChorHub</span>
           <span className="ml-2 text-xs bg-warning-100 text-warning-700 px-2 py-0.5 rounded-full">
-            Admin
+            {t('nav.admin_badge')}
           </span>
         </NavbarBrand>
         <NavbarContent className="hidden md:flex gap-4" justify="center">
-          {navItems.map((item) => (
+          {navItemDefs.map((item) => (
             <NavbarItem key={item.to}>
               <NavLink
                 to={item.to}
@@ -70,7 +75,7 @@ export function AdminLayout() {
                   isActive ? 'text-primary font-medium' : 'text-default-600 hover:text-default-900'
                 }
               >
-                {item.label}
+                {t(item.labelKey)}
               </NavLink>
             </NavbarItem>
           ))}
@@ -80,11 +85,14 @@ export function AdminLayout() {
             <span className="text-sm text-default-500 hidden sm:block">{adminSession?.username}</span>
           </NavbarItem>
           <NavbarItem>
+            <LanguageSwitcher />
+          </NavbarItem>
+          <NavbarItem>
             <ThemeToggle />
           </NavbarItem>
           <NavbarItem>
             <Button variant="flat" size="sm" onPress={handleLogout}>
-              Abmelden
+              {t('nav.logout')}
             </Button>
           </NavbarItem>
         </NavbarContent>
@@ -95,7 +103,7 @@ export function AdminLayout() {
         className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-divider flex z-50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {navItems.map((item) => (
+        {navItemDefs.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -104,7 +112,7 @@ export function AdminLayout() {
             }
           >
             <item.icon className="w-6 h-6 mb-0.5" />
-            <span>{item.mobileLabel}</span>
+            <span>{t(item.mobileLabelKey)}</span>
           </NavLink>
         ))}
       </nav>

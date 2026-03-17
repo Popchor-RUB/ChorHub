@@ -1,6 +1,24 @@
 import { test, expect } from '@playwright/test';
+import { getAdminToken, createMember, deleteMember, getMemberRehearsals, getAllRehearsals } from '../helpers/api';
 
 // Runs in the 'admin-auth' project — storageState: e2e/.auth/admin.json
+// Serial mode prevents parallel create/delete tests from interfering with row-count assertions
+test.describe.configure({ mode: 'serial' });
+
+const TEST_EMAILS = ['eva.braun.e2e@test.de', 'plan.test.e2e@test.de'];
+
+// Clean up any leftover test members before the suite runs (handles previous failed runs)
+test.beforeAll(async () => {
+  const token = await getAdminToken();
+  const members = await fetch('http://localhost:3000/admin/members', {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((r) => r.json()) as { id: string; email: string }[];
+  for (const m of members) {
+    if (TEST_EMAILS.includes(m.email)) {
+      await deleteMember(token, m.id).catch(() => {});
+    }
+  }
+});
 
 test.describe('Admin member overview', () => {
   test.beforeEach(async ({ page }) => {
@@ -137,5 +155,119 @@ test.describe('Admin member overview', () => {
     // Clear name filter restores Sopran-only view
     await page.getByPlaceholder('Name suchen…').clear();
     await expect(page.getByRole('row')).toHaveCount(53);
+  });
+});
+
+test.describe('Create member modal', () => {
+  let adminToken: string;
+  let createdMemberId: string | undefined;
+
+  test.beforeAll(async () => {
+    adminToken = await getAdminToken();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    createdMemberId = undefined;
+    await page.goto('/admin/mitglieder');
+    await expect(page.getByRole('heading', { name: 'Mitglieder' })).toBeVisible();
+    await expect(page.getByRole('row').nth(1)).toBeVisible({ timeout: 15_000 });
+  });
+
+  test.afterEach(async () => {
+    if (createdMemberId) {
+      await deleteMember(adminToken, createdMemberId).catch(() => {});
+    }
+  });
+
+  test('"+ Neu" button opens the create member modal', async ({ page }) => {
+    await page.getByRole('button', { name: '+ Neu' }).click();
+    const modal = page.getByRole('dialog');
+    await expect(modal).toBeVisible();
+    await expect(modal.getByText('Mitglied anlegen')).toBeVisible();
+  });
+
+  test('modal can be closed with Abbrechen', async ({ page }) => {
+    await page.getByRole('button', { name: '+ Neu' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Abbrechen' }).click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+  });
+
+  test('create button is disabled until all required fields are filled', async ({ page }) => {
+    await page.getByRole('button', { name: '+ Neu' }).click();
+    const submitBtn = page.getByRole('button', { name: 'Anlegen & E-Mail senden' });
+    await expect(submitBtn).toBeDisabled();
+
+    await page.getByLabel('Vorname').fill('Eva');
+    await expect(submitBtn).toBeDisabled();
+
+    await page.getByLabel('Nachname').fill('Braun');
+    await expect(submitBtn).toBeDisabled();
+
+    await page.getByLabel('E-Mail').fill('eva@test.de');
+    await expect(submitBtn).toBeEnabled();
+  });
+
+  test('successfully creates a new member and shows it in the table', async ({ page }) => {
+    const initialRowCount = await page.getByRole('row').count();
+
+    await page.getByRole('button', { name: '+ Neu' }).click();
+    const modal = page.getByRole('dialog');
+
+    await modal.getByLabel('Vorname').fill('Eva');
+    await modal.getByLabel('Nachname').fill('Braun');
+    await modal.getByLabel('E-Mail').fill('eva.braun.e2e@test.de');
+    await modal.getByRole('button', { name: 'Anlegen & E-Mail senden' }).click();
+
+    await expect(modal).not.toBeVisible({ timeout: 10_000 });
+
+    await expect(page.getByRole('row')).toHaveCount(initialRowCount + 1, { timeout: 10_000 });
+
+    // Fetch the created id for cleanup
+    const members = await fetch('http://localhost:3000/admin/members', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    }).then((r) => r.json()) as { id: string; email: string }[];
+    const created = members.find((m) => m.email === 'eva.braun.e2e@test.de');
+    if (created) createdMemberId = created.id;
+  });
+
+  test('shows error when email is already taken', async ({ page }) => {
+    // Get an existing member's email
+    const members = await fetch('http://localhost:3000/admin/members', {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    }).then((r) => r.json()) as { email: string }[];
+    const existingEmail = members[0].email;
+
+    await page.getByRole('button', { name: '+ Neu' }).click();
+    const modal = page.getByRole('dialog');
+
+    await modal.getByLabel('Vorname').fill('Test');
+    await modal.getByLabel('Nachname').fill('User');
+    await modal.getByLabel('E-Mail').fill(existingEmail);
+    await modal.getByRole('button', { name: 'Anlegen & E-Mail senden' }).click();
+
+    await expect(modal.getByText('Diese E-Mail-Adresse ist bereits vergeben.')).toBeVisible();
+    await expect(modal).toBeVisible();
+  });
+
+  test('new member has DECLINED plans for all past rehearsals', async () => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const member = await createMember(adminToken, {
+      firstName: 'Plan',
+      lastName: 'Test',
+      email: 'plan.test.e2e@test.de',
+    });
+    createdMemberId = member.id;
+
+    const allRehearsals = await getAllRehearsals(adminToken);
+    const pastRehearsals = allRehearsals.filter((r) => new Date(r.date) < now);
+
+    const memberRehearsals = await getMemberRehearsals(adminToken, member.id);
+    const declinedPlans = memberRehearsals.filter((r) => r.plan === 'DECLINED');
+
+    expect(declinedPlans).toHaveLength(pastRehearsals.length);
+    expect(memberRehearsals.filter((r) => r.plan !== 'DECLINED' && r.plan !== null)).toHaveLength(0);
   });
 });

@@ -13,9 +13,11 @@ import {
   useDisclosure,
 } from '@heroui/react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { adminMembersApi } from '../../services/api';
 import type { MemberOverview } from '../../types';
 import { MemberDetailModal } from '../../components/member/MemberDetailModal';
+import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
 
 export function MemberOverviewPage() {
@@ -26,7 +28,9 @@ export function MemberOverviewPage() {
   const [voiceFilter, setVoiceFilter] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<MemberOverview | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const voiceNames = [...new Map(
     members
@@ -82,23 +86,26 @@ export function MemberOverviewPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Mitglieder</h1>
+        <h1 className="text-2xl font-bold">{t('members.title')}</h1>
         <div className="flex gap-2 shrink-0">
           <Button size="sm" variant="flat" isLoading={exporting} onPress={handleExport}>
-            Excel exportieren
+            {t('members.export_excel')}
           </Button>
           <Button
-            color="primary"
             size="sm"
+            variant="flat"
             onPress={() => navigate('/admin/mitglieder/importieren')}
           >
-            CSV importieren
+            {t('members.import_csv')}
+          </Button>
+          <Button color="primary" size="sm" onPress={onCreateOpen}>
+            {t('members.create_new')}
           </Button>
         </div>
       </div>
       <Input
         size="sm"
-        placeholder="Name suchen…"
+        placeholder={t('members.search_placeholder')}
         value={search}
         onValueChange={setSearch}
         isClearable
@@ -116,7 +123,7 @@ export function MemberOverviewPage() {
         </div>
       ) : (
         <Table
-          aria-label="Mitgliederübersicht"
+          aria-label={t('members.table_aria')}
           isStriped
           className="[&_tr]:cursor-pointer"
           onRowAction={(key) => {
@@ -125,13 +132,13 @@ export function MemberOverviewPage() {
           }}
         >
           <TableHeader>
-            <TableColumn>Name</TableColumn>
-            <TableColumn>E-Mail</TableColumn>
-            <TableColumn>Stimme</TableColumn>
-            <TableColumn>Proben</TableColumn>
-            <TableColumn>Unentsch. gefehlt</TableColumn>
+            <TableColumn>{t('members.col_name')}</TableColumn>
+            <TableColumn>{t('members.col_email')}</TableColumn>
+            <TableColumn>{t('members.col_voice')}</TableColumn>
+            <TableColumn>{t('members.col_rehearsals')}</TableColumn>
+            <TableColumn>{t('members.col_unexcused')}</TableColumn>
           </TableHeader>
-          <TableBody emptyContent="Keine Mitglieder vorhanden.">
+          <TableBody emptyContent={t('members.no_members')}>
             {filteredMembers.map((m) => (
               <TableRow key={m.id}>
                 <TableCell>{m.lastName}, {m.firstName}</TableCell>
@@ -160,6 +167,12 @@ export function MemberOverviewPage() {
       {selectedMember && (
         <MemberDetailModal member={selectedMember} isOpen={isOpen} onClose={onClose} />
       )}
+
+      <CreateMemberModal
+        isOpen={isCreateOpen}
+        onClose={onCreateClose}
+        onCreated={() => adminMembersApi.list().then((res) => setMembers(res.data as MemberOverview[]))}
+      />
     </div>
   );
 }

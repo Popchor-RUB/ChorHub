@@ -13,6 +13,7 @@ import {
 import { I18nProvider } from '@react-aria/i18n';
 import { CalendarDateTime } from '@internationalized/date';
 import type { DateValue } from '@internationalized/date';
+import { useTranslation } from 'react-i18next';
 import { rehearsalsApi } from '../../services/api';
 import type { Rehearsal } from '../../types';
 
@@ -28,6 +29,8 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const { t, i18n } = useTranslation();
+  const i18nLocale = i18n.language.startsWith('en') ? 'en-GB' : 'de-DE';
 
   useEffect(() => {
     if (isOpen) {
@@ -76,11 +79,11 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <ModalContent>
-        <ModalHeader>{rehearsal ? 'Probe bearbeiten' : 'Neue Probe'}</ModalHeader>
+        <ModalHeader>{rehearsal ? t('rehearsals.form_title_edit') : t('rehearsals.form_title_new')}</ModalHeader>
         <ModalBody className="pb-2 flex flex-col gap-3">
-          <I18nProvider locale="de-DE">
+          <I18nProvider locale={i18nLocale}>
             <DatePicker
-              label="Datum und Uhrzeit"
+              label={t('rehearsals.date_time')}
               value={date}
               onChange={setDate}
               showMonthAndYearPickers
@@ -91,21 +94,21 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
             />
           </I18nProvider>
           <Input
-            label="Titel"
+            label={t('common.title')}
             value={title}
             onValueChange={setTitle}
             isRequired
           />
           <Textarea
-            label="Beschreibung"
+            label={t('common.description')}
             value={description}
             onValueChange={setDescription}
-            placeholder="Optional"
+            placeholder={t('common.optional')}
           />
         </ModalBody>
         <ModalFooter>
           <Button variant="flat" onPress={onClose}>
-            Abbrechen
+            {t('common.cancel')}
           </Button>
           <Button
             color="primary"
@@ -113,7 +116,7 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
             onPress={handleSave}
             isDisabled={!date || !title}
           >
-            Speichern
+            {t('common.save')}
           </Button>
         </ModalFooter>
       </ModalContent>

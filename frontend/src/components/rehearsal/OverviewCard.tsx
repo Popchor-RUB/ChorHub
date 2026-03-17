@@ -2,6 +2,8 @@ import { Card, CardBody, Button, Chip } from '@heroui/react';
 import type { RehearsalOverview } from '../../types';
 import { EditIcon } from '../icons/EditIcon';
 import { TrashIcon } from '../icons/TrashIcon';
+import { useTranslation } from 'react-i18next';
+import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateTimeShort } from '../../utils/dateFormatting';
 
 interface Props {
@@ -13,6 +15,8 @@ interface Props {
 }
 
 export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
+  const { t } = useTranslation();
+  const dateLocale = useDateLocale();
   const total = type === 'future' ? item.totalConfirmed ?? 0 : item.totalAttended ?? 0;
   return (
     <Card
@@ -24,17 +28,20 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <p className="font-semibold">{item.title}</p>
-            <p className="text-sm text-default-500">{formatDateTimeShort(item.date)}</p>
+            <p className="text-sm text-default-500">{formatDateTimeShort(item.date, dateLocale)}</p>
           </div>
           <div className="flex items-center gap-1">
             <Chip color={type === 'future' ? 'primary' : 'success'} variant="flat" size="lg">
-              {total} {type === 'future' ? 'zugesagt' : 'anwesend'}
+              {total}{' '}
+              {type === 'future'
+                ? t('attendance_detail.label_confirmed')
+                : t('attendance_detail.label_present')}
             </Chip>
             <Button
               isIconOnly
               size="sm"
               variant="light"
-              aria-label="Probe bearbeiten"
+              aria-label={t('rehearsals.edit')}
               onPress={onEdit}
             >
               <EditIcon />
@@ -44,7 +51,7 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
               size="sm"
               variant="light"
               color="danger"
-              aria-label="Probe löschen"
+              aria-label={t('rehearsals.delete')}
               onPress={onDelete}
             >
               <TrashIcon />

@@ -46,6 +46,93 @@ describe('AdminService', () => {
     service = module.get(AdminService);
   });
 
+  describe('createMember', () => {
+    const dto = { firstName: 'Peter', lastName: 'Meier', email: 'peter@choir.de' };
+    const createdMember = mockMember({ email: 'peter@choir.de' });
+    const pastRehearsal = { id: 'r-past-1' };
+
+    beforeEach(() => {
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      prismaMock.member.create.mockResolvedValue(createdMember);
+      prismaMock.rehearsal.findMany.mockResolvedValue([pastRehearsal] as any);
+      prismaMock.attendancePlan.createMany.mockResolvedValue({ count: 1 });
+      prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
+    });
+
+    it('creates member with provided fields', async () => {
+      await service.createMember(dto);
+      expect(prismaMock.member.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            firstName: 'Peter',
+            lastName: 'Meier',
+            email: 'peter@choir.de',
+          }),
+        }),
+      );
+    });
+
+    it('sends invite email to the new member', async () => {
+      await service.createMember(dto);
+      expect(mailService.sendMemberInvite).toHaveBeenCalledWith(
+        createdMember,
+        expect.stringContaining('/auth/verify?token='),
+      );
+    });
+
+    it('creates DECLINED attendance plans for all past rehearsals', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        { id: 'r-1' }, { id: 'r-2' },
+      ] as any);
+      prismaMock.attendancePlan.createMany.mockResolvedValue({ count: 2 });
+
+      await service.createMember(dto);
+
+      expect(prismaMock.attendancePlan.createMany).toHaveBeenCalledWith({
+        data: [
+          { memberId: createdMember.id, rehearsalId: 'r-1', response: 'DECLINED' },
+          { memberId: createdMember.id, rehearsalId: 'r-2', response: 'DECLINED' },
+        ],
+      });
+    });
+
+    it('skips createMany when there are no past rehearsals', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([]);
+
+      await service.createMember(dto);
+
+      expect(prismaMock.attendancePlan.createMany).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when email is already taken', async () => {
+      prismaMock.member.findUnique.mockResolvedValue(createdMember);
+
+      await expect(service.createMember(dto)).rejects.toThrow('E-Mail-Adresse bereits vergeben');
+    });
+
+    it('throws NotFoundException when voiceId does not exist', async () => {
+      prismaMock.choirVoice.findUnique.mockResolvedValue(null);
+
+      await expect(service.createMember({ ...dto, voiceId: 'unknown-voice' })).rejects.toThrow(
+        'Stimmlage nicht gefunden',
+      );
+      expect(prismaMock.member.create).not.toHaveBeenCalled();
+    });
+
+    it('creates member with a valid voiceId', async () => {
+      const voice = { id: 'v1', name: 'Sopran', sortOrder: 1, createdAt: new Date() };
+      prismaMock.choirVoice.findUnique.mockResolvedValue(voice);
+
+      await service.createMember({ ...dto, voiceId: 'v1' });
+
+      expect(prismaMock.member.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ choirVoiceId: 'v1' }),
+        }),
+      );
+    });
+  });
+
   describe('importMembersFromCsv', () => {
     const mockVoices = [
       { id: 'v1', name: 'Sopran', sortOrder: 1, createdAt: new Date() },

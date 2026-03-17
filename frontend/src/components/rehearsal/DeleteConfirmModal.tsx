@@ -7,6 +7,7 @@ import {
   ModalFooter,
   Button,
 } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { rehearsalsApi } from '../../services/api';
 import type { Rehearsal } from '../../types';
 
@@ -19,6 +20,7 @@ interface Props {
 
 export function DeleteConfirmModal({ rehearsal, isOpen, onClose, onDeleted }: Props) {
   const [deleting, setDeleting] = useState(false);
+  const { t } = useTranslation();
 
   const handleDelete = async () => {
     if (!rehearsal) return;
@@ -35,18 +37,20 @@ export function DeleteConfirmModal({ rehearsal, isOpen, onClose, onDeleted }: Pr
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="sm">
       <ModalContent>
-        <ModalHeader>Probe löschen</ModalHeader>
+        <ModalHeader>{t('rehearsals.delete')}</ModalHeader>
         <ModalBody className="pb-2">
-          <p>
-            Soll die Probe <strong>{rehearsal?.title}</strong> wirklich gelöscht werden?
-          </p>
+          <p
+            dangerouslySetInnerHTML={{
+              __html: t('rehearsals.confirm_delete', { title: rehearsal?.title ?? '' }),
+            }}
+          />
         </ModalBody>
         <ModalFooter>
           <Button variant="flat" onPress={onClose}>
-            Abbrechen
+            {t('common.cancel')}
           </Button>
           <Button color="danger" isLoading={deleting} onPress={handleDelete}>
-            Löschen
+            {t('common.delete')}
           </Button>
         </ModalFooter>
       </ModalContent>

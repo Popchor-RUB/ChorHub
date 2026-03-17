@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Tabs, Tab, Spinner, Button, useDisclosure } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { attendanceApi, rehearsalsApi } from '../../services/api';
 import type { RehearsalOverview, Rehearsal } from '../../types';
 import { AttendanceDetailModal } from '../../components/rehearsal/AttendanceDetailModal';
@@ -12,6 +13,7 @@ export function RehearsalOverviewPage() {
   const [past, setPast] = useState<RehearsalOverview[]>([]);
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
 
   const [selectedRehearsal, setSelectedRehearsal] = useState<RehearsalOverview | null>(null);
   const [selectedType, setSelectedType] = useState<'future' | 'past'>('past');
@@ -65,17 +67,17 @@ export function RehearsalOverviewPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Probenübersicht</h1>
+        <h1 className="text-2xl font-bold">{t('rehearsals.overview_title')}</h1>
         <Button color="primary" onPress={openCreate}>
-          + Neue Probe
+          {t('rehearsals.new')}
         </Button>
       </div>
 
-      <Tabs aria-label="Probenübersicht">
-        <Tab key="future" title={`Bevorstehend (${future.length})`}>
+      <Tabs aria-label={t('rehearsals.overview_title')}>
+        <Tab key="future" title={t('rehearsals.upcoming_count', { count: future.length })}>
           <div className="flex flex-col gap-3 mt-4">
             {future.length === 0 ? (
-              <p className="text-default-500">Keine bevorstehenden Proben.</p>
+              <p className="text-default-500">{t('rehearsals.no_upcoming_admin')}</p>
             ) : (
               future.map((r) => (
                 <OverviewCard
@@ -90,10 +92,10 @@ export function RehearsalOverviewPage() {
             )}
           </div>
         </Tab>
-        <Tab key="past" title={`Vergangen (${past.length})`}>
+        <Tab key="past" title={t('rehearsals.past_count', { count: past.length })}>
           <div className="flex flex-col gap-3 mt-4">
             {past.length === 0 ? (
-              <p className="text-default-500">Keine vergangenen Proben vorhanden.</p>
+              <p className="text-default-500">{t('rehearsals.no_past_admin')}</p>
             ) : (
               past.map((r) => (
                 <OverviewCard

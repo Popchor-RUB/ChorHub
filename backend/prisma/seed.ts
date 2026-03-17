@@ -215,6 +215,20 @@ async function main() {
   }
   console.log(`   ${plans.length} attendance plans created.`);
 
+  // Clear upcoming plans for the first alphabetical member so E2E tests always
+  // start with a clean slate for that member (no pre-seeded CONFIRMED plan).
+  const firstMember = await prisma.member.findFirst({
+    orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+  });
+  if (firstMember) {
+    await prisma.attendancePlan.deleteMany({
+      where: {
+        memberId: firstMember.id,
+        rehearsalId: { in: upcomingRehearsals.map(r => r.id) },
+      },
+    });
+  }
+
   // ── Attendance records (past rehearsals only) ─────────────────────────────
   console.log('✅ Generating attendance records for past rehearsals…');
   const records: { memberId: string; rehearsalId: string }[] = [];

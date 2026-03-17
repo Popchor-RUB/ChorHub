@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Checkbox, Spinner } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { generalInfoApi } from '../../services/api';
 import { MarkdownEditor } from '../../components/info/MarkdownEditor';
 
@@ -9,6 +10,7 @@ export function GeneralInfoPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [sendPush, setSendPush] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     generalInfoApi.get().then((res) => {
@@ -37,11 +39,11 @@ export function GeneralInfoPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Allgemeine Informationen</h1>
-        {saved && <span className="text-success text-sm font-medium">Gespeichert ✓</span>}
+        <h1 className="text-2xl font-bold">{t('info.title')}</h1>
+        {saved && <span className="text-success text-sm font-medium">{t('common.saved')}</span>}
       </div>
       <p className="text-sm text-default-500">
-        Diese Informationen werden allen Mitgliedern auf der Startseite angezeigt.
+        {t('info.description')}
       </p>
       <MarkdownEditor
         value={content}
@@ -50,7 +52,7 @@ export function GeneralInfoPage() {
         saving={saving}
       />
       <Checkbox isSelected={sendPush} onValueChange={setSendPush}>
-        Push-Benachrichtigung an alle Mitglieder senden
+        {t('info.send_push')}
       </Checkbox>
     </div>
   );

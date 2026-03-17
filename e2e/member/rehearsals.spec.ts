@@ -119,6 +119,7 @@ test.describe('Member rehearsal page', () => {
     // Step 2: Open admin context
     const adminContext = await browser.newContext({
       storageState: 'e2e/.auth/admin.json',
+      locale: 'de-DE',
     });
     const adminPage = await adminContext.newPage();
 

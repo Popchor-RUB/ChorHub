@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardBody, CardHeader, Input, Button, Divider } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { startAuthentication } from '@simplewebauthn/browser';
@@ -13,6 +14,7 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const { setAdminSession } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +25,7 @@ export function LoginPage() {
       setAdminSession({ token: res.data.token, username });
       navigate('/admin/mitglieder', { replace: true });
     } catch {
-      setError('Ungültige Anmeldedaten.');
+      setError(t('auth.error_invalid_credentials'));
     } finally {
       setLoading(false);
     }
@@ -31,7 +33,7 @@ export function LoginPage() {
 
   const handlePasskey = async () => {
     if (!username) {
-      setError('Bitte Benutzername eingeben.');
+      setError(t('auth.error_enter_username'));
       return;
     }
     setPasskeyLoading(true);
@@ -44,7 +46,11 @@ export function LoginPage() {
       setAdminSession({ token: verifyRes.data.token, username });
       navigate('/admin/mitglieder', { replace: true });
     } catch (e: any) {
-      setError(e.message?.includes('options') ? 'Passkey nicht gefunden.' : 'Passkey-Anmeldung fehlgeschlagen.');
+      setError(
+        e.message?.includes('options')
+          ? t('auth.error_passkey_not_found')
+          : t('auth.error_passkey_failed'),
+      );
     } finally {
       setPasskeyLoading(false);
     }
@@ -54,20 +60,20 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-default-50">
       <Card className="w-full max-w-md">
         <CardHeader className="flex flex-col items-start gap-1 pb-0">
-          <h1 className="text-2xl font-bold">ChorHub Admin</h1>
-          <p className="text-default-500 text-sm">Administratoren-Anmeldung</p>
+          <h1 className="text-2xl font-bold">{t('auth.admin_title')}</h1>
+          <p className="text-default-500 text-sm">{t('auth.admin_subtitle')}</p>
         </CardHeader>
         <CardBody>
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <Input
-              label="Benutzername"
+              label={t('auth.username')}
               value={username}
               onValueChange={setUsername}
               isRequired
               autoComplete="username"
             />
             <Input
-              label="Passwort"
+              label={t('auth.password')}
               type="password"
               value={password}
               onValueChange={setPassword}
@@ -75,7 +81,7 @@ export function LoginPage() {
             />
             {error && <p className="text-danger text-sm">{error}</p>}
             <Button type="submit" color="primary" isLoading={loading} fullWidth>
-              Anmelden
+              {t('auth.login')}
             </Button>
           </form>
 
@@ -88,7 +94,7 @@ export function LoginPage() {
             fullWidth
             startContent={<span>🔑</span>}
           >
-            Mit Passkey anmelden
+            {t('auth.login_with_passkey')}
           </Button>
         </CardBody>
       </Card>

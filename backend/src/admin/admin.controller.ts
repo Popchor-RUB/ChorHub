@@ -1,6 +1,9 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Post,
   Query,
   Param,
@@ -13,11 +16,17 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminService } from './admin.service';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
+import { CreateMemberDto } from './dto/create-member.dto';
 
 @Controller('admin')
 @UseGuards(JwtAdminGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
+
+  @Post('members')
+  createMember(@Body() dto: CreateMemberDto) {
+    return this.adminService.createMember(dto);
+  }
 
   @Post('members/import')
   @UseInterceptors(FileInterceptor('file'))
@@ -43,6 +52,12 @@ export class AdminController {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       disposition: 'attachment; filename="mitglieder-export.xlsx"',
     });
+  }
+
+  @Delete('members/:id')
+  @HttpCode(204)
+  deleteMember(@Param('id') id: string) {
+    return this.adminService.deleteMember(id);
   }
 
   @Get('members/:id/rehearsals')

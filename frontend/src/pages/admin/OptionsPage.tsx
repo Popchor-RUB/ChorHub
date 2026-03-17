@@ -10,6 +10,7 @@ import {
   Spinner,
   useDisclosure,
 } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { choirVoicesApi } from '../../services/api';
 import type { ChoirVoice } from '../../types';
 
@@ -22,6 +23,7 @@ export function OptionsPage() {
   const [editName, setEditName] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const addModal = useDisclosure();
   const deleteModal = useDisclosure();
@@ -45,7 +47,7 @@ export function OptionsPage() {
       await load();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
-        ?? 'Fehler beim Erstellen';
+        ?? t('voice.error_create');
       setError(msg);
     } finally {
       setAdding(false);
@@ -67,7 +69,7 @@ export function OptionsPage() {
       await load();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
-        ?? 'Fehler beim Umbenennen';
+        ?? t('voice.error_rename');
       setError(msg);
     }
   };
@@ -94,7 +96,7 @@ export function OptionsPage() {
       await load();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
-        ?? 'Fehler beim Löschen';
+        ?? t('voice.error_delete');
       setError(msg);
       deleteModal.onClose();
     }
@@ -104,17 +106,17 @@ export function OptionsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Einstellungen</h1>
+      <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
 
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Stimmlagen</h2>
+          <h2 className="text-lg font-semibold">{t('voice.section_title')}</h2>
           <Button
             color="primary"
             size="sm"
             onPress={() => { setNewName(''); setError(null); addModal.onOpen(); }}
           >
-            Stimmlage hinzufügen
+            {t('voice.add')}
           </Button>
         </div>
 
@@ -127,7 +129,7 @@ export function OptionsPage() {
         {loading ? (
           <div className="flex justify-center pt-8"><Spinner /></div>
         ) : voices.length === 0 ? (
-          <p className="text-default-400 text-sm">Keine Stimmlagen vorhanden.</p>
+          <p className="text-default-400 text-sm">{t('voice.no_voices_admin')}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {voices.map((voice, idx) => (
@@ -152,7 +154,8 @@ export function OptionsPage() {
                     {voice.name}
                     {voice.memberCount !== undefined && (
                       <span className="text-xs text-default-400 font-normal">
-                        {voice.memberCount} {voice.memberCount === 1 ? 'Mitglied' : 'Mitglieder'}
+                        {voice.memberCount}{' '}
+                        {t(voice.memberCount === 1 ? 'common.member_one' : 'common.member_other')}
                       </span>
                     )}
                   </span>
@@ -162,15 +165,15 @@ export function OptionsPage() {
                   {editingId === voice.id ? (
                     <>
                       <Button size="sm" color="primary" onPress={() => handleRenameCommit(voice.id)}>
-                        Speichern
+                        {t('common.save')}
                       </Button>
                       <Button size="sm" variant="flat" onPress={() => setEditingId(null)}>
-                        Abbrechen
+                        {t('common.cancel')}
                       </Button>
                     </>
                   ) : (
                     <>
-                      <Button size="sm" variant="flat" onPress={() => handleRenameStart(voice)} isIconOnly aria-label="Umbenennen">
+                      <Button size="sm" variant="flat" onPress={() => handleRenameStart(voice)} isIconOnly aria-label={t('common.rename')}>
                         ✏️
                       </Button>
                       <Button
@@ -179,7 +182,7 @@ export function OptionsPage() {
                         onPress={() => handleMove(voice, 'up')}
                         isDisabled={idx === 0}
                         isIconOnly
-                        aria-label="Nach oben"
+                        aria-label={t('voice.move_up')}
                       >
                         ↑
                       </Button>
@@ -189,7 +192,7 @@ export function OptionsPage() {
                         onPress={() => handleMove(voice, 'down')}
                         isDisabled={idx === voices.length - 1}
                         isIconOnly
-                        aria-label="Nach unten"
+                        aria-label={t('voice.move_down')}
                       >
                         ↓
                       </Button>
@@ -199,7 +202,7 @@ export function OptionsPage() {
                         variant="flat"
                         onPress={() => { setDeletingId(voice.id); setError(null); deleteModal.onOpen(); }}
                         isIconOnly
-                        aria-label="Löschen"
+                        aria-label={t('common.delete')}
                       >
                         🗑
                       </Button>
@@ -215,21 +218,21 @@ export function OptionsPage() {
       {/* Add modal */}
       <Modal isOpen={addModal.isOpen} onClose={addModal.onClose}>
         <ModalContent>
-          <ModalHeader>Neue Stimmlage</ModalHeader>
+          <ModalHeader>{t('voice.new_voice')}</ModalHeader>
           <ModalBody>
             <Input
               autoFocus
-              label="Name"
-              placeholder="z.B. Sopran"
+              label={t('common.name')}
+              placeholder={t('voice.name_placeholder')}
               value={newName}
               onValueChange={setNewName}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
             />
           </ModalBody>
           <ModalFooter>
-            <Button variant="flat" onPress={addModal.onClose}>Abbrechen</Button>
+            <Button variant="flat" onPress={addModal.onClose}>{t('common.cancel')}</Button>
             <Button color="primary" isLoading={adding} onPress={handleAdd} isDisabled={!newName.trim()}>
-              Hinzufügen
+              {t('common.add')}
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -238,16 +241,17 @@ export function OptionsPage() {
       {/* Delete confirm modal */}
       <Modal isOpen={deleteModal.isOpen} onClose={deleteModal.onClose}>
         <ModalContent>
-          <ModalHeader>Stimmlage löschen</ModalHeader>
+          <ModalHeader>{t('voice.delete_title')}</ModalHeader>
           <ModalBody>
-            <p>
-              Soll die Stimmlage <strong>{deletingVoice?.name}</strong> wirklich gelöscht werden?
-              Dies ist nur möglich, wenn ihr keine Mitglieder zugeordnet sind.
-            </p>
+            <p
+              dangerouslySetInnerHTML={{
+                __html: t('voice.delete_confirm', { name: deletingVoice?.name ?? '' }),
+              }}
+            />
           </ModalBody>
           <ModalFooter>
-            <Button variant="flat" onPress={deleteModal.onClose}>Abbrechen</Button>
-            <Button color="danger" onPress={handleDeleteConfirm}>Löschen</Button>
+            <Button variant="flat" onPress={deleteModal.onClose}>{t('common.cancel')}</Button>
+            <Button color="danger" onPress={handleDeleteConfirm}>{t('common.delete')}</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

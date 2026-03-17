@@ -1,6 +1,6 @@
 /** Weekday short + date + time (e.g. "Mi., 04.06.2025, 19:00 Uhr") */
-export const formatDateTimeShort = (d: string) =>
-  new Intl.DateTimeFormat('de-DE', {
+export const formatDateTimeShort = (d: string, locale = 'de-DE') =>
+  new Intl.DateTimeFormat(locale, {
     weekday: 'short',
     day: '2-digit',
     month: '2-digit',
@@ -10,8 +10,8 @@ export const formatDateTimeShort = (d: string) =>
   }).format(new Date(d));
 
 /** Weekday long + date + time (e.g. "Mittwoch, 04. Juni 2025, 19:00 Uhr") */
-export const formatDateTimeLong = (d: string) =>
-  new Intl.DateTimeFormat('de-DE', {
+export const formatDateTimeLong = (d: string, locale = 'de-DE') =>
+  new Intl.DateTimeFormat(locale, {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
@@ -21,8 +21,8 @@ export const formatDateTimeLong = (d: string) =>
   }).format(new Date(d));
 
 /** Weekday long + date only (e.g. "Mittwoch, 04. Juni 2025") */
-export const formatDateLong = (d: string) =>
-  new Intl.DateTimeFormat('de-DE', {
+export const formatDateLong = (d: string, locale = 'de-DE') =>
+  new Intl.DateTimeFormat(locale, {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
@@ -30,8 +30,8 @@ export const formatDateLong = (d: string) =>
   }).format(new Date(d));
 
 /** Weekday short + date only (e.g. "Mi., 04.06.2025") */
-export const formatDateMedium = (d: string) =>
-  new Intl.DateTimeFormat('de-DE', {
+export const formatDateMedium = (d: string, locale = 'de-DE') =>
+  new Intl.DateTimeFormat(locale, {
     weekday: 'short',
     day: '2-digit',
     month: '2-digit',
@@ -39,8 +39,8 @@ export const formatDateMedium = (d: string) =>
   }).format(new Date(d));
 
 /** Numeric date only (e.g. "04.06.2025") */
-export const formatDateNumeric = (d: string) =>
-  new Intl.DateTimeFormat('de-DE', {
+export const formatDateNumeric = (d: string, locale = 'de-DE') =>
+  new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

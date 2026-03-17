@@ -9,6 +9,7 @@ import {
   Spinner,
   useDisclosure,
 } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, membersApi, choirVoicesApi } from '../../services/api';
 import { RehearsalCard } from '../../components/rehearsal/RehearsalCard';
 import type { ChoirVoice, Member, Rehearsal } from '../../types';
@@ -22,6 +23,7 @@ export function RehearsalsPage() {
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [savingVoice, setSavingVoice] = useState(false);
   const voiceModal = useDisclosure();
+  const { t } = useTranslation();
 
   const loadData = async () => {
     const [rehearsalRes, memberRes] = await Promise.all([
@@ -69,16 +71,16 @@ export function RehearsalsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Proben</h1>
+      <h1 className="text-2xl font-bold">{t('rehearsals.title')}</h1>
 
       {/* Voice banner */}
       <div className="flex items-center gap-3 px-4 py-3 bg-default-100 dark:bg-default-100/10 rounded-xl text-sm border border-default-200">
-        <span className="text-default-500">Deine Stimmlage:</span>
+        <span className="text-default-500">{t('voice.your_voice')}</span>
         <span className="font-medium flex-1">
-          {member?.choirVoice?.name ?? 'Nicht festgelegt'}
+          {member?.choirVoice?.name ?? t('voice.not_set')}
         </span>
         <Button size="sm" variant="flat" onPress={openVoiceModal}>
-          Ändern
+          {t('voice.change')}
         </Button>
       </div>
 
@@ -86,15 +88,15 @@ export function RehearsalsPage() {
         <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col items-center justify-center gap-1 bg-success-50 dark:bg-success-50/10 rounded-xl p-3 border border-success-200 dark:border-success-800">
             <span className="text-2xl font-bold text-success">{attended}</span>
-            <span className="text-xs text-success-700 dark:text-success-400 text-center">Anwesend</span>
+            <span className="text-xs text-success-700 dark:text-success-400 text-center">{t('rehearsals.present')}</span>
           </div>
           <div className="flex flex-col items-center justify-center gap-1 bg-warning-50 dark:bg-warning-50/10 rounded-xl p-3 border border-warning-200 dark:border-warning-800">
             <span className="text-2xl font-bold text-warning">{excused}</span>
-            <span className="text-xs text-warning-700 dark:text-warning-400 text-center">Entschuldigt</span>
+            <span className="text-xs text-warning-700 dark:text-warning-400 text-center">{t('rehearsals.excused')}</span>
           </div>
           <div className="flex flex-col items-center justify-center gap-1 bg-danger-50 dark:bg-danger-50/10 rounded-xl p-3 border border-danger-200 dark:border-danger-800">
             <span className="text-2xl font-bold text-danger">{unexcused}</span>
-            <span className="text-xs text-danger-700 dark:text-danger-400 text-center leading-tight">Unentschuldigt</span>
+            <span className="text-xs text-danger-700 dark:text-danger-400 text-center leading-tight">{t('rehearsals.unexcused')}</span>
           </div>
         </div>
       )}
@@ -102,10 +104,10 @@ export function RehearsalsPage() {
       {/* Upcoming rehearsals */}
       <section>
         <h2 className="text-base font-semibold text-default-600 mb-3">
-          Bevorstehend ({upcoming.length})
+          {t('rehearsals.upcoming_count', { count: upcoming.length })}
         </h2>
         {upcoming.length === 0 ? (
-          <p className="text-default-400 text-sm">Keine bevorstehenden Proben eingetragen.</p>
+          <p className="text-default-400 text-sm">{t('rehearsals.no_upcoming')}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {upcoming.map((r) => (
@@ -119,7 +121,7 @@ export function RehearsalsPage() {
       {past.length > 0 && (
         <section>
           <h2 className="text-base font-semibold text-default-400 mb-3">
-            Vergangen ({past.length})
+            {t('rehearsals.past_count', { count: past.length })}
           </h2>
           <div className="flex flex-col gap-3">
             {past.map((r) => (
@@ -137,10 +139,10 @@ export function RehearsalsPage() {
       {/* Voice change modal */}
       <Modal isOpen={voiceModal.isOpen} onClose={voiceModal.onClose}>
         <ModalContent>
-          <ModalHeader>Stimmlage ändern</ModalHeader>
+          <ModalHeader>{t('voice.change_title')}</ModalHeader>
           <ModalBody>
             {availableVoices.length === 0 ? (
-              <p className="text-default-400 text-sm">Keine Stimmlagen verfügbar.</p>
+              <p className="text-default-400 text-sm">{t('voice.no_voices')}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {availableVoices.map((v) => (
@@ -161,7 +163,10 @@ export function RehearsalsPage() {
                     </span>
                     <span className="flex-1">{v.name}</span>
                     {v.memberCount !== undefined && (
-                      <span className="text-xs text-default-400">{v.memberCount} {v.memberCount === 1 ? 'Mitglied' : 'Mitglieder'}</span>
+                      <span className="text-xs text-default-400">
+                        {v.memberCount}{' '}
+                        {t(v.memberCount === 1 ? 'common.member_one' : 'common.member_other')}
+                      </span>
                     )}
                   </button>
                 ))}
@@ -169,9 +174,9 @@ export function RehearsalsPage() {
             )}
           </ModalBody>
           <ModalFooter>
-            <Button variant="flat" onPress={voiceModal.onClose}>Abbrechen</Button>
+            <Button variant="flat" onPress={voiceModal.onClose}>{t('common.cancel')}</Button>
             <Button color="primary" isLoading={savingVoice} onPress={handleSaveVoice}>
-              Speichern
+              {t('common.save')}
             </Button>
           </ModalFooter>
         </ModalContent>

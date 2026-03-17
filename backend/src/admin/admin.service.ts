@@ -1,10 +1,11 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash } from 'crypto';
 import { parse } from 'csv-parse/sync';
 import * as ExcelJS from 'exceljs';
+import type { CreateMemberDto } from './dto/create-member.dto';
 
 interface CsvRow {
   firstName: string;
@@ -20,6 +21,55 @@ export class AdminService {
     private readonly mailService: MailService,
     private readonly config: ConfigService,
   ) {}
+
+  async createMember(dto: CreateMemberDto) {
+    const existing = await this.prisma.member.findUnique({ where: { email: dto.email } });
+    if (existing) throw new ConflictException('E-Mail-Adresse bereits vergeben');
+
+    if (dto.voiceId) {
+      const voice = await this.prisma.choirVoice.findUnique({ where: { id: dto.voiceId } });
+      if (!voice) throw new NotFoundException('Stimmlage nicht gefunden');
+    }
+
+    const member = await this.prisma.member.create({
+      data: {
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        email: dto.email,
+        choirVoiceId: dto.voiceId ?? null,
+      },
+    });
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const pastRehearsals = await this.prisma.rehearsal.findMany({
+      where: { date: { lt: startOfToday } },
+      select: { id: true },
+    });
+    if (pastRehearsals.length > 0) {
+      await this.prisma.attendancePlan.createMany({
+        data: pastRehearsals.map((r) => ({
+          memberId: member.id,
+          rehearsalId: r.id,
+          response: 'DECLINED' as const,
+        })),
+      });
+    }
+
+    const rawToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+    await this.prisma.memberLoginToken.create({ data: { memberId: member.id, hashedToken } });
+    const magicUrl = `${this.config.get('APP_URL')}/auth/verify?token=${rawToken}`;
+    await this.mailService.sendMemberInvite(member, magicUrl);
+
+    return member;
+  }
+
+  async deleteMember(id: string) {
+    const member = await this.prisma.member.findUnique({ where: { id } });
+    if (!member) throw new NotFoundException('Mitglied nicht gefunden');
+    await this.prisma.member.delete({ where: { id } });
+  }
 
   async importMembersFromCsv(buffer: Buffer) {
     let records: CsvRow[];
@@ -100,7 +150,7 @@ export class AdminService {
     const [totalPastRehearsals, members] = await Promise.all([
       this.prisma.rehearsal.count({ where: { date: { lt: startOfToday } } }),
       this.prisma.member.findMany({
-        orderBy: [{ lastName: 'asc' }],
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
         select: {
           id: true,
           firstName: true,

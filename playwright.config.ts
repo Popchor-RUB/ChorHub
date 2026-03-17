@@ -13,6 +13,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     viewport: { width: 1280, height: 720 },
+    locale: 'de-DE',
   },
 
   globalSetup: './e2e/global-setup.ts',

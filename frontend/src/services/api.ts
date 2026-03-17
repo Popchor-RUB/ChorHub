@@ -91,6 +91,8 @@ export const attendanceApi = {
 };
 
 export const adminMembersApi = {
+  create: (data: { firstName: string; lastName: string; email: string; voiceId?: string }) =>
+    api.post('/admin/members', data),
   import: (file: File) => {
     const fd = new FormData();
     fd.append('file', file);

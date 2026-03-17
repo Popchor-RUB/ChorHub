@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button, Input, Spinner, Textarea } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { adminPushApi } from '../../services/api';
 
 export function PushNotificationsPage() {
@@ -9,6 +10,7 @@ export function PushNotificationsPage() {
   const [url, setUrl] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     adminPushApi.getStats().then((res) => setSubscriberCount(res.data.subscriberCount));
@@ -33,8 +35,8 @@ export function PushNotificationsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Push-Benachrichtigungen</h1>
-        {sent && <span className="text-success text-sm font-medium">Gesendet ✓</span>}
+        <h1 className="text-2xl font-bold">{t('push.title')}</h1>
+        {sent && <span className="text-success text-sm font-medium">{t('common.sent')}</span>}
       </div>
 
       <div className="bg-default-100 rounded-xl p-5 flex items-center gap-4">
@@ -43,31 +45,31 @@ export function PushNotificationsPage() {
         </div>
         <div className="text-sm text-default-600">
           {subscriberCount === 1
-            ? 'Mitglied hat Push-Benachrichtigungen aktiviert'
-            : 'Mitglieder haben Push-Benachrichtigungen aktiviert'}
+            ? t('push.subscribers_one')
+            : t('push.subscribers_other')}
         </div>
       </div>
 
       <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Benachrichtigung senden</h2>
+        <h2 className="text-lg font-semibold">{t('push.send_section')}</h2>
         <Input
-          label="Titel"
+          label={t('push.label_title')}
           value={title}
           onValueChange={setTitle}
           isRequired
         />
         <Textarea
-          label="Nachricht"
+          label={t('push.label_message')}
           value={body}
           onValueChange={setBody}
           isRequired
           minRows={3}
         />
         <Input
-          label="URL (optional)"
+          label={t('push.label_url')}
           value={url}
           onValueChange={setUrl}
-          placeholder="z. B. /proben"
+          placeholder={t('push.url_placeholder')}
         />
         <Button
           color="primary"
@@ -76,7 +78,7 @@ export function PushNotificationsPage() {
           isLoading={sending}
           className="self-start"
         >
-          An alle senden
+          {t('push.send_btn')}
         </Button>
       </div>
     </div>

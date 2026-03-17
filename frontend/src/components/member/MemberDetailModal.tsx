@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Modal, ModalContent, ModalHeader, ModalBody, Chip, Spinner } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { adminMembersApi } from '../../services/api';
 import type { MemberOverview, MemberRehearsalEntry } from '../../types';
+import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateMedium } from '../../utils/dateFormatting';
 
 interface Props {
@@ -13,6 +15,8 @@ interface Props {
 export function MemberDetailModal({ member, isOpen, onClose }: Props) {
   const [rehearsals, setRehearsals] = useState<MemberRehearsalEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
+  const dateLocale = useDateLocale();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -48,17 +52,20 @@ export function MemberDetailModal({ member, isOpen, onClose }: Props) {
             <>
               <div className="flex flex-wrap gap-2 mb-4">
                 <Chip color="success" variant="flat">
-                  {past.filter((r) => r.attended).length} anwesend
+                  {t('detail_modal.present_count', { count: past.filter((r) => r.attended).length })}
                 </Chip>
                 <Chip color="danger" variant="flat">
-                  {member.unexcusedAbsenceCount} unentschuldigt gefehlt
+                  {t('detail_modal.unexcused_count', { count: member.unexcusedAbsenceCount })}
                 </Chip>
                 <Chip color="default" variant="flat">
-                  {past.filter((r) => !r.attended && r.plan === 'DECLINED').length} entschuldigt
+                  {t('detail_modal.excused_count', { count: past.filter((r) => !r.attended && r.plan === 'DECLINED').length })}
                 </Chip>
                 {upcoming.length > 0 && (
                   <Chip color="primary" variant="flat">
-                    {upcoming.filter((r) => r.plan === 'CONFIRMED').length} von {upcoming.length} bevorstehend zugesagt
+                    {t('detail_modal.confirmed_upcoming', {
+                      confirmed: upcoming.filter((r) => r.plan === 'CONFIRMED').length,
+                      total: upcoming.length,
+                    })}
                   </Chip>
                 )}
               </div>
@@ -66,7 +73,7 @@ export function MemberDetailModal({ member, isOpen, onClose }: Props) {
               {upcoming.length > 0 && (
                 <div className="mb-5">
                   <p className="text-xs font-semibold text-default-400 uppercase tracking-wide mb-2">
-                    Bevorstehende Proben
+                    {t('detail_modal.upcoming_rehearsals')}
                   </p>
                   <div className="flex flex-col gap-1">
                     {upcoming.map((r) => (
@@ -75,14 +82,14 @@ export function MemberDetailModal({ member, isOpen, onClose }: Props) {
                         className="flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-default-50"
                       >
                         <span className="font-medium text-default-700">
-                          {formatDateMedium(r.date)} – {r.title}
+                          {formatDateMedium(r.date, dateLocale)} – {r.title}
                         </span>
                         <span className="text-xs text-default-500">
                           {r.plan === 'CONFIRMED'
-                            ? '✓ zugesagt'
+                            ? t('detail_modal.plan_confirmed')
                             : r.plan === 'DECLINED'
-                            ? '✗ abgesagt'
-                            : '– keine Angabe'}
+                            ? t('detail_modal.plan_declined')
+                            : t('detail_modal.plan_none')}
                         </span>
                       </div>
                     ))}
@@ -93,7 +100,7 @@ export function MemberDetailModal({ member, isOpen, onClose }: Props) {
               {past.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-default-400 uppercase tracking-wide mb-2">
-                    Vergangene Proben
+                    {t('detail_modal.past_rehearsals')}
                   </p>
                   <div className="flex flex-col gap-1">
                     {past.map((r) => {
@@ -110,14 +117,14 @@ export function MemberDetailModal({ member, isOpen, onClose }: Props) {
                           }`}
                         >
                           <span className="font-medium">
-                            {formatDateMedium(r.date)} – {r.title}
+                            {formatDateMedium(r.date, dateLocale)} – {r.title}
                           </span>
                           <span className="text-xs">
                             {r.attended
-                              ? '✓ anwesend'
+                              ? t('detail_modal.attended')
                               : r.plan === 'DECLINED'
-                              ? 'entschuldigt'
-                              : '✗ unentsch. gefehlt'}
+                              ? t('detail_modal.excused_short')
+                              : t('detail_modal.unexcused_short')}
                           </span>
                         </div>
                       );
@@ -127,7 +134,7 @@ export function MemberDetailModal({ member, isOpen, onClose }: Props) {
               )}
 
               {rehearsals.length === 0 && (
-                <p className="text-default-400 text-center py-4">Keine Proben vorhanden.</p>
+                <p className="text-default-400 text-center py-4">{t('detail_modal.no_rehearsals')}</p>
               )}
             </>
           )}

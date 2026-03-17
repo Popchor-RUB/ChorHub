@@ -7,18 +7,20 @@ import {
   ModalFooter,
   Button,
 } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
 export function NotificationBell() {
   const { permission, isSubscribed, subscribe, unsubscribe, isLoading } = usePushNotifications();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const { t } = useTranslation();
 
   const denied = permission === 'denied';
   const label = denied
-    ? 'Benachrichtigungen blockiert'
+    ? t('notifications.blocked')
     : isSubscribed
-      ? 'Benachrichtigungen deaktivieren'
-      : 'Benachrichtigungen aktivieren';
+      ? t('notifications.disable')
+      : t('notifications.enable');
 
   const handleClick = () => {
     if (denied || isLoading) return;
@@ -69,18 +71,18 @@ export function NotificationBell() {
 
       <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} size="sm">
         <ModalContent>
-          <ModalHeader>Benachrichtigungen deaktivieren</ModalHeader>
+          <ModalHeader>{t('notifications.disable_title')}</ModalHeader>
           <ModalBody>
             <p className="text-sm text-default-600">
-              Wenn du die Benachrichtigungen deaktivierst, erhältst du keine Mitteilungen mehr von dieser App.
+              {t('notifications.disable_body')}
             </p>
           </ModalBody>
           <ModalFooter>
             <Button variant="flat" onPress={() => setConfirmOpen(false)}>
-              Abbrechen
+              {t('common.cancel')}
             </Button>
             <Button color="danger" onPress={handleConfirmUnsubscribe}>
-              Deaktivieren
+              {t('notifications.deactivate')}
             </Button>
           </ModalFooter>
         </ModalContent>
