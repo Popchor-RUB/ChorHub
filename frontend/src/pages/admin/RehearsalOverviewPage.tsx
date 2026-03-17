@@ -22,6 +22,8 @@ import { CalendarDateTime } from '@internationalized/date';
 import type { DateValue } from '@internationalized/date';
 import { attendanceApi, rehearsalsApi } from '../../services/api';
 import type { RehearsalOverview, AttendanceRecord, Rehearsal } from '../../types';
+import { VoiceGroupList, useCollapsedVoices } from '../../components/common/VoiceGroupList';
+import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
 
 const formatDate = (d: string) =>
   new Intl.DateTimeFormat('de-DE', {
@@ -59,25 +61,82 @@ function AttendanceDetailModal({
 }) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const { collapsedVoices, toggle: toggleVoice, collapseAll } = useCollapsedVoices();
 
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
+    collapseAll([]);
     attendanceApi.getRecords(rehearsal.id).then((res) => {
-      setRecords(res.data as AttendanceRecord[]);
+      const data = res.data as AttendanceRecord[];
+      setRecords(data);
+      const voices = [...new Set(data.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
+      collapseAll(voices);
       setLoading(false);
     });
   }, [isOpen, rehearsal.id]);
 
   // Group records by voice for display (voices come back sorted by sortOrder from backend)
   const voiceNames = [...new Set(records.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
-  const byVoice = voiceNames.map((voice) => ({
-    voice,
-    members: records.filter((r) => r.choirVoice?.name === voice),
-  })).filter((g) => g.members.length > 0);
+  const voiceGroupData: VoiceGroupData[] = voiceNames
+    .map((voice) => {
+      const members = records.filter((r) => r.choirVoice?.name === voice);
+      const total = members.length;
+      const confirmedCount = members.filter((m) => m.plan === 'CONFIRMED').length;
+      const attendedCount = members.filter((m) => m.attended).length;
+      const noChoiceCount = members.filter((m) => !m.plan).length;
+      const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+      const primaryCount = type === 'future' ? confirmedCount : attendedCount;
+      const primaryLabel = type === 'future' ? 'zugesagt' : 'anwesend';
+      return {
+        voice,
+        headerRight: (
+          <span className="flex items-center gap-3 text-xs font-normal">
+            <span className="text-success-600">
+              {primaryCount} {primaryLabel} ({pct(primaryCount)} %)
+            </span>
+            <span className="text-default-400">
+              {noChoiceCount} keine Angabe ({pct(noChoiceCount)} %)
+            </span>
+          </span>
+        ),
+        rows: members.map((m) => {
+          const absent = isUnexpectedAbsence(m);
+          return {
+            key: m.id,
+            content: (
+              <div
+                className={[
+                  'flex items-center justify-between px-4 py-2.5 text-sm',
+                  type === 'past'
+                    ? m.attended
+                      ? 'bg-success-50 text-success-800'
+                      : absent
+                      ? 'bg-danger-50 text-danger-800'
+                      : 'bg-content1 text-default-500'
+                    : 'bg-content1',
+                ].filter(Boolean).join(' ')}
+              >
+                <span className="font-medium">{m.lastName}, {m.firstName}</span>
+                {type === 'past' ? (
+                  <span className="text-xs">
+                    {m.attended ? '✓ anwesend' : m.plan === 'DECLINED' ? 'abgesagt' : '✗ gefehlt'}
+                  </span>
+                ) : (
+                  <span className="text-xs">
+                    {m.plan === 'CONFIRMED' ? '✓ zugesagt' : m.plan === 'DECLINED' ? '✗ abgesagt' : '– keine Angabe'}
+                  </span>
+                )}
+              </div>
+            ),
+          };
+        }),
+      };
+    })
+    .filter((g) => g.rows.length > 0);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={onClose} size="2xl">
       <ModalContent>
         <ModalHeader className="flex flex-col gap-0.5">
           <span>{rehearsal.title}</span>
@@ -85,7 +144,8 @@ function AttendanceDetailModal({
             {formatDateLong(rehearsal.date)}
           </span>
         </ModalHeader>
-        <ModalBody className="pb-6">
+        <ModalBody className="p-0">
+          <div style={{ overflowY: 'auto', maxHeight: '70vh', padding: '0 1.5rem 1.5rem' }}>
           {loading ? (
             <div className="flex justify-center py-8">
               <Spinner />
@@ -122,59 +182,17 @@ function AttendanceDetailModal({
               </div>
 
               {/* Per-voice member list */}
-              {byVoice.map(({ voice, members }) => (
-                <div key={voice} className="mb-4">
-                  <p className="text-xs font-semibold text-default-400 uppercase tracking-wide mb-1">
-                    {voice}
-                  </p>
-                  <div className="flex flex-col gap-1">
-                    {members.map((m) => {
-                      const absent = isUnexpectedAbsence(m);
-                      return (
-                        <div
-                          key={m.id}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
-                            type === 'past'
-                              ? m.attended
-                                ? 'bg-success-50 text-success-800'
-                                : absent
-                                ? 'bg-danger-50 text-danger-800'
-                                : 'bg-default-50 text-default-500'
-                              : 'bg-default-50'
-                          }`}
-                        >
-                          <span className="font-medium">
-                            {m.lastName}, {m.firstName}
-                          </span>
-                          {type === 'past' ? (
-                            <span className="text-xs">
-                              {m.attended
-                                ? '✓ anwesend'
-                                : m.plan === 'DECLINED'
-                                ? 'abgesagt'
-                                : '✗ gefehlt'}
-                            </span>
-                          ) : (
-                            <span className="text-xs">
-                              {m.plan === 'CONFIRMED'
-                                ? '✓ zugesagt'
-                                : m.plan === 'DECLINED'
-                                ? '✗ abgesagt'
-                                : '– keine Angabe'}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
-              {records.length === 0 && (
-                <p className="text-default-400 text-center py-4">Keine Mitgliederdaten.</p>
-              )}
+              <VoiceGroupList
+                groups={voiceGroupData}
+                collapsedVoices={collapsedVoices}
+                onToggle={toggleVoice}
+                emptyState={
+                  <p className="text-default-400 text-center py-4">Keine Mitgliederdaten.</p>
+                }
+              />
             </>
           )}
+          </div>
         </ModalBody>
       </ModalContent>
     </Modal>

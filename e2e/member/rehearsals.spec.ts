@@ -133,6 +133,14 @@ test.describe('Member rehearsal page', () => {
       await adminPage.getByText(upcomingRehearsalTitle).first().click();
 
       const rehearsalDialog = adminPage.getByRole('dialog');
+
+      // Voice sections are collapsed by default — expand all of them first
+      const collapsedHeaders = rehearsalDialog.getByRole('button').filter({ hasText: '▸' });
+      const collapsedCount = await collapsedHeaders.count();
+      for (let i = 0; i < collapsedCount; i++) {
+        await collapsedHeaders.first().click();
+      }
+
       await expect(rehearsalDialog.getByText(memberFullName, { exact: true })).toBeVisible();
       // The status span is a sibling of the name span inside the same row div
       const memberNameInRehearsal = rehearsalDialog.getByText(memberFullName, { exact: true });

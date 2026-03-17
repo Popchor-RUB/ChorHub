@@ -10,6 +10,8 @@ import {
 } from '@heroui/react';
 import { rehearsalsApi, attendanceApi } from '../../services/api';
 import type { Rehearsal, AttendanceRecord } from '../../types';
+import { VoiceGroupList, useCollapsedVoices } from '../../components/common/VoiceGroupList';
+import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
 
 const formatDate = (d: string) =>
   new Intl.DateTimeFormat('de-DE', {
@@ -40,7 +42,7 @@ export function AttendancePage() {
 
   const [nameFilter, setNameFilter] = useState('');
   const [voiceFilter, setVoiceFilter] = useState<string | null>(null);
-  const [collapsedVoices, setCollapsedVoices] = useState<Set<string>>(new Set());
+  const { collapsedVoices, toggle: toggleVoiceCollapse, collapseAll } = useCollapsedVoices();
 
   const [saving, setSaving] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export function AttendancePage() {
     setLoadingRecords(true);
     setNameFilter('');
     setVoiceFilter(null);
-    setCollapsedVoices(new Set());
+    collapseAll([]);
     setFocusedMemberId(null);
     attendanceApi.getRecords(selectedRehearsalId).then((res) => {
       setRecords(res.data as AttendanceRecord[]);
@@ -124,6 +126,73 @@ export function AttendancePage() {
 
   const visibleMembersRef = useRef(visibleMembers);
   visibleMembersRef.current = visibleMembers;
+
+  const voiceGroupData: VoiceGroupData[] = groups.map((group) => {
+    const groupAttended = group.members.filter((m) => m.attended).length;
+    return {
+      voice: group.voice,
+      headerRight: (
+        <span className="text-xs font-normal text-default-500">
+          {groupAttended} / {group.members.length} anwesend
+        </span>
+      ),
+      rows: group.members.map((member) => {
+        const isFocused = focusedMemberId === member.id;
+        const isSaving = saving === member.id;
+        const visibleIdx = visibleMembers.findIndex((m) => m.id === member.id);
+        const shortcutNum = ctrlHeld && visibleIdx >= 0 && visibleIdx < 9 ? visibleIdx + 1 : null;
+        return {
+          key: member.id,
+          content: (
+            <div
+              data-testid="attendance-member-row"
+              data-member-id={member.id}
+              ref={(el) => {
+                if (el) rowRefs.current.set(member.id, el);
+                else rowRefs.current.delete(member.id);
+              }}
+              className={[
+                'grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_160px_110px] items-center px-4 py-3 transition-colors',
+                member.attended ? 'bg-success-50 dark:bg-success-900/20' : 'bg-content1',
+                isFocused ? 'ring-2 ring-inset ring-primary' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => setFocusedMemberId(member.id)}
+            >
+              <div className="min-w-0">
+                <p className="font-medium text-sm truncate">
+                  {member.lastName}, {member.firstName}
+                </p>
+                <p className="text-xs text-default-400 sm:hidden mt-0.5">
+                  {formatLastAttended(member.lastAttendedRehearsalsAgo)}
+                </p>
+              </div>
+              <p className="hidden sm:block text-sm text-default-500">
+                {formatLastAttended(member.lastAttendedRehearsalsAgo)}
+              </p>
+              <div className="flex justify-end items-center gap-1.5">
+                {shortcutNum !== null && (
+                  <span className="hidden sm:block text-xs font-mono text-default-400 w-4 text-center">
+                    {shortcutNum}
+                  </span>
+                )}
+                <Button
+                  size="sm"
+                  color={member.attended ? 'success' : 'default'}
+                  variant={member.attended ? 'solid' : 'bordered'}
+                  isLoading={isSaving}
+                  onPress={() => toggleAttendance(member.id, member.attended)}
+                  className="min-w-[90px]"
+                >
+                  {member.attended ? '✓ Anwesend' : '+ Erfassen'}
+                </Button>
+              </div>
+            </div>
+          ),
+        };
+      }),
+    };
+  });
+
   const focusedMemberIdRef = useRef(focusedMemberId);
   focusedMemberIdRef.current = focusedMemberId;
 
@@ -222,15 +291,6 @@ export function AttendancePage() {
     };
   }, []);
 
-  const toggleVoiceCollapse = (voice: string) => {
-    setCollapsedVoices((prev) => {
-      const next = new Set(prev);
-      if (next.has(voice)) next.delete(voice);
-      else next.add(voice);
-      return next;
-    });
-  };
-
   return (
     <div className="flex flex-col gap-4 max-w-2xl">
       <h1 className="text-2xl font-bold">Anwesenheit erfassen</h1>
@@ -316,106 +376,23 @@ export function AttendancePage() {
           )}
 
           {/* Member table */}
-          <div className="rounded-xl border border-divider overflow-hidden">
-            {/* Column headers — desktop only */}
-            <div className="hidden sm:grid sm:grid-cols-[1fr_160px_110px] px-4 py-2 bg-default-50 border-b border-divider text-xs font-semibold text-default-500 uppercase tracking-wide">
-              <span>Name</span>
-              <span>Letzte Probe</span>
-              <span className="text-right">Anwesenheit</span>
-            </div>
-
-            {groups.length === 0 && (
+          <VoiceGroupList
+            groups={voiceGroupData}
+            collapsedVoices={collapsedVoices}
+            onToggle={toggleVoiceCollapse}
+            header={
+              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_110px] px-4 py-2 bg-default-50 border-b border-divider text-xs font-semibold text-default-500 uppercase tracking-wide">
+                <span>Name</span>
+                <span>Letzte Probe</span>
+                <span className="text-right">Anwesenheit</span>
+              </div>
+            }
+            emptyState={
               <p className="text-center text-default-400 py-10 text-sm">
                 Keine Mitglieder gefunden
               </p>
-            )}
-
-            {groups.map((group) => {
-              const isCollapsed = collapsedVoices.has(group.voice);
-              const groupAttended = group.members.filter((m) => m.attended).length;
-              return (
-                <div key={group.voice}>
-                  {/* Section header */}
-                  <button
-                    className="w-full flex items-center justify-between px-4 py-2 bg-default-100 hover:bg-default-200 transition-colors border-b border-divider text-sm font-semibold text-default-700"
-                    onClick={() => toggleVoiceCollapse(group.voice)}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-default-400">{isCollapsed ? '▸' : '▾'}</span>
-                      <span>{group.voice}</span>
-                    </span>
-                    <span className="text-xs font-normal text-default-500">
-                      {groupAttended} / {group.members.length} anwesend
-                    </span>
-                  </button>
-
-                  {/* Member rows */}
-                  {!isCollapsed &&
-                    group.members.map((member, idx) => {
-                      const isLast = idx === group.members.length - 1;
-                      const isFocused = focusedMemberId === member.id;
-                      const isSaving = saving === member.id;
-                      const visibleIdx = visibleMembers.findIndex((m) => m.id === member.id);
-                      const shortcutNum = ctrlHeld && visibleIdx >= 0 && visibleIdx < 9 ? visibleIdx + 1 : null;
-                      return (
-                        <div
-                          key={member.id}
-                          data-testid="attendance-member-row"
-                          data-member-id={member.id}
-                          ref={(el) => {
-                            if (el) rowRefs.current.set(member.id, el);
-                            else rowRefs.current.delete(member.id);
-                          }}
-                          className={[
-                            'grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_160px_110px] items-center px-4 py-3 transition-colors',
-                            !isLast ? 'border-b border-divider' : '',
-                            member.attended ? 'bg-success-50 dark:bg-success-900/20' : 'bg-content1',
-                            isFocused ? 'ring-2 ring-inset ring-primary' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ')}
-                          onClick={() => setFocusedMemberId(member.id)}
-                        >
-                          {/* Name + secondary line on mobile */}
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {member.lastName}, {member.firstName}
-                            </p>
-                            <p className="text-xs text-default-400 sm:hidden mt-0.5">
-                              {formatLastAttended(member.lastAttendedRehearsalsAgo)}
-                            </p>
-                          </div>
-
-                          {/* Last attended — desktop only */}
-                          <p className="hidden sm:block text-sm text-default-500">
-                            {formatLastAttended(member.lastAttendedRehearsalsAgo)}
-                          </p>
-
-                          {/* Toggle button */}
-                          <div className="flex justify-end items-center gap-1.5">
-                            {shortcutNum !== null && (
-                              <span className="hidden sm:block text-xs font-mono text-default-400 w-4 text-center">
-                                {shortcutNum}
-                              </span>
-                            )}
-                            <Button
-                              size="sm"
-                              color={member.attended ? 'success' : 'default'}
-                              variant={member.attended ? 'solid' : 'bordered'}
-                              isLoading={isSaving}
-                              onPress={() => toggleAttendance(member.id, member.attended)}
-                              className="min-w-[90px]"
-                            >
-                              {member.attended ? '✓ Anwesend' : '+ Erfassen'}
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              );
-            })}
-          </div>
+            }
+          />
 
           {/* Keyboard shortcut hint — desktop only */}
           <p className="hidden sm:block text-xs text-default-400 text-center">

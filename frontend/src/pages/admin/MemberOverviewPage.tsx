@@ -171,19 +171,28 @@ export function MemberOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState('');
+  const [voiceFilter, setVoiceFilter] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<MemberOverview | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
 
-  const filteredMembers = search.trim()
-    ? members.filter((m) => {
-        const q = search.trim().toLowerCase();
-        return (
-          m.firstName.toLowerCase().includes(q) ||
-          m.lastName.toLowerCase().includes(q)
-        );
-      })
-    : members;
+  const voiceNames = [...new Map(
+    members
+      .filter((m) => m.choirVoice)
+      .map((m) => [m.choirVoice!.name, m.choirVoice!.sortOrder] as const)
+  ).entries()]
+    .sort((a, b) => a[1] - b[1])
+    .map(([name]) => name);
+
+  const filteredMembers = members.filter((m) => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      m.firstName.toLowerCase().includes(q) ||
+      m.lastName.toLowerCase().includes(q);
+    const matchesVoice = !voiceFilter || m.choirVoice?.name === voiceFilter;
+    return matchesSearch && matchesVoice;
+  });
 
   useEffect(() => {
     adminMembersApi.list().then((res) => {
@@ -247,6 +256,31 @@ export function MemberOverviewPage() {
         onValueChange={setSearch}
         isClearable
       />
+      {voiceNames.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" data-testid="voice-filter-chips">
+          <Chip
+            size="sm"
+            variant={!voiceFilter ? 'solid' : 'flat'}
+            color={!voiceFilter ? 'primary' : 'default'}
+            className="cursor-pointer select-none"
+            onClick={() => setVoiceFilter(null)}
+          >
+            Alle
+          </Chip>
+          {voiceNames.map((voice) => (
+            <Chip
+              key={voice}
+              size="sm"
+              variant={voiceFilter === voice ? 'solid' : 'flat'}
+              color={voiceFilter === voice ? 'primary' : 'default'}
+              className="cursor-pointer select-none"
+              onClick={() => setVoiceFilter((prev) => (prev === voice ? null : voice))}
+            >
+              {voice}
+            </Chip>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center pt-8">

@@ -83,4 +83,59 @@ test.describe('Admin member overview', () => {
     await searchInput.clear();
     await expect(page.getByRole('row')).toHaveCount(201);
   });
+
+  test('voice filter chips are visible after members load', async ({ page }) => {
+    const chips = page.getByTestId('voice-filter-chips');
+    await expect(chips).toBeVisible();
+
+    const voices = ['Alle', 'Sopran', 'Mezzosopran', 'Alt', 'Tenor', 'Bariton', 'Bass'];
+    for (const voice of voices) {
+      await expect(chips.getByText(voice, { exact: true })).toBeVisible();
+    }
+  });
+
+  test('clicking a voice chip filters the table to that voice only', async ({ page }) => {
+    // Sopran has 52 members in seed data → 52 data rows + 1 header = 53
+    const chips = page.getByTestId('voice-filter-chips');
+    await chips.getByText('Sopran', { exact: true }).click();
+
+    await expect(page.getByRole('row')).toHaveCount(53);
+  });
+
+  test('clicking the active voice chip again resets the filter', async ({ page }) => {
+    const chips = page.getByTestId('voice-filter-chips');
+    await chips.getByText('Sopran', { exact: true }).click();
+    await expect(page.getByRole('row')).toHaveCount(53);
+
+    // Click the same chip again to deactivate
+    await chips.getByText('Sopran', { exact: true }).click();
+    await expect(page.getByRole('row')).toHaveCount(201);
+  });
+
+  test('clicking "Alle" resets the voice filter', async ({ page }) => {
+    const chips = page.getByTestId('voice-filter-chips');
+    await chips.getByText('Alt', { exact: true }).click();
+    // Alt has 38 members → 39 rows
+    await expect(page.getByRole('row')).toHaveCount(39);
+
+    await chips.getByText('Alle', { exact: true }).click();
+    await expect(page.getByRole('row')).toHaveCount(201);
+  });
+
+  test('voice filter and search input work together', async ({ page }) => {
+    const chips = page.getByTestId('voice-filter-chips');
+    // Activate Sopran filter (52 members)
+    await chips.getByText('Sopran', { exact: true }).click();
+    await expect(page.getByRole('row')).toHaveCount(53);
+
+    // Further narrow by name
+    await page.getByPlaceholder('Name suchen…').fill('a');
+    const filteredCount = await page.getByRole('row').count();
+    expect(filteredCount).toBeLessThan(53);
+    expect(filteredCount).toBeGreaterThanOrEqual(2);
+
+    // Clear name filter restores Sopran-only view
+    await page.getByPlaceholder('Name suchen…').clear();
+    await expect(page.getByRole('row')).toHaveCount(53);
+  });
 });
