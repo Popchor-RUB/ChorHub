@@ -2,22 +2,13 @@ import { Card, CardBody, CardHeader, Button, Chip } from '@heroui/react';
 import type { Rehearsal, AttendanceResponse } from '../../types';
 import { attendanceApi } from '../../services/api';
 import { useState } from 'react';
+import { formatDateTimeLong } from '../../utils/dateFormatting';
 
 interface Props {
   rehearsal: Rehearsal;
   onUpdated: () => void;
   readOnly?: boolean;
 }
-
-const formatDate = (dateStr: string) =>
-  new Intl.DateTimeFormat('de-DE', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(dateStr));
 
 export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props) {
   const [loading, setLoading] = useState<AttendanceResponse | null>(null);
@@ -58,7 +49,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             </Chip>
           )}
         </div>
-        <p className="text-sm text-default-500">{formatDate(rehearsal.date)}</p>
+        <p className="text-sm text-default-500">{formatDateTimeLong(rehearsal.date)}</p>
       </CardHeader>
       <CardBody className="flex flex-col gap-3">
         {rehearsal.description && (

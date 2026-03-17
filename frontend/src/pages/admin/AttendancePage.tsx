@@ -1,32 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Select,
-  SelectItem,
-  SelectSection,
-  Input,
-  Button,
-  Chip,
-  Spinner,
-} from '@heroui/react';
+import { Select, SelectItem, SelectSection, Input, Button, Spinner } from '@heroui/react';
 import { rehearsalsApi, attendanceApi } from '../../services/api';
 import type { Rehearsal, AttendanceRecord } from '../../types';
 import { VoiceGroupList, useCollapsedVoices } from '../../components/common/VoiceGroupList';
 import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
-
-const formatDate = (d: string) =>
-  new Intl.DateTimeFormat('de-DE', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(d));
-
-const formatDateShort = (d: string) =>
-  new Intl.DateTimeFormat('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(d));
+import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
+import { useAttendanceKeyboard } from '../../hooks/useAttendanceKeyboard';
+import { formatDateLong, formatDateNumeric } from '../../utils/dateFormatting';
 
 function formatLastAttended(ago: number | null): string {
   if (ago === null) return 'Noch nie';
@@ -47,12 +27,11 @@ export function AttendancePage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null);
-  const [ctrlHeld, setCtrlHeld] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Stable refs to avoid stale closures in keyboard handler
+  // Stable refs to avoid stale closures
   const recordsRef = useRef(records);
   recordsRef.current = records;
   const selectedRehearsalIdRef = useRef(selectedRehearsalId);
@@ -113,12 +92,13 @@ export function AttendancePage() {
     return matchesName && (!voiceFilter || r.choirVoice?.name === voiceFilter);
   });
 
-  // Derive voice groups in the order they appear (backend sorts by sortOrder)
   const voiceNames = [...new Set(records.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
-  const groups = voiceNames.map((voice) => ({
-    voice,
-    members: filteredRecords.filter((r) => r.choirVoice?.name === voice),
-  })).filter((g) => g.members.length > 0);
+  const groups = voiceNames
+    .map((voice) => ({
+      voice,
+      members: filteredRecords.filter((r) => r.choirVoice?.name === voice),
+    }))
+    .filter((g) => g.members.length > 0);
 
   const visibleMembers = groups
     .filter((g) => !collapsedVoices.has(g.voice))
@@ -126,6 +106,47 @@ export function AttendancePage() {
 
   const visibleMembersRef = useRef(visibleMembers);
   visibleMembersRef.current = visibleMembers;
+
+  const focusedMemberIdRef = useRef(focusedMemberId);
+  focusedMemberIdRef.current = focusedMemberId;
+
+  const toggleAttendance = async (memberId: string, currentlyAttended: boolean) => {
+    if (saving) return;
+    setSaving(memberId);
+    setSaveError(null);
+
+    const newAttendedIds = currentlyAttended
+      ? recordsRef.current.filter((r) => r.attended && r.id !== memberId).map((r) => r.id)
+      : [...recordsRef.current.filter((r) => r.attended).map((r) => r.id), memberId];
+
+    setRecords((prev) =>
+      prev.map((r) => (r.id === memberId ? { ...r, attended: !currentlyAttended } : r)),
+    );
+
+    try {
+      await attendanceApi.bulkSetRecords(selectedRehearsalIdRef.current, newAttendedIds);
+    } catch {
+      setRecords((prev) =>
+        prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),
+      );
+      setSaveError('Speichern fehlgeschlagen');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const toggleAttendanceRef = useRef(toggleAttendance);
+  toggleAttendanceRef.current = toggleAttendance;
+
+  const { ctrlHeld } = useAttendanceKeyboard({
+    recordsRef,
+    visibleMembersRef,
+    focusedMemberIdRef,
+    toggleAttendanceRef,
+    searchInputRef,
+    rowRefs,
+    setFocusedMemberId,
+  });
 
   const voiceGroupData: VoiceGroupData[] = groups.map((group) => {
     const groupAttended = group.members.filter((m) => m.attended).length;
@@ -193,109 +214,10 @@ export function AttendancePage() {
     };
   });
 
-  const focusedMemberIdRef = useRef(focusedMemberId);
-  focusedMemberIdRef.current = focusedMemberId;
-
-  const toggleAttendance = async (memberId: string, currentlyAttended: boolean) => {
-    if (saving) return;
-    setSaving(memberId);
-    setSaveError(null);
-
-    const newAttendedIds = currentlyAttended
-      ? recordsRef.current.filter((r) => r.attended && r.id !== memberId).map((r) => r.id)
-      : [...recordsRef.current.filter((r) => r.attended).map((r) => r.id), memberId];
-
-    setRecords((prev) =>
-      prev.map((r) => (r.id === memberId ? { ...r, attended: !currentlyAttended } : r)),
-    );
-
-    try {
-      await attendanceApi.bulkSetRecords(selectedRehearsalIdRef.current, newAttendedIds);
-    } catch {
-      setRecords((prev) =>
-        prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),
-      );
-      setSaveError('Speichern fehlgeschlagen');
-    } finally {
-      setSaving(null);
-    }
-  };
-
-  const toggleAttendanceRef = useRef(toggleAttendance);
-  toggleAttendanceRef.current = toggleAttendance;
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
-
-      if (e.key === 'Control') {
-        setCtrlHeld(true);
-        return;
-      }
-
-      if (e.key === '/' && !isInInput) {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-        return;
-      }
-
-      if (e.key === 'Escape' && isInInput) {
-        (target as HTMLInputElement).blur();
-        return;
-      }
-
-      // Ctrl+1–9: toggle attendance for the Nth visible member
-      if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
-        e.preventDefault();
-        const member = visibleMembersRef.current[parseInt(e.key) - 1];
-        if (member) toggleAttendanceRef.current(member.id, member.attended);
-        return;
-      }
-
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        const vm = visibleMembersRef.current;
-        if (vm.length === 0) return;
-        const currentIndex = vm.findIndex((m) => m.id === focusedMemberIdRef.current);
-        const newIndex =
-          e.key === 'ArrowDown'
-            ? currentIndex < vm.length - 1
-              ? currentIndex + 1
-              : 0
-            : currentIndex > 0
-              ? currentIndex - 1
-              : vm.length - 1;
-        const newMember = vm[newIndex];
-        setFocusedMemberId(newMember.id);
-        rowRefs.current.get(newMember.id)?.scrollIntoView({ block: 'nearest' });
-        return;
-      }
-
-      if ((e.key === ' ' && !isInInput || e.key === 'Enter') && focusedMemberIdRef.current) {
-        e.preventDefault();
-        const member = recordsRef.current.find((r) => r.id === focusedMemberIdRef.current);
-        if (member) toggleAttendanceRef.current(member.id, member.attended);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Control') setCtrlHeld(false);
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
   return (
     <div className="flex flex-col gap-4 max-w-2xl">
       <h1 className="text-2xl font-bold">Anwesenheit erfassen</h1>
 
-      {/* Rehearsal selector */}
       <div className="flex flex-col gap-2">
         <Select
           label="Probe"
@@ -308,15 +230,15 @@ export function AttendancePage() {
         >
           <SelectSection showDivider title="Kommende Proben">
             {futureRehearsals.map((r) => (
-              <SelectItem key={r.id} textValue={`${formatDateShort(r.date)} – ${r.title}`}>
-                {formatDateShort(r.date)} – {r.title}
+              <SelectItem key={r.id} textValue={`${formatDateNumeric(r.date)} – ${r.title}`}>
+                {formatDateNumeric(r.date)} – {r.title}
               </SelectItem>
             ))}
           </SelectSection>
           <SelectSection title="Vergangene Proben">
             {pastRehearsals.map((r) => (
-              <SelectItem key={r.id} textValue={`${formatDateShort(r.date)} – ${r.title}`}>
-                {formatDateShort(r.date)} – {r.title}
+              <SelectItem key={r.id} textValue={`${formatDateNumeric(r.date)} – ${r.title}`}>
+                {formatDateNumeric(r.date)} – {r.title}
               </SelectItem>
             ))}
           </SelectSection>
@@ -324,7 +246,7 @@ export function AttendancePage() {
 
         {selectedRehearsal && !loadingRecords && (
           <p className="text-sm text-default-500 px-1">
-            {formatDate(selectedRehearsal.date)} ·{' '}
+            {formatDateLong(selectedRehearsal.date)} ·{' '}
             <span className="font-medium text-success-600">{attendedCount}</span> von{' '}
             {records.length} anwesend
           </p>
@@ -332,10 +254,8 @@ export function AttendancePage() {
         {loadingRecords && <Spinner size="sm" />}
       </div>
 
-      {/* Roll call table */}
       {selectedRehearsalId && !loadingRecords && (
         <>
-          {/* Filters */}
           <div className="flex flex-col gap-2">
             <Input
               ref={searchInputRef}
@@ -346,36 +266,17 @@ export function AttendancePage() {
               isClearable
               size="sm"
             />
-            <div className="flex flex-wrap gap-1.5">
-              <Chip
-                size="sm"
-                variant={!voiceFilter ? 'solid' : 'flat'}
-                color={!voiceFilter ? 'primary' : 'default'}
-                className="cursor-pointer select-none"
-                onClick={() => setVoiceFilter(null)}
-              >
-                Alle
-              </Chip>
-              {voiceNames.map((voice) => (
-                <Chip
-                  key={voice}
-                  size="sm"
-                  variant={voiceFilter === voice ? 'solid' : 'flat'}
-                  color={voiceFilter === voice ? 'primary' : 'default'}
-                  className="cursor-pointer select-none"
-                  onClick={() => setVoiceFilter((prev) => (prev === voice ? null : voice))}
-                >
-                  {voice}
-                </Chip>
-              ))}
-            </div>
+            <VoiceFilterChips
+              voices={voiceNames}
+              selected={voiceFilter}
+              onChange={setVoiceFilter}
+            />
           </div>
 
           {saveError && (
             <p className="text-sm text-danger text-center">{saveError}</p>
           )}
 
-          {/* Member table */}
           <VoiceGroupList
             groups={voiceGroupData}
             collapsedVoices={collapsedVoices}
@@ -394,7 +295,6 @@ export function AttendancePage() {
             }
           />
 
-          {/* Keyboard shortcut hint — desktop only */}
           <p className="hidden sm:block text-xs text-default-400 text-center">
             ↑↓ navigieren · Leertaste/Enter umschalten · / suchen · Strg+1–9 erfassen
           </p>

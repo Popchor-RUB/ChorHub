@@ -1,0 +1,138 @@
+import { useEffect, useState } from 'react';
+import { Modal, ModalContent, ModalHeader, ModalBody, Chip, Spinner } from '@heroui/react';
+import { adminMembersApi } from '../../services/api';
+import type { MemberOverview, MemberRehearsalEntry } from '../../types';
+import { formatDateMedium } from '../../utils/dateFormatting';
+
+interface Props {
+  member: MemberOverview;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function MemberDetailModal({ member, isOpen, onClose }: Props) {
+  const [rehearsals, setRehearsals] = useState<MemberRehearsalEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setLoading(true);
+    adminMembersApi.rehearsals(member.id).then((res) => {
+      setRehearsals(res.data as MemberRehearsalEntry[]);
+      setLoading(false);
+    });
+  }, [isOpen, member.id]);
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const past = rehearsals.filter((r) => new Date(r.date) < startOfToday).reverse();
+  const upcoming = rehearsals.filter((r) => new Date(r.date) >= startOfToday);
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
+      <ModalContent>
+        <ModalHeader className="flex flex-col gap-0.5">
+          <span>
+            {member.firstName} {member.lastName}
+          </span>
+          <span className="text-sm font-normal text-default-500">
+            {member.choirVoice?.name ?? '—'} · {member.email}
+          </span>
+        </ModalHeader>
+        <ModalBody className="pb-6">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Spinner />
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Chip color="success" variant="flat">
+                  {past.filter((r) => r.attended).length} anwesend
+                </Chip>
+                <Chip color="danger" variant="flat">
+                  {member.unexcusedAbsenceCount} unentschuldigt gefehlt
+                </Chip>
+                <Chip color="default" variant="flat">
+                  {past.filter((r) => !r.attended && r.plan === 'DECLINED').length} entschuldigt
+                </Chip>
+                {upcoming.length > 0 && (
+                  <Chip color="primary" variant="flat">
+                    {upcoming.filter((r) => r.plan === 'CONFIRMED').length} von {upcoming.length} bevorstehend zugesagt
+                  </Chip>
+                )}
+              </div>
+
+              {upcoming.length > 0 && (
+                <div className="mb-5">
+                  <p className="text-xs font-semibold text-default-400 uppercase tracking-wide mb-2">
+                    Bevorstehende Proben
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    {upcoming.map((r) => (
+                      <div
+                        key={r.id}
+                        className="flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-default-50"
+                      >
+                        <span className="font-medium text-default-700">
+                          {formatDateMedium(r.date)} – {r.title}
+                        </span>
+                        <span className="text-xs text-default-500">
+                          {r.plan === 'CONFIRMED'
+                            ? '✓ zugesagt'
+                            : r.plan === 'DECLINED'
+                            ? '✗ abgesagt'
+                            : '– keine Angabe'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {past.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-default-400 uppercase tracking-wide mb-2">
+                    Vergangene Proben
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    {past.map((r) => {
+                      const unexcused = !r.attended && r.plan !== 'DECLINED';
+                      return (
+                        <div
+                          key={r.id}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
+                            r.attended
+                              ? 'bg-success-50 text-success-800'
+                              : unexcused
+                              ? 'bg-danger-50 text-danger-800'
+                              : 'bg-default-50 text-default-500'
+                          }`}
+                        >
+                          <span className="font-medium">
+                            {formatDateMedium(r.date)} – {r.title}
+                          </span>
+                          <span className="text-xs">
+                            {r.attended
+                              ? '✓ anwesend'
+                              : r.plan === 'DECLINED'
+                              ? 'entschuldigt'
+                              : '✗ unentsch. gefehlt'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {rehearsals.length === 0 && (
+                <p className="text-default-400 text-center py-4">Keine Proben vorhanden.</p>
+              )}
+            </>
+          )}
+        </ModalBody>
+      </ModalContent>
+    </Modal>
+  );
+}
