@@ -18,6 +18,11 @@ frontend/.env
 # Database
 pgdata/
 
+# E2E tests
+e2e/.auth/
+playwright-report/
+test-results/
+
 # IDE
 .vscode/
 .idea/

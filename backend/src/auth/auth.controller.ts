@@ -19,7 +19,7 @@ import type { AdminUser } from './types/auth-user.types';
 
 // All auth endpoints are rate-limited to 10 requests per 15 minutes per IP.
 @UseGuards(ThrottlerGuard)
-@Throttle({ default: { limit: 10, ttl: 900_000 } })
+@Throttle({ default: { limit: 10, ttl: process.env.NODE_ENV === 'production' ? 900_000 : 0 } })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

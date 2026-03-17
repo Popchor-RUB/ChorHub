@@ -360,6 +360,8 @@ export function AttendancePage() {
                       return (
                         <div
                           key={member.id}
+                          data-testid="attendance-member-row"
+                          data-member-id={member.id}
                           ref={(el) => {
                             if (el) rowRefs.current.set(member.id, el);
                             else rowRefs.current.delete(member.id);

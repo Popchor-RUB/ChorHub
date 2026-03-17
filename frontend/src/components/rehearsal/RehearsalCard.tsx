@@ -48,7 +48,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
   };
 
   return (
-    <Card className={`w-full ${readOnly ? 'opacity-80' : ''}`}>
+    <Card className={`w-full ${readOnly ? 'opacity-80' : ''}`} data-testid="rehearsal-card">
       <CardHeader className="flex flex-col items-start gap-1">
         <div className="flex items-center gap-2 w-full">
           <h3 className="text-lg font-semibold flex-1">{rehearsal.title}</h3>
