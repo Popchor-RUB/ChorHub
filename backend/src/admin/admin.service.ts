@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { AttendanceResponse } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
@@ -255,6 +256,33 @@ export class AdminService {
       attended: r.attendanceRecords.length > 0,
       plan: r.attendancePlans[0]?.response ?? null,
     }));
+  }
+
+  async adminSetMemberAttendancePlan(
+    memberId: string,
+    rehearsalId: string,
+    response: AttendanceResponse | null,
+  ) {
+    const [member, rehearsal] = await Promise.all([
+      this.prisma.member.findUnique({ where: { id: memberId }, select: { id: true } }),
+      this.prisma.rehearsal.findUnique({ where: { id: rehearsalId }, select: { id: true } }),
+    ]);
+    if (!member) throw new NotFoundException('Mitglied nicht gefunden');
+    if (!rehearsal) throw new NotFoundException('Probe nicht gefunden');
+
+    if (response === null) {
+      await this.prisma.attendancePlan
+        .delete({ where: { memberId_rehearsalId: { memberId, rehearsalId } } })
+        .catch(() => undefined);
+    } else {
+      await this.prisma.attendancePlan.upsert({
+        where: { memberId_rehearsalId: { memberId, rehearsalId } },
+        create: { memberId, rehearsalId, response },
+        update: { response },
+      });
+    }
+
+    return { plan: response };
   }
 
   async exportMembersExcel(): Promise<Buffer> {

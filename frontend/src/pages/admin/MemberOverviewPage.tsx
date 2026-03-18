@@ -165,7 +165,12 @@ export function MemberOverviewPage() {
       )}
 
       {selectedMember && (
-        <MemberDetailModal member={selectedMember} isOpen={isOpen} onClose={onClose} />
+        <MemberDetailModal
+          member={selectedMember}
+          isOpen={isOpen}
+          onClose={onClose}
+          onDelete={(id) => setMembers((prev) => prev.filter((m) => m.id !== id))}
+        />
       )}
 
       <CreateMemberModal

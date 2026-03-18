@@ -106,6 +106,9 @@ export const adminMembersApi = {
   search: (q: string) => api.get(`/admin/members/search?q=${encodeURIComponent(q)}`),
   history: (id: string) => api.get(`/admin/members/${id}/history`),
   rehearsals: (id: string) => api.get(`/admin/members/${id}/rehearsals`),
+  delete: (id: string) => api.delete(`/admin/members/${id}`),
+  setAttendancePlan: (memberId: string, rehearsalId: string, response: 'CONFIRMED' | 'DECLINED' | null) =>
+    api.put(`/admin/members/${memberId}/attendance-plans/${rehearsalId}`, { response }),
 };
 
 export const generalInfoApi = {

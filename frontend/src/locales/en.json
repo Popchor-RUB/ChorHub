@@ -216,7 +216,13 @@
     "attended": "✓ present",
     "excused_short": "excused",
     "unexcused_short": "✗ unexcused abs.",
-    "no_member_data": "No member data."
+    "no_member_data": "No member data.",
+    "edit_mode_toggle": "Edit",
+    "edit_mode_done": "Done",
+    "delete_member": "Delete Member",
+    "delete_confirm_prompt": "Really delete?",
+    "delete_confirm_yes": "Yes, delete",
+    "delete_confirm_no": "Cancel"
   },
   "attendance_detail": {
     "present_chip": "{{count}} present",

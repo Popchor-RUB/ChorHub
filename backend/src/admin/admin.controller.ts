@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Post,
+  Put,
   Query,
   Param,
   StreamableFile,
@@ -17,6 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminService } from './admin.service';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { CreateMemberDto } from './dto/create-member.dto';
+import { AdminSetAttendancePlanDto } from './dto/admin-set-attendance-plan.dto';
 
 @Controller('admin')
 @UseGuards(JwtAdminGuard)
@@ -71,5 +73,14 @@ export class AdminController {
   @Get('members/:id/history')
   getMemberHistory(@Param('id') id: string) {
     return this.adminService.getMemberHistory(id);
+  }
+
+  @Put('members/:memberId/attendance-plans/:rehearsalId')
+  setMemberAttendancePlan(
+    @Param('memberId') memberId: string,
+    @Param('rehearsalId') rehearsalId: string,
+    @Body() dto: AdminSetAttendancePlanDto,
+  ) {
+    return this.adminService.adminSetMemberAttendancePlan(memberId, rehearsalId, dto.response ?? null);
   }
 }

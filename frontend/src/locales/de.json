@@ -216,7 +216,13 @@
     "attended": "✓ anwesend",
     "excused_short": "entschuldigt",
     "unexcused_short": "✗ unentsch. gefehlt",
-    "no_member_data": "Keine Mitgliederdaten."
+    "no_member_data": "Keine Mitgliederdaten.",
+    "edit_mode_toggle": "Bearbeiten",
+    "edit_mode_done": "Fertig",
+    "delete_member": "Mitglied löschen",
+    "delete_confirm_prompt": "Wirklich löschen?",
+    "delete_confirm_yes": "Ja, löschen",
+    "delete_confirm_no": "Abbrechen"
   },
   "attendance_detail": {
     "present_chip": "{{count}} anwesend",

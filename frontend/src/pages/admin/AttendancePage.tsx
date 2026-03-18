@@ -3,6 +3,7 @@ import { Select, SelectItem, SelectSection, Input, Button, Spinner, useDisclosur
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, attendanceApi } from '../../services/api';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
+import { MemberDetailModal } from '../../components/member/MemberDetailModal';
 import type { Rehearsal, AttendanceRecord } from '../../types';
 import { VoiceGroupList, useCollapsedVoices } from '../../components/common/VoiceGroupList';
 import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
@@ -26,6 +27,9 @@ export function AttendancePage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null);
+
+  const [selectedMember, setSelectedMember] = useState<AttendanceRecord | null>(null);
+  const { isOpen: isMemberOpen, onOpen: onMemberOpen, onClose: onMemberClose } = useDisclosure();
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -175,6 +179,11 @@ export function AttendancePage() {
     return t('attendance.last_ago', { count: ago });
   };
 
+  const openMemberDetail = (member: AttendanceRecord) => {
+    setSelectedMember(member);
+    onMemberOpen();
+  };
+
   const buildMemberRow = (member: AttendanceRecord) => {
     const isFocused = focusedMemberId === member.id;
     const isSaving = saving === member.id;
@@ -198,7 +207,10 @@ export function AttendancePage() {
           onClick={() => setFocusedMemberId(member.id)}
         >
           <div className="min-w-0">
-            <p className="font-medium text-sm truncate">
+            <p
+              className="font-medium text-sm truncate cursor-pointer hover:text-primary transition-colors"
+              onClick={(e) => { e.stopPropagation(); openMemberDetail(member); }}
+            >
               {member.lastName}, {member.firstName}
             </p>
             <p className="text-xs text-default-400 sm:hidden mt-0.5">
@@ -355,6 +367,15 @@ export function AttendancePage() {
         onCreated={() => {}}
         onCreatedWithId={handleMemberCreatedWithId}
       />
+
+      {selectedMember && (
+        <MemberDetailModal
+          member={selectedMember}
+          isOpen={isMemberOpen}
+          onClose={onMemberClose}
+          onDelete={(id) => setRecords((prev) => prev.filter((r) => r.id !== id))}
+        />
+      )}
     </div>
   );
 }

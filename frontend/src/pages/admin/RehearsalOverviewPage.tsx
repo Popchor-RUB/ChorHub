@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Tabs, Tab, Spinner, Button, useDisclosure } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { attendanceApi, rehearsalsApi } from '../../services/api';
-import type { RehearsalOverview, Rehearsal } from '../../types';
+import type { RehearsalOverview, Rehearsal, AttendanceRecord } from '../../types';
 import { AttendanceDetailModal } from '../../components/rehearsal/AttendanceDetailModal';
 import { RehearsalFormModal } from '../../components/rehearsal/RehearsalFormModal';
 import { DeleteConfirmModal } from '../../components/rehearsal/DeleteConfirmModal';
 import { OverviewCard } from '../../components/rehearsal/OverviewCard';
+import { MemberDetailModal } from '../../components/member/MemberDetailModal';
 
 export function RehearsalOverviewPage() {
   const [future, setFuture] = useState<RehearsalOverview[]>([]);
@@ -24,6 +25,9 @@ export function RehearsalOverviewPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<Rehearsal | null>(null);
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+
+  const [selectedMember, setSelectedMember] = useState<AttendanceRecord | null>(null);
+  const { isOpen: isMemberOpen, onOpen: onMemberOpen, onClose: onMemberClose } = useDisclosure();
 
   const loadData = () =>
     Promise.all([
@@ -58,6 +62,11 @@ export function RehearsalOverviewPage() {
   const openDelete = (item: RehearsalOverview) => {
     const full = rehearsals.find((r) => r.id === item.id);
     if (full) { setDeleteTarget(full); onDeleteOpen(); }
+  };
+
+  const handleMemberClick = (member: AttendanceRecord) => {
+    setSelectedMember(member);
+    onMemberOpen();
   };
 
   if (loading) {
@@ -118,6 +127,7 @@ export function RehearsalOverviewPage() {
           type={selectedType}
           isOpen={isOpen}
           onClose={onClose}
+          onMemberClick={handleMemberClick}
         />
       )}
 
@@ -134,6 +144,15 @@ export function RehearsalOverviewPage() {
         onClose={onDeleteClose}
         onDeleted={loadData}
       />
+
+      {selectedMember && (
+        <MemberDetailModal
+          member={selectedMember}
+          isOpen={isMemberOpen}
+          onClose={onMemberClose}
+          onDelete={loadData}
+        />
+      )}
     </div>
   );
 }

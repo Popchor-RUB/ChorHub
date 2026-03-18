@@ -17,11 +17,12 @@ interface Props {
   type: 'future' | 'past';
   isOpen: boolean;
   onClose: () => void;
+  onMemberClick?: (member: AttendanceRecord) => void;
 }
 
 const NO_VOICE_KEY = '__no_voice__';
 
-export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose }: Props) {
+export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemberClick }: Props) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const { collapsedVoices, toggle: toggleVoice, collapseAll } = useCollapsedVoices();
@@ -74,6 +75,7 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose }: Prop
           key: m.id,
           content: (
             <div
+              onClick={onMemberClick ? () => onMemberClick(m) : undefined}
               className={[
                 'flex items-center justify-between px-4 py-2.5 text-sm',
                 type === 'past'
@@ -83,6 +85,7 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose }: Prop
                     ? 'bg-danger-50 text-danger-800'
                     : 'bg-content1 text-default-500'
                   : 'bg-content1',
+                onMemberClick ? 'cursor-pointer hover:opacity-75 transition-opacity' : '',
               ].filter(Boolean).join(' ')}
             >
               <span className="font-medium">{m.lastName}, {m.firstName}</span>

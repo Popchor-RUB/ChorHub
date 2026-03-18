@@ -164,7 +164,7 @@ describe('AdminService', () => {
       prismaMock.member.findUnique.mockResolvedValue(null);
       prismaMock.member.upsert.mockResolvedValue(mockMember());
 
-      const result = await service.importMembersFromCsv(csv);
+      const result = await service.importMembersFromCsv(csv, true);
 
       expect(result.created).toBe(1);
       expect(result.failed).toHaveLength(0);
@@ -358,6 +358,55 @@ describe('AdminService', () => {
       expect(result[1]).toMatchObject({ attended: false, plan: 'DECLINED' });
       expect(result[2]).toMatchObject({ attended: false, plan: 'CONFIRMED' });
       expect(result[3]).toMatchObject({ attended: false, plan: null });
+    });
+  });
+
+  describe('adminSetMemberAttendancePlan', () => {
+    const memberId = 'member-1';
+    const rehearsalId = 'rehearsal-1';
+
+    beforeEach(() => {
+      prismaMock.member.findUnique.mockResolvedValue(mockMember() as any);
+      prismaMock.rehearsal.findUnique.mockResolvedValue({
+        id: rehearsalId,
+        date: new Date('2025-01-01'),
+        title: 'Probe',
+        description: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+    });
+
+    it('upserts DECLINED plan when response is DECLINED', async () => {
+      prismaMock.attendancePlan.upsert.mockResolvedValue({} as any);
+      const result = await service.adminSetMemberAttendancePlan(memberId, rehearsalId, 'DECLINED');
+      expect(prismaMock.attendancePlan.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ create: expect.objectContaining({ response: 'DECLINED' }) }),
+      );
+      expect(result).toEqual({ plan: 'DECLINED' });
+    });
+
+    it('deletes the plan when response is null', async () => {
+      prismaMock.attendancePlan.delete.mockResolvedValue({} as any);
+      const result = await service.adminSetMemberAttendancePlan(memberId, rehearsalId, null);
+      expect(prismaMock.attendancePlan.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { memberId_rehearsalId: { memberId, rehearsalId } } }),
+      );
+      expect(result).toEqual({ plan: null });
+    });
+
+    it('throws NotFoundException when member does not exist', async () => {
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      await expect(
+        service.adminSetMemberAttendancePlan('bad-id', rehearsalId, 'DECLINED'),
+      ).rejects.toThrow('Mitglied nicht gefunden');
+    });
+
+    it('throws NotFoundException when rehearsal does not exist', async () => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue(null);
+      await expect(
+        service.adminSetMemberAttendancePlan(memberId, 'bad-id', 'DECLINED'),
+      ).rejects.toThrow('Probe nicht gefunden');
     });
   });
 
