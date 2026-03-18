@@ -24,9 +24,9 @@ export class GeneralInfoController {
     const result = await this.generalInfoService.updateInfo(dto);
     if (dto.sendPushNotification) {
       await this.pushService.sendToAll({
-        title: 'ChorHub – Neue Informationen',
-        body: 'Der Admin hat allgemeine Informationen aktualisiert.',
-        url: '/',
+        title: 'Neue Informationen',
+        body: 'Informationen wurden aktualisiert!',
+        url: '/informationen',
       });
     }
     return result;

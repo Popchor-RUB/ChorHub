@@ -15,7 +15,10 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url ?? BASE_PATH;
+  const rawUrl = event.notification.data?.url;
+  const url = rawUrl
+    ? (rawUrl.startsWith('/') ? BASE_PATH + rawUrl.slice(1) : rawUrl)
+    : BASE_PATH;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
