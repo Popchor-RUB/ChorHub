@@ -30,9 +30,12 @@ export class AdminController {
 
   @Post('members/import')
   @UseInterceptors(FileInterceptor('file'))
-  async importMembers(@UploadedFile() file: Express.Multer.File) {
+  async importMembers(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('sendEmails') sendEmails: string,
+  ) {
     if (!file) throw new BadRequestException('Keine Datei hochgeladen');
-    return this.adminService.importMembersFromCsv(file.buffer);
+    return this.adminService.importMembersFromCsv(file.buffer, sendEmails === 'true');
   }
 
   @Get('members')

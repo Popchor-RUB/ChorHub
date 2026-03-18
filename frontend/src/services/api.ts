@@ -93,9 +93,10 @@ export const attendanceApi = {
 export const adminMembersApi = {
   create: (data: { firstName: string; lastName: string; email: string; voiceId?: string }) =>
     api.post('/admin/members', data),
-  import: (file: File) => {
+  import: (file: File, sendEmails: boolean) => {
     const fd = new FormData();
     fd.append('file', file);
+    fd.append('sendEmails', String(sendEmails));
     return api.post('/admin/members/import', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

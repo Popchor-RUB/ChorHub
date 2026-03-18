@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Card, CardBody, Button, Chip } from '@heroui/react';
+import { useState, useEffect } from 'react';
+import { Card, CardBody, Button, Checkbox, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
-import { adminMembersApi } from '../../services/api';
+import { adminMembersApi, choirVoicesApi } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import type { ChoirVoice } from '../../types';
 
 interface ImportResult {
   created: number;
@@ -15,6 +16,12 @@ export function ImportMembersPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState('');
+  const [sendEmails, setSendEmails] = useState(true);
+  const [voices, setVoices] = useState<ChoirVoice[]>([]);
+
+  useEffect(() => {
+    choirVoicesApi.list().then((res) => setVoices(res.data as ChoirVoice[])).catch(() => {});
+  }, []);
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -34,7 +41,7 @@ export function ImportMembersPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await adminMembersApi.import(file);
+      const res = await adminMembersApi.import(file, sendEmails);
       setResult(res.data as ImportResult);
     } catch (e: any) {
       setError(e.response?.data?.error?.message ?? t('members.import_failed'));
@@ -53,9 +60,12 @@ export function ImportMembersPage() {
             {t('members.import_description')}{' '}
             <code className="bg-default-100 px-1 rounded">firstName, lastName, email, choirVoice</code>
           </p>
-          <p className="text-xs text-default-400">
-            {t('members.import_valid_voices')}
-          </p>
+          {voices.length > 0 && (
+            <p className="text-xs text-default-400">
+              {t('members.import_valid_voices')}{' '}
+              {voices.map((v) => v.name).join(', ')}
+            </p>
+          )}
 
           <div
             className="border-2 border-dashed border-default-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors"
@@ -81,6 +91,10 @@ export function ImportMembersPage() {
           </div>
 
           {error && <p className="text-danger text-sm">{error}</p>}
+
+          <Checkbox isSelected={sendEmails} onValueChange={setSendEmails}>
+            {t('members.import_send_emails')}
+          </Checkbox>
 
           <div className="flex gap-2">
             <Button color="primary" onPress={handleImport} isLoading={loading} isDisabled={!file}>

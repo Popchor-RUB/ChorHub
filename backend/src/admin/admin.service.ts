@@ -71,7 +71,7 @@ export class AdminService {
     await this.prisma.member.delete({ where: { id } });
   }
 
-  async importMembersFromCsv(buffer: Buffer) {
+  async importMembersFromCsv(buffer: Buffer, sendEmails = false) {
     let records: CsvRow[];
     try {
       records = parse(buffer, {
@@ -122,15 +122,16 @@ export class AdminService {
           },
         });
 
-        // Only send invitation email to newly created members
         if (!existing) {
-          const rawToken = randomBytes(32).toString('hex');
-          const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-          await this.prisma.memberLoginToken.create({
-            data: { memberId: member.id, hashedToken },
-          });
-          const magicUrl = `${this.config.get('APP_URL')}/auth/verify?token=${rawToken}`;
-          await this.mailService.sendMemberInvite(member, magicUrl);
+          if (sendEmails) {
+            const rawToken = randomBytes(32).toString('hex');
+            const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+            await this.prisma.memberLoginToken.create({
+              data: { memberId: member.id, hashedToken },
+            });
+            const magicUrl = `${this.config.get('APP_URL')}/auth/verify?token=${rawToken}`;
+            await this.mailService.sendMemberInvite(member, magicUrl);
+          }
           results.created++;
         } else {
           results.updated++;
