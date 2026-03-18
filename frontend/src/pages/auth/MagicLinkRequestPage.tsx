@@ -19,7 +19,7 @@ export function MagicLinkRequestPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { setMemberSession } = useAuthStore();
-  const { visible: showGuide, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-login');
+  const { visible: showGuide, forced: guideForced, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-login');
   const { t } = useTranslation();
 
   const handleSession = (token: string, member: { id: string; firstName: string; lastName: string }) => {
@@ -38,6 +38,10 @@ export function MagicLinkRequestPage() {
     setError('');
     const trimmed = email.trim();
     try {
+      if (trimmed.toLowerCase() === 'admin') {
+        navigate('/admin/login', { replace: true });
+        return;
+      }
       if (isToken(trimmed)) {
         const res = await memberAuthApi.verifyMagicLink(trimmed);
         handleSession(res.data.token, res.data.member);
@@ -81,7 +85,7 @@ export function MagicLinkRequestPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-default-50">
-      {showGuide && <IOSInstallGuide onDismiss={dismissGuide} />}
+      {showGuide && <IOSInstallGuide forced={guideForced} onDismiss={dismissGuide} />}
       <Card className="w-full max-w-md">
         <CardHeader className="flex flex-col items-start gap-1 pb-0">
           <h1 className="text-2xl font-bold">{t('auth.member_title')}</h1>

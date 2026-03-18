@@ -65,7 +65,7 @@ export default async function globalSetup() {
   await memberPage.goto(`${FRONTEND_URL}/login`);
   await memberPage.waitForSelector('text=Mitglieder-Anmeldung');
 
-  await memberPage.getByLabel('E-Mail-Adresse oder Token').fill(memberEmail);
+  await memberPage.getByLabel('E-Mail-Adresse').fill(memberEmail);
   await memberPage.getByRole('button', { name: 'Weiter' }).click();
 
   await memberPage.waitForSelector('text=6-stelliger Code', { timeout: 10_000 });

@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { Button } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 interface Props {
+  forced: boolean;
   onDismiss: () => void;
 }
 
@@ -25,7 +27,113 @@ function ShareIcon({ className }: { className?: string }) {
   );
 }
 
-export function IOSInstallGuide({ onDismiss }: Props) {
+function Step({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-3">
+      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-default-500 mt-0.5">{desc}</p>
+      </div>
+    </li>
+  );
+}
+
+function StepList({ className }: { className?: string }) {
+  const { t } = useTranslation();
+  const step1Words = t('ios_guide.step1_desc').split(' ');
+
+  return (
+    <ol className={`space-y-4 ${className ?? ''}`}>
+      <Step
+        icon={<ShareIcon className="w-4 h-4 text-primary" />}
+        title={t('ios_guide.step1_title')}
+        desc={
+          <>
+            {step1Words.slice(0, -1).join(' ')}{' '}
+            <ShareIcon className="w-3.5 h-3.5 inline relative -top-px" />
+            {' '}{step1Words.slice(-1)[0]}
+          </>
+        }
+      />
+      <Step
+        icon={
+          <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        }
+        title={t('ios_guide.step2_title')}
+        desc={t('ios_guide.step2_desc')}
+      />
+      <Step
+        icon={
+          <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+        }
+        title={t('ios_guide.step3_title')}
+        desc={t('ios_guide.step3_desc')}
+      />
+    </ol>
+  );
+}
+
+function ForcedGuide() {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    (document.activeElement as HTMLElement)?.blur();
+
+    const handleFocusIn = (e: FocusEvent) => {
+      (e.target as HTMLElement)?.blur();
+    };
+    document.addEventListener('focusin', handleFocusIn, true);
+
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('focusin', handleFocusIn, true);
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center p-6 touch-none">
+      <div className="flex flex-col items-center gap-3 mb-8">
+        <img
+          src={`${import.meta.env.BASE_URL}icons/apple-touch-icon.png`}
+          alt="ChorHub"
+          className="w-20 h-20 rounded-[22%] shadow-lg"
+        />
+        <h1 className="text-2xl font-bold text-center">{t('ios_guide.install_title')}</h1>
+        <p className="text-default-500 text-sm text-center">{t('ios_guide.install_subtitle')}</p>
+      </div>
+
+      <div className="w-full max-w-sm">
+        <StepList />
+      </div>
+
+      {/* Arrow hinting at the Safari toolbar */}
+      <div className="absolute bottom-8 flex flex-col items-center gap-1">
+        <p className="text-xs text-default-400">{t('ios_guide.share_hint')}</p>
+        <svg
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2.5}
+          stroke="currentColor"
+          className="w-5 h-5 text-default-400 animate-bounce"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function DismissableGuide({ onDismiss }: { onDismiss: () => void }) {
   const { t } = useTranslation();
 
   return (
@@ -66,46 +174,7 @@ export function IOSInstallGuide({ onDismiss }: Props) {
 
           <div className="h-px bg-divider mb-4" />
 
-          {/* Steps */}
-          <ol className="space-y-4 mb-5">
-            <li className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <ShareIcon className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">{t('ios_guide.step1_title')}</p>
-                <p className="text-xs text-default-500 mt-0.5">
-                  {t('ios_guide.step1_desc').split(' ').slice(0, -1).join(' ')}{' '}
-                  <ShareIcon className="w-3.5 h-3.5 inline relative -top-px" />
-                  {' '}{t('ios_guide.step1_desc').split(' ').slice(-1)[0]}
-                </p>
-              </div>
-            </li>
-
-            <li className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium">{t('ios_guide.step2_title')}</p>
-                <p className="text-xs text-default-500 mt-0.5">{t('ios_guide.step2_desc')}</p>
-              </div>
-            </li>
-
-            <li className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium">{t('ios_guide.step3_title')}</p>
-                <p className="text-xs text-default-500 mt-0.5">{t('ios_guide.step3_desc')}</p>
-              </div>
-            </li>
-          </ol>
+          <StepList className="mb-5" />
 
           <Button variant="flat" fullWidth size="sm" onPress={onDismiss} className="mb-4">
             {t('ios_guide.understood')}
@@ -129,4 +198,9 @@ export function IOSInstallGuide({ onDismiss }: Props) {
       </div>
     </div>
   );
+}
+
+export function IOSInstallGuide({ forced, onDismiss }: Props) {
+  if (forced) return <ForcedGuide />;
+  return <DismissableGuide onDismiss={onDismiss} />;
 }

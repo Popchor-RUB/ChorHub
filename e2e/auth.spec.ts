@@ -44,7 +44,7 @@ test.describe('Member magic link flow', () => {
     await page.goto('/login');
     await expect(page.getByText('Mitglieder-Anmeldung')).toBeVisible();
 
-    await page.getByLabel('E-Mail-Adresse oder Token').fill(memberEmail);
+    await page.getByLabel('E-Mail-Adresse').fill(memberEmail);
     await page.getByRole('button', { name: 'Weiter' }).click();
 
     await expect(page.getByText('6-stelliger Code')).toBeVisible();
@@ -64,7 +64,7 @@ test.describe('Member magic link flow', () => {
     await clearMailHog();
 
     await page.goto('/login');
-    await page.getByLabel('E-Mail-Adresse oder Token').fill(memberEmail);
+    await page.getByLabel('E-Mail-Adresse').fill(memberEmail);
     await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByText('6-stelliger Code')).toBeVisible();
 
@@ -83,12 +83,12 @@ test.describe('Member magic link flow', () => {
     await clearMailHog();
 
     await page.goto('/login');
-    await page.getByLabel('E-Mail-Adresse oder Token').fill(memberEmail);
+    await page.getByLabel('E-Mail-Adresse').fill(memberEmail);
     await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByText('6-stelliger Code')).toBeVisible();
 
     await page.getByRole('button', { name: 'Zurück' }).click();
 
-    await expect(page.getByLabel('E-Mail-Adresse oder Token')).toBeVisible();
+    await expect(page.getByLabel('E-Mail-Adresse')).toBeVisible();
   });
 });

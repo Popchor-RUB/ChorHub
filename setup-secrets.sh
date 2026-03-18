@@ -135,6 +135,7 @@ if confirm_overwrite "$ENV_FRONTEND_DEV"; then
   cat > "$ENV_FRONTEND_DEV" <<EOF
 VITE_API_URL=http://localhost:5173/api
 VITE_BASE_PATH=/
+VITE_FORCE_IOS_PWA=1
 EOF
   echo "  Written: frontend/.env.development"
 fi
@@ -146,6 +147,7 @@ if confirm_overwrite "$ENV_FRONTEND_PROD"; then
   cat > "$ENV_FRONTEND_PROD" <<EOF
 VITE_API_URL=${VITE_API_URL_PROD}
 VITE_BASE_PATH=${VITE_BASE_PATH_PROD}
+VITE_FORCE_IOS_PWA=1
 EOF
   echo "  Written: frontend/.env.production"
 fi

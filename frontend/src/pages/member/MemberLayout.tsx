@@ -19,7 +19,7 @@ export function MemberLayout() {
   const { memberSession, logoutMember } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { visible: showGuide, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-member');
+  const { visible: showGuide, forced: guideForced, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-member');
 
   const handleLogout = () => {
     logoutMember();
@@ -28,7 +28,7 @@ export function MemberLayout() {
 
   return (
     <div className="min-h-screen bg-default-50">
-      {showGuide && <IOSInstallGuide onDismiss={dismissGuide} />}
+      {showGuide && <IOSInstallGuide forced={guideForced} onDismiss={dismissGuide} />}
       <Navbar isBordered>
         <NavbarBrand>
           <span className="font-bold text-inherit text-xl">🎵 ChorHub</span>

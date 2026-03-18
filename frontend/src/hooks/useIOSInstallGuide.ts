@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+const FORCE_PWA = import.meta.env.VITE_FORCE_IOS_PWA === '1';
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 function isIOSSafariNotStandalone(): boolean {
@@ -18,14 +19,16 @@ function isDue(storageKey: string): boolean {
 }
 
 export function useIOSInstallGuide(storageKey: string) {
-  const [visible, setVisible] = useState(
-    () => isIOSSafariNotStandalone() && isDue(storageKey),
-  );
+  const [visible, setVisible] = useState(() => {
+    if (!isIOSSafariNotStandalone()) return false;
+    if (FORCE_PWA) return true;
+    return isDue(storageKey);
+  });
 
   const dismiss = () => {
     localStorage.setItem(storageKey, String(Date.now()));
     setVisible(false);
   };
 
-  return { visible, dismiss };
+  return { visible, forced: FORCE_PWA, dismiss };
 }
