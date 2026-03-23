@@ -80,21 +80,32 @@ function daysFromNow(days: number): Date {
   return d;
 }
 
-const PAST_REHEARSALS = [
-  { date: daysFromNow(-63), title: 'Wochenprobe', description: 'Einstimmung nach der Sommerpause – leichte Aufwärmstücke' },
-  { date: daysFromNow(-49), title: 'Wochenprobe', description: 'Einstudierung: Bach – Jesu, Joy of Man\'s Desiring' },
-  { date: daysFromNow(-35), title: 'Wochenprobe', description: 'Stimmbildung und Intonation' },
-  { date: daysFromNow(-21), title: 'Wochenprobe', description: 'Gemeinsames Proben der Konzertstücke' },
-  { date: daysFromNow(-7),  title: 'Hauptprobe',  description: 'Generalprobe vor dem Herbstkonzert – vollständiges Programm' },
+const PAST_REHEARSAL_COUNT = 5;
+const UPCOMING_REHEARSAL_COUNT = 10;
+
+const REHEARSAL_DESCRIPTIONS = [
+  'Einstimmung und gemeinsames Einsingen',
+  'Registerproben mit Fokus auf Intonation',
+  'Feinschliff von Dynamik und Artikulation',
+  'Programmprobe mit vollständigem Ablauf',
+  'Neue Stücke anlesen und Stimmen festigen',
+  'Klangbalance zwischen den Stimmen verbessern',
 ];
 
-const UPCOMING_REHEARSALS = [
-  { date: daysFromNow(7),  title: 'Wochenprobe', description: 'Rückblick auf das Konzert, neue Stücke für Advent' },
-  { date: daysFromNow(14), title: 'Wochenprobe', description: 'Adventsprogramm: erste Einstudierung' },
-  { date: daysFromNow(21), title: 'Wochenprobe', description: 'Adventsprogramm: Feinschliff Dynamik & Tempi' },
-  { date: daysFromNow(28), title: 'Wochenprobe', description: null },
-  { date: daysFromNow(35), title: 'Hauptprobe',  description: 'Hauptprobe Adventskonzert – bitte pünktlich erscheinen!' },
-];
+function buildRehearsalSeries(offsetDays: number, count: number, titleStartIndex = 1) {
+  return Array.from({ length: count }, (_, i) => {
+    const index = i + 1;
+    const titleIndex = titleStartIndex + i;
+    return {
+      date: daysFromNow(offsetDays + i * 7),
+      title: `${titleIndex}. Probe`,
+      description: REHEARSAL_DESCRIPTIONS[i % REHEARSAL_DESCRIPTIONS.length],
+    };
+  });
+}
+
+const PAST_REHEARSALS = buildRehearsalSeries(-7 * PAST_REHEARSAL_COUNT, PAST_REHEARSAL_COUNT, 1);
+const UPCOMING_REHEARSALS = buildRehearsalSeries(7, UPCOMING_REHEARSAL_COUNT, PAST_REHEARSAL_COUNT + 1);
 
 // ── Attendance helpers ────────────────────────────────────────────────────────
 

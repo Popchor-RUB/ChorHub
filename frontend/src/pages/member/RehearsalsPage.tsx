@@ -18,6 +18,7 @@ export function RehearsalsPage() {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAllRehearsals, setShowAllRehearsals] = useState(false);
 
   const [availableVoices, setAvailableVoices] = useState<ChoirVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
@@ -59,6 +60,8 @@ export function RehearsalsPage() {
   startOfToday.setHours(0, 0, 0, 0);
   const upcoming = rehearsals.filter((r) => new Date(r.date) >= startOfToday).reverse();
   const past = rehearsals.filter((r) => new Date(r.date) < startOfToday);
+  const visibleUpcoming = showAllRehearsals ? upcoming : upcoming.slice(0, 4);
+  const hasHiddenRehearsals = upcoming.length > visibleUpcoming.length;
 
   if (loading) {
     return <div className="flex justify-center pt-16"><Spinner size="lg" /></div>;
@@ -110,9 +113,19 @@ export function RehearsalsPage() {
           <p className="text-default-400 text-sm">{t('rehearsals.no_upcoming')}</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {upcoming.map((r) => (
+            {visibleUpcoming.map((r) => (
               <RehearsalCard key={r.id} rehearsal={r} onUpdated={loadData} />
             ))}
+          </div>
+        )}
+        {!showAllRehearsals && hasHiddenRehearsals && (
+          <div className="mt-3 flex justify-center">
+            <Button
+              color="primary"
+              onPress={() => setShowAllRehearsals(true)}
+            >
+              {t('rehearsals.show_all')}
+            </Button>
           </div>
         )}
       </section>

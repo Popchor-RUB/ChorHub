@@ -65,6 +65,7 @@
     "new": "+ Neue Probe",
     "upcoming_count": "Bevorstehend ({{count}})",
     "past_count": "Vergangen ({{count}})",
+    "show_all": "Alle anzeigen",
     "no_upcoming": "Keine bevorstehenden Proben eingetragen.",
     "no_upcoming_admin": "Keine bevorstehenden Proben.",
     "no_past_admin": "Keine vergangenen Proben vorhanden.",

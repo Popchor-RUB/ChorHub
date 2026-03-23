@@ -65,6 +65,7 @@
     "new": "+ New Rehearsal",
     "upcoming_count": "Upcoming ({{count}})",
     "past_count": "Past ({{count}})",
+    "show_all": "Show all",
     "no_upcoming": "No upcoming rehearsals scheduled.",
     "no_upcoming_admin": "No upcoming rehearsals.",
     "no_past_admin": "No past rehearsals.",
