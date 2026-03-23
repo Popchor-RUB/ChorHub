@@ -118,7 +118,7 @@ npm run test:cov   # Mit Coverage-Report
 
 ## Admin-CLI
 
-Das Skript `backend/scripts/admin-cli.ts` verwaltet Admin-Benutzer direkt in der Datenbank.
+Das Skript `backend/scripts/admin-cli.ts` verwaltet Admin-Benutzer und kann Einladungs-E-Mails an Mitglieder versenden.
 
 ```bash
 cd backend
@@ -131,6 +131,10 @@ npm run admin -- <Befehl>
 | `passwd <Benutzername>` | Passwort ändern. Das neue Passwort wird interaktiv abgefragt (keine Eingabe = Zufallspasswort generieren). Das Passwort erscheint **nicht** in der Shell-History. |
 | `delete <Benutzername>` | Admin löschen. |
 | `list` | Alle Admins auflisten. |
+| `invite` | Einladungen an Mitglieder senden, die sich noch nie eingeloggt haben (`lastLoginAt` ist `null`). |
+| `invite --all` | Einladungen an **alle** Mitglieder senden, unabhängig vom Login-Status. |
+
+Beim Versand über `invite`/`invite --all` wird auf maximal **1 E-Mail pro Sekunde** begrenzt und ein Fortschrittsbalken angezeigt.
 
 **Beispiele:**
 
@@ -149,6 +153,12 @@ npm run admin -- delete alice
 
 # Alle Admins anzeigen
 npm run admin -- list
+
+# Einladungen an Mitglieder ohne bisherigen Login senden
+npm run admin -- invite
+
+# Einladungen an alle Mitglieder senden
+npm run admin -- invite --all
 ```
 
 > **Hinweis:** `DATABASE_URL` muss gesetzt sein (z. B. über `.env.backend`). Im Docker-Betrieb kann der Befehl auch direkt im Container ausgeführt werden:

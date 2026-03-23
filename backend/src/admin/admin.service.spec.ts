@@ -14,6 +14,7 @@ const mockMember = (overrides: Partial<any> = {}) => ({
   choirVoiceId: null,
   loginCode: null,
   loginCodeExpiresAt: null,
+  lastLoginAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
@@ -171,6 +172,20 @@ describe('AdminService', () => {
       expect(mailService.sendMemberInvite).toHaveBeenCalledTimes(1);
     });
 
+    it('creates member but does not send invite when sendEmails is false', async () => {
+      const csv = Buffer.from(
+        'firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,SOPRAN\n',
+      );
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      prismaMock.member.upsert.mockResolvedValue(mockMember());
+
+      const result = await service.importMembersFromCsv(csv);
+
+      expect(result.created).toBe(1);
+      expect(result.failed).toHaveLength(0);
+      expect(mailService.sendMemberInvite).not.toHaveBeenCalled();
+    });
+
     it('marks row as failed when choirVoice is invalid', async () => {
       const csv = Buffer.from(
         'firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,INVALIDVOICE\n',
@@ -179,6 +194,40 @@ describe('AdminService', () => {
       expect(result.failed).toHaveLength(1);
       expect(result.failed[0].reason).toContain('Ungültige Stimmlage');
       expect(mailService.sendMemberInvite).not.toHaveBeenCalled();
+    });
+
+    it('imports row with empty choirVoice and stores null choirVoiceId', async () => {
+      const csv = Buffer.from('firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,\n');
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      prismaMock.member.upsert.mockResolvedValue(mockMember());
+
+      const result = await service.importMembersFromCsv(csv);
+
+      expect(result.created).toBe(1);
+      expect(result.failed).toHaveLength(0);
+      expect(prismaMock.member.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ choirVoiceId: null }),
+          update: expect.objectContaining({ choirVoiceId: null }),
+        }),
+      );
+    });
+
+    it('imports row with "-" choirVoice and stores null choirVoiceId', async () => {
+      const csv = Buffer.from('firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,-\n');
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      prismaMock.member.upsert.mockResolvedValue(mockMember());
+
+      const result = await service.importMembersFromCsv(csv);
+
+      expect(result.created).toBe(1);
+      expect(result.failed).toHaveLength(0);
+      expect(prismaMock.member.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ choirVoiceId: null }),
+          update: expect.objectContaining({ choirVoiceId: null }),
+        }),
+      );
     });
 
     it('marks row as failed when required fields are missing', async () => {

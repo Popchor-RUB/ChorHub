@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { AttendanceResponse } from '@prisma/client';
+import { AttendanceResponse } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
@@ -12,7 +12,7 @@ interface CsvRow {
   firstName: string;
   lastName: string;
   email: string;
-  choirVoice: string;
+  choirVoice?: string;
 }
 
 @Injectable()
@@ -79,6 +79,7 @@ export class AdminService {
         columns: true,
         skip_empty_lines: true,
         trim: true,
+        delimiter: ";"
       });
     } catch {
       throw new BadRequestException('Ungültiges CSV-Format');
@@ -91,18 +92,23 @@ export class AdminService {
     const results = { created: 0, updated: 0, failed: [] as { email: string; reason: string }[] };
 
     for (const row of records) {
-      if (!row.firstName || !row.lastName || !row.email || !row.choirVoice) {
+      if (!row.firstName || !row.lastName || !row.email) {
         results.failed.push({ email: row.email ?? '?', reason: 'Fehlende Pflichtfelder' });
         continue;
       }
 
-      const voice = voiceMap.get(row.choirVoice.toLowerCase());
-      if (!voice) {
-        results.failed.push({
-          email: row.email,
-          reason: `Ungültige Stimmlage: ${row.choirVoice}`,
-        });
-        continue;
+      const choirVoiceValue = row.choirVoice?.trim();
+      let choirVoiceId: string | null = null;
+      if (choirVoiceValue && choirVoiceValue !== '-') {
+        const voice = voiceMap.get(choirVoiceValue.toLowerCase());
+        if (!voice) {
+          results.failed.push({
+            email: row.email,
+            reason: `Ungültige Stimmlage: ${row.choirVoice}`,
+          });
+          continue;
+        }
+        choirVoiceId = voice.id;
       }
 
       try {
@@ -114,12 +120,12 @@ export class AdminService {
             firstName: row.firstName,
             lastName: row.lastName,
             email: row.email,
-            choirVoiceId: voice.id,
+            choirVoiceId,
           },
           update: {
             firstName: row.firstName,
             lastName: row.lastName,
-            choirVoiceId: voice.id,
+            choirVoiceId,
           },
         });
 

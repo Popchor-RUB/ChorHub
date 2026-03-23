@@ -75,6 +75,7 @@ echo ""
 echo "SMTP settings (leave empty to use MailHog defaults):"
 SMTP_HOST=$(prompt SMTP_HOST "SMTP host" "mailhog")
 SMTP_PORT=$(prompt SMTP_PORT "SMTP port" "1025")
+SMTP_SECURE=$(prompt SMTP_SECURE "Use implicit TLS / secure SMTP on port 465 (true/false)" "false")
 SMTP_USER=$(prompt SMTP_USER "SMTP username" "")
 SMTP_PASS=$(prompt_secret SMTP_PASS "SMTP password (hidden)")
 
@@ -116,6 +117,7 @@ DATABASE_URL=postgresql://chorhub:${PG_PASS}@db:5432/chorhub
 JWT_SECRET=${JWT_SECRET}
 SMTP_HOST=${SMTP_HOST}
 SMTP_PORT=${SMTP_PORT}
+SMTP_SECURE=${SMTP_SECURE}
 SMTP_USER=${SMTP_USER}
 SMTP_PASS=${SMTP_PASS}
 MAIL_FROM=${MAIL_FROM}

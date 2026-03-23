@@ -16,7 +16,7 @@ export function ImportMembersPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState('');
-  const [sendEmails, setSendEmails] = useState(true);
+  const [sendEmails, setSendEmails] = useState(false);
   const [voices, setVoices] = useState<ChoirVoice[]>([]);
 
   useEffect(() => {

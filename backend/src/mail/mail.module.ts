@@ -13,6 +13,7 @@ import { MailService } from './mail.service';
         transport: {
           host: config.get<string>('SMTP_HOST'),
           port: config.get<number>('SMTP_PORT', 587),
+          secure: config.get<boolean>('SMTP_SECURE', false),
           auth:
             config.get('SMTP_USER')
               ? {

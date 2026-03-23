@@ -19,6 +19,7 @@ const mockMember = {
   choirVoiceId: null,
   loginCode: null,
   loginCodeExpiresAt: null,
+  lastLoginAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -275,7 +276,7 @@ describe('AuthService', () => {
       await expect(service.verifyMagicLink('bad-token')).rejects.toThrow(UnauthorizedException);
     });
 
-    it('returns member data for valid token without any DB writes', async () => {
+    it('returns member data for valid token and updates lastLoginAt', async () => {
       prismaMock.memberLoginToken.findUnique.mockResolvedValue({
         id: 'token-1',
         memberId: mockMember.id,
@@ -283,13 +284,17 @@ describe('AuthService', () => {
         createdAt: new Date(),
         member: mockMember,
       } as any);
+      prismaMock.member.update.mockResolvedValue({ ...mockMember, lastLoginAt: new Date() });
 
       const result = await service.verifyMagicLink('valid-raw-token');
 
       expect(result.member.id).toBe(mockMember.id);
       expect(result.token).toBe('valid-raw-token');
+      expect(prismaMock.member.update).toHaveBeenCalledWith({
+        where: { id: mockMember.id },
+        data: { lastLoginAt: expect.any(Date) },
+      });
       // Token must NOT be cleared or modified (permanent)
-      expect(prismaMock.member.update).not.toHaveBeenCalled();
       expect(prismaMock.memberLoginToken.delete).not.toHaveBeenCalled();
     });
   });

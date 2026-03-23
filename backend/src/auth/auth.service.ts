@@ -96,7 +96,7 @@ export class AuthService {
       }),
       this.prisma.member.update({
         where: { id: member.id },
-        data: { loginCode: null, loginCodeExpiresAt: null },
+        data: { loginCode: null, loginCodeExpiresAt: null, lastLoginAt: new Date() },
       }),
     ]);
 
@@ -123,6 +123,11 @@ export class AuthService {
     }
 
     const { member } = tokenRecord;
+    await this.prisma.member.update({
+      where: { id: member.id },
+      data: { lastLoginAt: new Date() },
+    });
+
     return {
       token: rawToken,
       member: {

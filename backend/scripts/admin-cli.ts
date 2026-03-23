@@ -6,10 +6,12 @@
  *   npm run admin -- delete <username>
  *   npm run admin -- list
  *   npm run admin -- passwd <username>
+ *   npm run admin -- invite [--all]
  *
  * Or directly:
- *   npx ts-node -P tsconfig.scripts.json scripts/admin-cli.ts create <username> [password]
- *   npx ts-node -P tsconfig.scripts.json scripts/admin-cli.ts passwd <username>
+ *   npx tsx scripts/admin-cli.ts create <username> [password]
+ *   npx tsx scripts/admin-cli.ts passwd <username>
+ *   npx tsx scripts/admin-cli.ts invite [--all]
  *
  * If no password is supplied for "create" or "passwd", a secure random one is generated
  * and printed to stdout.
@@ -17,11 +19,16 @@
  * Requires DATABASE_URL to be set in the environment (e.g. via .env).
  */
 
+import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import * as readline from 'readline';
+import { readFile } from 'fs/promises';
+import { resolve } from 'path';
+import * as Handlebars from 'handlebars';
+import * as nodemailer from 'nodemailer';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -60,6 +67,8 @@ function usage(): never {
   console.error('  npx ts-node scripts/admin-cli.ts create <username> [password]');
   console.error('  npx ts-node scripts/admin-cli.ts delete <username>');
   console.error('  npx ts-node scripts/admin-cli.ts list');
+  console.error('  npx ts-node scripts/admin-cli.ts passwd <username>');
+  console.error('  npx ts-node scripts/admin-cli.ts invite [--all]');
   process.exit(1);
 }
 
@@ -141,6 +150,113 @@ async function listAdmins(): Promise<void> {
   }
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function renderProgress(current: number, total: number): void {
+  const width = 30;
+  const ratio = total === 0 ? 1 : current / total;
+  const filled = Math.round(width * ratio);
+  const bar = `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`;
+  process.stdout.write(`\r[${bar}] ${current}/${total}`);
+}
+
+async function inviteMembers(sendToAll: boolean): Promise<void> {
+  const members = await prisma.member.findMany({
+    where: sendToAll ? undefined : { lastLoginAt: null },
+    orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    select: { id: true, firstName: true, lastName: true, email: true },
+  });
+
+  if (members.length === 0) {
+    console.log(sendToAll ? 'No members found.' : 'No members found who have not logged in yet.');
+    return;
+  }
+
+  const smtpHost = process.env.SMTP_HOST;
+  if (!smtpHost) {
+    console.error('Error: SMTP_HOST is not set.');
+    process.exit(1);
+  }
+
+  const smtpPort = Number(process.env.SMTP_PORT ?? 587);
+  const smtpSecure = `${process.env.SMTP_SECURE ?? 'false'}`.toLowerCase() === 'true';
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpSecure,
+    auth: process.env.SMTP_USER
+      ? {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS ?? '',
+        }
+      : undefined,
+  });
+
+  const inviteTemplateSource = await readFile(
+    resolve(process.cwd(), 'src/mail/templates/invite.hbs'),
+    'utf8',
+  );
+  const renderInvite = Handlebars.compile(inviteTemplateSource, { strict: true });
+  const from = process.env.MAIL_FROM ?? 'noreply@chorhub.de';
+  const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+  const subject = 'Willkommen bei ChorHub – Ihr persönlicher Zugangslink';
+
+  let sent = 0;
+  let failed = 0;
+  let processed = 0;
+  let nextAllowedAt = Date.now();
+
+  console.log(`Starting invite run for ${members.length} member(s)${sendToAll ? ' (all)' : ' (never logged in)'}.`);
+  renderProgress(processed, members.length);
+
+  for (const member of members) {
+    const waitMs = nextAllowedAt - Date.now();
+    if (waitMs > 0) {
+      await sleep(waitMs);
+    }
+
+    try {
+      const rawToken = randomBytes(32).toString('hex');
+      const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+      await prisma.memberLoginToken.create({
+        data: { memberId: member.id, hashedToken },
+      });
+      const magicUrl = `${appUrl}/auth/verify?token=${rawToken}`;
+      const html = renderInvite({
+        firstName: member.firstName,
+        lastName: member.lastName,
+        magicUrl,
+      });
+
+      await transporter.sendMail({
+        from,
+        to: member.email,
+        subject,
+        html,
+      });
+      sent++;
+    } catch (err) {
+      failed++;
+      process.stdout.write('\n');
+      console.error(`[${processed + 1}/${members.length}] Failed invite for ${member.email}`);
+      console.error(err);
+    }
+    processed++;
+    renderProgress(processed, members.length);
+    nextAllowedAt = Date.now() + 1000;
+  }
+
+  process.stdout.write('\n');
+  console.log('════════════════════════════════════════');
+  console.log('  INVITE RUN COMPLETE');
+  console.log(`  Total   : ${members.length}`);
+  console.log(`  Sent    : ${sent}`);
+  console.log(`  Failed  : ${failed}`);
+  console.log('════════════════════════════════════════');
+}
+
 async function main(): Promise<void> {
   const [, , command, ...args] = process.argv;
 
@@ -159,6 +275,9 @@ async function main(): Promise<void> {
     case 'passwd':
       if (!args[0]) usage();
       await changePassword(args[0]);
+      break;
+    case 'invite':
+      await inviteMembers(args.includes('--all'));
       break;
     default:
       usage();
