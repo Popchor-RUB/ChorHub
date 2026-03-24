@@ -151,7 +151,7 @@ describe('AdminService', () => {
     it('throws BadRequestException for malformed CSV', async () => {
       // csv-parse may not throw on simple text - test with truly malformed
       // Instead test missing columns scenario
-      const csvMissingCols = Buffer.from('name,email\nAnna,anna@test.de\n');
+      const csvMissingCols = Buffer.from('name;email\nAnna;anna@test.de\n');
       prismaMock.member.findUnique.mockResolvedValue(null);
       prismaMock.member.upsert.mockResolvedValue(mockMember());
       const result = await service.importMembersFromCsv(csvMissingCols);
@@ -160,7 +160,7 @@ describe('AdminService', () => {
 
     it('creates member and sends invite for valid CSV row', async () => {
       const csv = Buffer.from(
-        'firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,SOPRAN\n',
+        'firstName;lastName;email;choirVoice\nAnna;Müller;anna@choir.de;SOPRAN\n',
       );
       prismaMock.member.findUnique.mockResolvedValue(null);
       prismaMock.member.upsert.mockResolvedValue(mockMember());
@@ -174,7 +174,7 @@ describe('AdminService', () => {
 
     it('creates member but does not send invite when sendEmails is false', async () => {
       const csv = Buffer.from(
-        'firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,SOPRAN\n',
+        'firstName;lastName;email;choirVoice\nAnna;Müller;anna@choir.de;SOPRAN\n',
       );
       prismaMock.member.findUnique.mockResolvedValue(null);
       prismaMock.member.upsert.mockResolvedValue(mockMember());
@@ -188,7 +188,7 @@ describe('AdminService', () => {
 
     it('marks row as failed when choirVoice is invalid', async () => {
       const csv = Buffer.from(
-        'firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,INVALIDVOICE\n',
+        'firstName;lastName;email;choirVoice\nAnna;Müller;anna@choir.de;INVALIDVOICE\n',
       );
       const result = await service.importMembersFromCsv(csv);
       expect(result.failed).toHaveLength(1);
@@ -197,7 +197,7 @@ describe('AdminService', () => {
     });
 
     it('imports row with empty choirVoice and stores null choirVoiceId', async () => {
-      const csv = Buffer.from('firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,\n');
+      const csv = Buffer.from('firstName;lastName;email;choirVoice\nAnna;Müller;anna@choir.de;\n');
       prismaMock.member.findUnique.mockResolvedValue(null);
       prismaMock.member.upsert.mockResolvedValue(mockMember());
 
@@ -214,7 +214,7 @@ describe('AdminService', () => {
     });
 
     it('imports row with "-" choirVoice and stores null choirVoiceId', async () => {
-      const csv = Buffer.from('firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,-\n');
+      const csv = Buffer.from('firstName;lastName;email;choirVoice\nAnna;Müller;anna@choir.de;-\n');
       prismaMock.member.findUnique.mockResolvedValue(null);
       prismaMock.member.upsert.mockResolvedValue(mockMember());
 
@@ -232,7 +232,7 @@ describe('AdminService', () => {
 
     it('marks row as failed when required fields are missing', async () => {
       const csv = Buffer.from(
-        'firstName,lastName,email,choirVoice\nAnna,,anna@choir.de,SOPRAN\n',
+        'firstName;lastName;email;choirVoice\nAnna;;anna@choir.de;SOPRAN\n',
       );
       const result = await service.importMembersFromCsv(csv);
       expect(result.failed).toHaveLength(1);
@@ -241,10 +241,10 @@ describe('AdminService', () => {
 
     it('processes multiple rows and tracks results independently', async () => {
       const csv = Buffer.from(
-        'firstName,lastName,email,choirVoice\n' +
-        'Anna,Müller,anna@choir.de,SOPRAN\n' +
-        'Max,Schmidt,max@choir.de,BASS\n' +
-        'Bad,Row,bad@choir.de,INVALID\n',
+        'firstName;lastName;email;choirVoice\n' +
+        'Anna;Müller;anna@choir.de;SOPRAN\n' +
+        'Max;Schmidt;max@choir.de;BASS\n' +
+        'Bad;Row;bad@choir.de;INVALID\n',
       );
       prismaMock.member.findUnique.mockResolvedValue(null);
       prismaMock.member.upsert.mockResolvedValue(mockMember());
@@ -257,7 +257,7 @@ describe('AdminService', () => {
 
     it('increments updated count for existing members', async () => {
       const csv = Buffer.from(
-        'firstName,lastName,email,choirVoice\nAnna,Müller,anna@choir.de,SOPRAN\n',
+        'firstName;lastName;email;choirVoice\nAnna;Müller;anna@choir.de;SOPRAN\n',
       );
       prismaMock.member.findUnique.mockResolvedValue(mockMember()); // existing
       prismaMock.member.upsert.mockResolvedValue(mockMember());

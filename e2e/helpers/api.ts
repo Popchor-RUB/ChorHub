@@ -8,6 +8,8 @@ export interface Rehearsal {
   id: string;
   date: string;
   title: string;
+  location?: string | null;
+  durationMinutes?: number | null;
 }
 
 export interface Member {
@@ -109,6 +111,33 @@ export async function getMemberRehearsals(
   });
   if (!res.ok) throw new Error(`Failed to fetch member rehearsals: ${res.status}`);
   return res.json();
+}
+
+export async function createRehearsal(
+  adminToken: string,
+  data: {
+    date: string;
+    title: string;
+    description?: string;
+    location?: string;
+    durationMinutes?: number;
+  },
+): Promise<Rehearsal> {
+  const res = await fetch(`${BACKEND_URL}/rehearsals`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`Failed to create rehearsal: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+export async function deleteRehearsal(adminToken: string, rehearsalId: string): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}/rehearsals/${rehearsalId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  if (!res.ok) throw new Error(`Failed to delete rehearsal: ${res.status}`);
 }
 
 export function formatDateShort(dateStr: string): string {

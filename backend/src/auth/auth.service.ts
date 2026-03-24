@@ -50,8 +50,12 @@ export class AuthService {
   }
 
   async requestMagicLink(email: string): Promise<void> {
-    const member = await this.prisma.member.findUnique({ where: { email } });
-    if (!member) return; // Silent fail
+    const member = await this.prisma.member.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
+    if (!member) {
+      throw new UnauthorizedException('Ungültige Zugangsdaten');
+    }
 
     const rawToken = randomBytes(32).toString('hex');
     const hashedToken = createHash('sha256').update(rawToken).digest('hex');
@@ -65,7 +69,7 @@ export class AuthService {
         data: { memberId: member.id, hashedToken },
       }),
       this.prisma.member.update({
-        where: { email },
+        where: { id: member.id },
         data: { loginCode: hashedCode, loginCodeExpiresAt: codeExpiresAt },
       }),
     ]);

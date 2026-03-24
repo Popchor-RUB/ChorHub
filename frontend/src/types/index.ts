@@ -21,6 +21,8 @@ export interface Rehearsal {
   date: string;
   title: string;
   description: string | null;
+  location: string | null;
+  durationMinutes: number | null;
   myPlan?: AttendanceResponse | null;
   myAttended?: boolean | null;
 }
@@ -79,6 +81,7 @@ export interface RehearsalOverview {
   id: string;
   date: string;
   title: string;
+  durationMinutes?: number | null;
   totalConfirmed?: number;
   totalAttended?: number;
   byVoice: VoiceBreakdown;

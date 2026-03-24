@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { withBasePath } from '../utils/basePath';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const BASE_PATH = import.meta.env.VITE_BASE_PATH ?? '/';
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -27,10 +29,10 @@ api.interceptors.response.use(
       const state = useAuthStore.getState();
       if (state.adminSession) {
         state.logoutAdmin();
-        window.location.href = `/admin/login`;
+        window.location.href = withBasePath('/admin/login', BASE_PATH);
       } else if (state.memberSession) {
         state.logoutMember();
-        window.location.href = `/login`;
+        window.location.href = withBasePath('/login', BASE_PATH);
       }
     }
     return Promise.reject(error);
@@ -71,11 +73,39 @@ export const rehearsalsApi = {
   getUpcoming: () => api.get('/rehearsals'),
   getAllForMember: () => api.get('/rehearsals?all=true'), // member auth, returns past + upcoming
   getAll: () => api.get('/rehearsals/all'),              // admin auth only
-  create: (data: { date: string; title: string; description?: string }) =>
+  create: (data: {
+    date: string;
+    title: string;
+    description?: string;
+    location?: string;
+    durationMinutes?: number;
+  }) =>
     api.post('/rehearsals', data),
-  update: (id: string, data: Partial<{ date: string; title: string; description: string }>) =>
+  update: (
+    id: string,
+    data: Partial<{
+      date: string;
+      title: string;
+      description: string;
+      location: string;
+      durationMinutes: number;
+    }>,
+  ) =>
     api.patch(`/rehearsals/${id}`, data),
   remove: (id: string) => api.delete(`/rehearsals/${id}`),
+};
+
+const normalizedApiBaseUrl = BASE_URL.replace(/\/+$/, '');
+
+export const memberCalendarApi = {
+  getIcsUrl: () =>
+    `${normalizedApiBaseUrl}/rehearsals/calendar.ics`,
+  getWebcalUrl: () => {
+    const icsUrl = memberCalendarApi.getIcsUrl();
+    if (icsUrl.startsWith('https://')) return `webcal://${icsUrl.substring('https://'.length)}`;
+    if (icsUrl.startsWith('http://')) return `webcal://${icsUrl.substring('http://'.length)}`;
+    return icsUrl;
+  },
 };
 
 export const attendanceApi = {

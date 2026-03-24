@@ -4,7 +4,7 @@ import { EditIcon } from '../icons/EditIcon';
 import { TrashIcon } from '../icons/TrashIcon';
 import { useTranslation } from 'react-i18next';
 import { useDateLocale } from '../../hooks/useDateLocale';
-import { formatDateTimeShort } from '../../utils/dateFormatting';
+import { formatDateTimeShort, formatTime } from '../../utils/dateFormatting';
 
 interface Props {
   item: RehearsalOverview;
@@ -18,6 +18,12 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
   const total = type === 'future' ? item.totalConfirmed ?? 0 : item.totalAttended ?? 0;
+  const endTime = item.durationMinutes
+    ? formatTime(
+        new Date(new Date(item.date).getTime() + item.durationMinutes * 60_000),
+        dateLocale,
+      )
+    : null;
   return (
     <Card
       isPressable
@@ -28,7 +34,10 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <p className="font-semibold">{item.title}</p>
-            <p className="text-sm text-default-500">{formatDateTimeShort(item.date, dateLocale)}</p>
+            <p className="text-sm text-default-500">
+              {formatDateTimeShort(item.date, dateLocale)}
+              {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}
+            </p>
           </div>
           <div className="flex items-center gap-1">
             <Chip color={type === 'future' ? 'primary' : 'success'} variant="flat" size="lg">

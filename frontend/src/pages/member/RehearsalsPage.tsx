@@ -10,7 +10,7 @@ import {
   useDisclosure,
 } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
-import { rehearsalsApi, membersApi, choirVoicesApi } from '../../services/api';
+import { rehearsalsApi, membersApi, choirVoicesApi, memberCalendarApi } from '../../services/api';
 import { RehearsalCard } from '../../components/rehearsal/RehearsalCard';
 import type { ChoirVoice, Member, Rehearsal } from '../../types';
 
@@ -19,12 +19,17 @@ export function RehearsalsPage() {
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAllRehearsals, setShowAllRehearsals] = useState(false);
+  const [calendarCopied, setCalendarCopied] = useState(false);
 
   const [availableVoices, setAvailableVoices] = useState<ChoirVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [savingVoice, setSavingVoice] = useState(false);
   const voiceModal = useDisclosure();
+  const calendarModal = useDisclosure();
   const { t } = useTranslation();
+
+  const calendarIcsUrl = memberCalendarApi.getIcsUrl();
+  const calendarWebcalUrl = memberCalendarApi.getWebcalUrl();
 
   const loadData = async () => {
     const [rehearsalRes, memberRes] = await Promise.all([
@@ -53,6 +58,17 @@ export function RehearsalsPage() {
       voiceModal.onClose();
     } finally {
       setSavingVoice(false);
+    }
+  };
+
+  const handleCopyCalendarLink = async () => {
+    if (!calendarIcsUrl) return;
+    try {
+      await navigator.clipboard.writeText(calendarIcsUrl);
+      setCalendarCopied(true);
+      window.setTimeout(() => setCalendarCopied(false), 2500);
+    } catch {
+      setCalendarCopied(false);
     }
   };
 
@@ -87,28 +103,35 @@ export function RehearsalsPage() {
         </Button>
       </div>
 
-      {recorded.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="flex flex-col items-center justify-center gap-1 bg-success-50 dark:bg-success-50/10 rounded-xl p-3 border border-success-200 dark:border-success-800">
-            <span className="text-2xl font-bold text-success">{attended}</span>
-            <span className="text-xs text-success-700 dark:text-success-400 text-center">{t('rehearsals.present')}</span>
-          </div>
-          <div className="flex flex-col items-center justify-center gap-1 bg-warning-50 dark:bg-warning-50/10 rounded-xl p-3 border border-warning-200 dark:border-warning-800">
-            <span className="text-2xl font-bold text-warning">{excused}</span>
-            <span className="text-xs text-warning-700 dark:text-warning-400 text-center">{t('rehearsals.excused')}</span>
-          </div>
-          <div className="flex flex-col items-center justify-center gap-1 bg-danger-50 dark:bg-danger-50/10 rounded-xl p-3 border border-danger-200 dark:border-danger-800">
-            <span className="text-2xl font-bold text-danger">{unexcused}</span>
-            <span className="text-xs text-danger-700 dark:text-danger-400 text-center leading-tight">{t('rehearsals.unexcused')}</span>
-          </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col items-center justify-center gap-1 bg-success-50 dark:bg-success-50/10 rounded-xl p-3 border border-success-200 dark:border-success-800">
+          <span className="text-2xl font-bold text-success">{attended}</span>
+          <span className="text-xs text-success-700 dark:text-success-400 text-center">{t('rehearsals.present')}</span>
         </div>
-      )}
+        <div className="flex flex-col items-center justify-center gap-1 bg-warning-50 dark:bg-warning-50/10 rounded-xl p-3 border border-warning-200 dark:border-warning-800">
+          <span className="text-2xl font-bold text-warning">{excused}</span>
+          <span className="text-xs text-warning-700 dark:text-warning-400 text-center">{t('rehearsals.excused')}</span>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-1 bg-danger-50 dark:bg-danger-50/10 rounded-xl p-3 border border-danger-200 dark:border-danger-800">
+          <span className="text-2xl font-bold text-danger">{unexcused}</span>
+          <span className="text-xs text-danger-700 dark:text-danger-400 text-center leading-tight">{t('rehearsals.unexcused')}</span>
+        </div>
+      </div>
 
       {/* Upcoming rehearsals */}
       <section>
-        <h2 className="text-base font-semibold text-default-600 mb-3">
-          {t('rehearsals.upcoming_count', { count: upcoming.length })}
-        </h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-default-600">
+            {t('rehearsals.upcoming_count', { count: upcoming.length })}
+          </h2>
+          <Button
+            size="sm"
+            variant="flat"
+            onPress={calendarModal.onOpen}
+          >
+            {t('rehearsals.calendar_button')}
+          </Button>
+        </div>
         {upcoming.length === 0 ? (
           <p className="text-default-400 text-sm">{t('rehearsals.no_upcoming')}</p>
         ) : (
@@ -190,6 +213,38 @@ export function RehearsalsPage() {
             <Button variant="flat" onPress={voiceModal.onClose}>{t('common.cancel')}</Button>
             <Button color="primary" isLoading={savingVoice} onPress={handleSaveVoice}>
               {t('common.save')}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Calendar subscribe modal */}
+      <Modal isOpen={calendarModal.isOpen} onClose={calendarModal.onClose}>
+        <ModalContent>
+          <ModalHeader>{t('rehearsals.calendar_title')}</ModalHeader>
+          <ModalBody>
+            <p className="text-sm text-default-500">{t('rehearsals.calendar_hint')}</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="primary"
+              isDisabled={!calendarWebcalUrl}
+              onPress={() => {
+                if (!calendarWebcalUrl) return;
+                window.open(calendarWebcalUrl, '_blank', 'noopener,noreferrer');
+              }}
+            >
+              {t('rehearsals.calendar_subscribe')}
+            </Button>
+            <Button
+              variant="flat"
+              isDisabled={!calendarIcsUrl}
+              onPress={handleCopyCalendarLink}
+            >
+              {calendarCopied ? t('rehearsals.calendar_copied') : t('rehearsals.calendar_copy')}
+            </Button>
+            <Button variant="flat" onPress={calendarModal.onClose}>
+              {t('common.close')}
             </Button>
           </ModalFooter>
         </ModalContent>

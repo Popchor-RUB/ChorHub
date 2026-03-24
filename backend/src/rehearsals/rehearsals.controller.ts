@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -16,10 +17,19 @@ import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { MemberUser } from '../auth/types/auth-user.types';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('rehearsals')
 export class RehearsalsController {
   constructor(private readonly rehearsalsService: RehearsalsService) {}
+
+  @Public()
+  @Get('calendar.ics')
+  @Header('Content-Type', 'text/calendar; charset=utf-8')
+  @Header('Content-Disposition', 'inline; filename="chorhub-rehearsals.ics"')
+  getMemberCalendar() {
+    return this.rehearsalsService.getMemberCalendar();
+  }
 
   @Get()
   @UseGuards(MemberTokenGuard)

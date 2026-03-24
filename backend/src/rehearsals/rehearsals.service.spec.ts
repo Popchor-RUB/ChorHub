@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { RehearsalsService } from './rehearsals.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
@@ -10,6 +11,8 @@ const mockRehearsal = {
   date: new Date('2025-06-01'),
   title: 'Probe 1',
   description: null,
+  location: null,
+  durationMinutes: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -24,6 +27,7 @@ describe('RehearsalsService', () => {
       providers: [
         RehearsalsService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: ConfigService, useValue: { get: jest.fn(() => 'https://app.chorhub.test') } },
       ],
     }).compile();
     service = module.get(RehearsalsService);
@@ -175,12 +179,51 @@ describe('RehearsalsService', () => {
   describe('create', () => {
     it('creates rehearsal with correct data', async () => {
       prismaMock.rehearsal.create.mockResolvedValue(mockRehearsal);
-      await service.create({ date: '2025-06-01', title: 'Probe 1' });
+      await service.create({
+        date: '2025-06-01',
+        title: 'Probe 1',
+        location: 'Gemeindesaal',
+        durationMinutes: 90,
+      });
       expect(prismaMock.rehearsal.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ title: 'Probe 1' }),
+          data: expect.objectContaining({
+            title: 'Probe 1',
+            location: 'Gemeindesaal',
+            durationMinutes: 90,
+          }),
         }),
       );
+    });
+  });
+
+  describe('getMemberCalendar', () => {
+    it('returns iCalendar payload with stable UID and updated timestamp fields', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        {
+          ...mockRehearsal,
+          id: 'abc-123',
+          title: 'General rehearsal',
+          description: 'Bring folder',
+          location: 'Community Hall',
+          date: new Date('2026-03-30T18:30:00.000Z'),
+          durationMinutes: 90,
+          updatedAt: new Date('2026-03-24T10:00:00.000Z'),
+        },
+      ] as any);
+
+      const result = await service.getMemberCalendar();
+
+      expect(result).toContain('BEGIN:VCALENDAR');
+      expect(result).toContain('BEGIN:VEVENT');
+      expect(result).toContain('UID:rehearsal-abc-123@app.chorhub.test');
+      expect(result).toContain('DTSTART:20260330T183000Z');
+      expect(result).toContain('DTEND:20260330T200000Z');
+      expect(result).toContain('LAST-MODIFIED:20260324T100000Z');
+      expect(result).toContain('LOCATION:Community Hall');
+      expect(result).toContain('SUMMARY:General rehearsal');
+      expect(result).toContain('DESCRIPTION:Bring folder');
+      expect(result).toContain('END:VCALENDAR');
     });
   });
 

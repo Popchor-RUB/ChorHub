@@ -118,6 +118,7 @@ export class AttendanceService {
       id: r.id,
       date: r.date,
       title: r.title,
+      durationMinutes: r.durationMinutes,
       totalConfirmed: r.attendancePlans.length,
       byVoice: this.groupByVoice(
         r.attendancePlans.map((p) => p.member.choirVoice?.name),
@@ -142,6 +143,7 @@ export class AttendanceService {
       id: r.id,
       date: r.date,
       title: r.title,
+      durationMinutes: r.durationMinutes,
       totalAttended: r.attendanceRecords.length,
       byVoice: this.groupByVoice(
         r.attendanceRecords.map((rec) => rec.member.choirVoice?.name),

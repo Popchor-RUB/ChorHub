@@ -7,6 +7,8 @@ import {
   ModalFooter,
   Button,
   Input,
+  Select,
+  SelectItem,
   Textarea,
   DatePicker,
 } from '@heroui/react';
@@ -24,10 +26,45 @@ interface Props {
   onSaved: () => void;
 }
 
+type RecurrencePattern = 'NONE' | 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
+const APP_TIMEZONE = 'Europe/Berlin';
+
+function addMonthsKeepingDay(base: Date, months: number, anchorDay: number) {
+  const next = new Date(base);
+  next.setDate(1);
+  next.setMonth(next.getMonth() + months);
+  const lastDayOfMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  next.setDate(Math.min(anchorDay, lastDayOfMonth));
+  return next;
+}
+
+function buildRecurringDates(start: Date, end: Date, pattern: RecurrencePattern) {
+  const dates: Date[] = [];
+  const anchorDay = start.getDate();
+  let cursor = new Date(start);
+
+  while (cursor <= end) {
+    dates.push(new Date(cursor));
+    if (pattern === 'MONTHLY') {
+      cursor = addMonthsKeepingDay(cursor, 1, anchorDay);
+    } else {
+      const stepDays = pattern === 'DAILY' ? 1 : pattern === 'WEEKLY' ? 7 : 14;
+      cursor = new Date(cursor);
+      cursor.setDate(cursor.getDate() + stepDays);
+    }
+  }
+
+  return dates;
+}
+
 export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Props) {
   const [date, setDate] = useState<DateValue | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [location, setLocation] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState('');
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern>('NONE');
+  const [seriesEndDate, setSeriesEndDate] = useState<DateValue | null>(null);
   const [saving, setSaving] = useState(false);
   const { t, i18n } = useTranslation();
   const i18nLocale = i18n.language.startsWith('en') ? 'en-GB' : 'de-DE';
@@ -47,27 +84,71 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
         );
         setTitle(rehearsal.title);
         setDescription(rehearsal.description ?? '');
+        setLocation(rehearsal.location ?? '');
+        setDurationMinutes(
+          rehearsal.durationMinutes !== null && rehearsal.durationMinutes !== undefined
+            ? String(rehearsal.durationMinutes)
+            : '',
+        );
       } else {
         setDate(null);
         setTitle('');
         setDescription('');
+        setLocation('');
+        setDurationMinutes('');
+        setRecurrencePattern('NONE');
+        setSeriesEndDate(null);
       }
     }
   }, [rehearsal, isOpen]);
 
+  const isNewSeries = !rehearsal && recurrencePattern !== 'NONE';
+  const seriesRangeInvalid = (() => {
+    if (!isNewSeries || !date || !seriesEndDate) return false;
+    const startDate = date.toDate(APP_TIMEZONE);
+    const endDate = seriesEndDate.toDate(APP_TIMEZONE);
+    endDate.setHours(23, 59, 59, 999);
+    return startDate > endDate;
+  })();
+
   const handleSave = async () => {
     if (!date) return;
+    if (isNewSeries && !seriesEndDate) return;
+    const normalizedDuration = durationMinutes.trim();
+    const parsedDuration = normalizedDuration ? Number.parseInt(normalizedDuration, 10) : undefined;
     setSaving(true);
     try {
-      const isoDate = date.toDate('Europe/Berlin').toISOString();
+      const startDate = date.toDate(APP_TIMEZONE);
+      const baseData = {
+        title,
+        description: description || undefined,
+        location: location || undefined,
+        durationMinutes: Number.isFinite(parsedDuration) ? parsedDuration : undefined,
+      };
+
       if (rehearsal) {
         await rehearsalsApi.update(rehearsal.id, {
-          date: isoDate,
-          title,
-          description: description || undefined,
+          date: startDate.toISOString(),
+          ...baseData,
         });
       } else {
-        await rehearsalsApi.create({ date: isoDate, title, description: description || undefined });
+        if (recurrencePattern === 'NONE') {
+          await rehearsalsApi.create({
+            date: startDate.toISOString(),
+            ...baseData,
+          });
+        } else {
+          const endDate = seriesEndDate!.toDate(APP_TIMEZONE);
+          endDate.setHours(23, 59, 59, 999);
+
+          const dates = buildRecurringDates(startDate, endDate, recurrencePattern);
+          for (const occurrenceDate of dates) {
+            await rehearsalsApi.create({
+              date: occurrenceDate.toISOString(),
+              ...baseData,
+            });
+          }
+        }
       }
       onSaved();
       onClose();
@@ -93,11 +174,57 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
               hourCycle={24}
             />
           </I18nProvider>
+          {!rehearsal && (
+            <Select
+              label={t('rehearsals.recurrence')}
+              selectedKeys={[recurrencePattern]}
+              onSelectionChange={(keys) => {
+                if (keys === 'all') return;
+                const selected = Array.from(keys)[0] as RecurrencePattern | undefined;
+                setRecurrencePattern(selected ?? 'NONE');
+              }}
+            >
+              <SelectItem key="NONE">{t('rehearsals.recurrence_none')}</SelectItem>
+              <SelectItem key="DAILY">{t('rehearsals.recurrence_daily')}</SelectItem>
+              <SelectItem key="WEEKLY">{t('rehearsals.recurrence_weekly')}</SelectItem>
+              <SelectItem key="BIWEEKLY">{t('rehearsals.recurrence_biweekly')}</SelectItem>
+              <SelectItem key="MONTHLY">{t('rehearsals.recurrence_monthly')}</SelectItem>
+            </Select>
+          )}
+          {!rehearsal && recurrencePattern !== 'NONE' && (
+            <I18nProvider locale={i18nLocale}>
+              <DatePicker
+                label={t('rehearsals.recurrence_end_date')}
+                value={seriesEndDate}
+                onChange={setSeriesEndDate}
+                showMonthAndYearPickers
+                hideTimeZone
+                granularity="day"
+                isRequired
+                isInvalid={seriesRangeInvalid}
+                errorMessage={seriesRangeInvalid ? t('rehearsals.recurrence_end_date_invalid') : undefined}
+              />
+            </I18nProvider>
+          )}
           <Input
             label={t('common.title')}
             value={title}
             onValueChange={setTitle}
             isRequired
+          />
+          <Input
+            label={t('rehearsals.location')}
+            value={location}
+            onValueChange={setLocation}
+            placeholder={t('common.optional')}
+          />
+          <Input
+            type="number"
+            min={1}
+            label={t('rehearsals.duration_minutes')}
+            value={durationMinutes}
+            onValueChange={setDurationMinutes}
+            placeholder={t('common.optional')}
           />
           <Textarea
             label={t('common.description')}
@@ -114,7 +241,7 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
             color="primary"
             isLoading={saving}
             onPress={handleSave}
-            isDisabled={!date || !title}
+            isDisabled={!date || !title || (isNewSeries && !seriesEndDate) || seriesRangeInvalid}
           >
             {t('common.save')}
           </Button>

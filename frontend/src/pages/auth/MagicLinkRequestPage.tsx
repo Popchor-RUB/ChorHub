@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardBody, CardHeader, Input, Button } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import { memberAuthApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { IOSInstallGuide } from '../../components/IOSInstallGuide';
@@ -49,8 +50,12 @@ export function MagicLinkRequestPage() {
         await memberAuthApi.requestMagicLink(trimmed);
         setView('code');
       }
-    } catch {
-      setError(t('common.error_generic'));
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        setError(t('auth.error_invalid_credentials'));
+      } else {
+        setError(t('common.error_generic'));
+      }
     } finally {
       setLoading(false);
     }

@@ -3,7 +3,7 @@ set -euo pipefail
 
 REMOTE_USER="philipp"
 REMOTE_HOST="alphanudel.de"
-REMOTE_DIR="~/docker/chorhub"
+REMOTE_DIR="~/docker/chorhub_staging"
 
 echo "==> Syncing files to ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR} ..."
 rsync -av \

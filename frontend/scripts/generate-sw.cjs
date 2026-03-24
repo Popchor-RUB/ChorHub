@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const { normalizeBasePath } = require('./base-path.cjs');
 
-const basePath = process.env.VITE_BASE_PATH ?? '/';
+const basePath = normalizeBasePath(process.env.VITE_BASE_PATH);
 
 const serviceWorker = `// Auto-generated service worker - do not edit manually
 const BASE_PATH = '${basePath}';

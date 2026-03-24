@@ -47,8 +47,12 @@ function decodeQuotedPrintable(input: string): string {
 
 function extractCode(body: string): string | null {
   const decoded = decodeQuotedPrintable(body);
-  const match = decoded.match(/\b(\d{6})\b/);
-  return match ? match[1] : null;
+  // Prefer visible HTML text nodes (e.g. >123456<) to avoid matching CSS colors like #444444.
+  const htmlTextMatch = decoded.match(/>\s*(\d{6})\s*</);
+  if (htmlTextMatch) return htmlTextMatch[1];
+
+  const fallbackMatch = decoded.match(/\b(\d{6})\b/);
+  return fallbackMatch ? fallbackMatch[1] : null;
 }
 
 interface PollOptions {

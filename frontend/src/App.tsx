@@ -14,8 +14,9 @@ import { AttendancePage } from './pages/admin/AttendancePage';
 import { RehearsalOverviewPage } from './pages/admin/RehearsalOverviewPage';
 import { PushNotificationsPage } from './pages/admin/PushNotificationsPage';
 import { OptionsPage } from './pages/admin/OptionsPage';
+import { normalizeBasePath } from './utils/basePath';
 
-const basename = import.meta.env.VITE_BASE_PATH ?? '/';
+const basename = normalizeBasePath(import.meta.env.VITE_BASE_PATH);
 
 const router = createBrowserRouter(
   [

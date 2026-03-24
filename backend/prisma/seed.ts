@@ -100,6 +100,8 @@ function buildRehearsalSeries(offsetDays: number, count: number, titleStartIndex
       date: daysFromNow(offsetDays + i * 7),
       title: `${titleIndex}. Probe`,
       description: REHEARSAL_DESCRIPTIONS[i % REHEARSAL_DESCRIPTIONS.length],
+      location: 'Gemeindesaal',
+      durationMinutes: 120,
     };
   });
 }

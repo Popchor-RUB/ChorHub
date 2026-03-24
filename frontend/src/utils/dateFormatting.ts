@@ -45,3 +45,10 @@ export const formatDateNumeric = (d: string, locale = 'de-DE') =>
     month: '2-digit',
     year: 'numeric',
   }).format(new Date(d));
+
+/** Time only (e.g. "19:00") */
+export const formatTime = (d: string | Date, locale = 'de-DE') =>
+  new Intl.DateTimeFormat(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(d));

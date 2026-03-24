@@ -4,7 +4,7 @@ import { attendanceApi } from '../../services/api';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDateLocale } from '../../hooks/useDateLocale';
-import { formatDateTimeLong } from '../../utils/dateFormatting';
+import { formatDateTimeLong, formatTime } from '../../utils/dateFormatting';
 
 interface Props {
   rehearsal: Rehearsal;
@@ -20,6 +20,15 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
 
   const hasStarted = new Date(rehearsal.date) <= new Date();
   const buttonsDisabled = readOnly || hasStarted;
+  const endTime = rehearsal.durationMinutes
+    ? formatTime(
+        new Date(new Date(rehearsal.date).getTime() + rehearsal.durationMinutes * 60_000),
+        dateLocale,
+      )
+    : null;
+  const metaParts = [
+    rehearsal.location?.trim() || null,
+  ].filter(Boolean) as string[];
 
   const setPlan = async (response: AttendanceResponse) => {
     if (buttonsDisabled) return;
@@ -51,7 +60,13 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             </Chip>
           )}
         </div>
-        <p className="text-sm text-default-500">{formatDateTimeLong(rehearsal.date, dateLocale)}</p>
+        <p className="text-sm text-default-500">
+          {formatDateTimeLong(rehearsal.date, dateLocale)}
+          {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}
+        </p>
+        {metaParts.length > 0 && (
+          <p className="text-sm text-default-500">{metaParts.join(' · ')}</p>
+        )}
       </CardHeader>
       <CardBody className="flex flex-col gap-3">
         {rehearsal.description && (

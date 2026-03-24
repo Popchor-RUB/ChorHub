@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { pushApi } from '../services/api';
+import { normalizeBasePath } from '../utils/basePath';
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -23,7 +24,7 @@ export function usePushNotifications() {
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
-    const swPath = (import.meta.env.VITE_BASE_PATH ?? '/') + 'sw.js';
+    const swPath = `${normalizeBasePath(import.meta.env.VITE_BASE_PATH)}sw.js`;
     navigator.serviceWorker
       .register(swPath, { updateViaCache: 'none' })
       .then((reg) => {

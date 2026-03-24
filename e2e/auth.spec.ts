@@ -91,4 +91,17 @@ test.describe('Member magic link flow', () => {
 
     await expect(page.getByLabel('E-Mail-Adresse')).toBeVisible();
   });
+
+  test('unknown email shows invalid credentials on request', async ({ page }) => {
+    await clearMailHog();
+
+    await page.goto('/login');
+    await page.getByLabel('E-Mail-Adresse').fill('does-not-exist@example.com');
+    await page.getByRole('button', { name: 'Weiter' }).click();
+
+    await expect(page.getByText('Ungültige Anmeldedaten.')).toBeVisible();
+    await expect(page.getByLabel('E-Mail-Adresse')).toBeVisible();
+    await expect(page.getByText('6-stelliger Code')).not.toBeVisible();
+    await expect(page).toHaveURL(/\/login/);
+  });
 });

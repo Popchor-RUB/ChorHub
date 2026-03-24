@@ -10,6 +10,8 @@ const mockRehearsal = {
   date: new Date('2030-01-01'),
   title: 'Probe 1',
   description: null,
+  location: null,
+  durationMinutes: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };

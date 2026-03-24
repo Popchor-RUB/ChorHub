@@ -9,7 +9,7 @@ export class MailService {
   async sendMagicLink(member: Member, magicUrl: string, rawToken: string, loginCode: string): Promise<void> {
     await this.mailerService.sendMail({
       to: member.email,
-      subject: 'Ihr Anmeldelink für ChorHub',
+      subject: 'Dein ChorHub Anmeldelink',
       template: 'magic-link',
       context: {
         firstName: member.firstName,
@@ -23,7 +23,7 @@ export class MailService {
   async sendMemberInvite(member: Member, magicUrl: string): Promise<void> {
     await this.mailerService.sendMail({
       to: member.email,
-      subject: 'Willkommen bei ChorHub – Ihr persönlicher Zugangslink',
+      subject: 'Willkommen bei ChorHub – Dein Zugangslink',
       template: 'invite',
       context: {
         firstName: member.firstName,

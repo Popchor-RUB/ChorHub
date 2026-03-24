@@ -106,15 +106,15 @@ describe('AuthService', () => {
   });
 
   describe('requestMagicLink', () => {
-    it('silently does nothing when member not found', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(null);
-      await service.requestMagicLink('unknown@example.com');
+    it('throws UnauthorizedException when member not found', async () => {
+      prismaMock.member.findFirst.mockResolvedValue(null);
+      await expect(service.requestMagicLink('unknown@example.com')).rejects.toThrow(UnauthorizedException);
       expect(mailService.sendMagicLink).not.toHaveBeenCalled();
       expect(prismaMock.memberLoginToken.create).not.toHaveBeenCalled();
     });
 
     it('creates a login token, updates member with code, and sends email when member exists', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(mockMember);
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
       prismaMock.member.update.mockResolvedValue(mockMember);
 
@@ -130,7 +130,7 @@ describe('AuthService', () => {
       );
       expect(prismaMock.member.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { email: 'anna@choir.de' },
+          where: { id: 'member-1' },
           data: expect.objectContaining({
             loginCode: expect.any(String),
             loginCodeExpiresAt: expect.any(Date),
@@ -147,7 +147,7 @@ describe('AuthService', () => {
     });
 
     it('stores hashed token (not raw) in MemberLoginToken', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(mockMember);
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
       prismaMock.member.update.mockResolvedValue(mockMember);
 
@@ -173,7 +173,7 @@ describe('AuthService', () => {
     });
 
     it('sets loginCodeExpiresAt ~15 minutes from now', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(mockMember);
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
       prismaMock.member.update.mockResolvedValue(mockMember);
 
@@ -186,6 +186,18 @@ describe('AuthService', () => {
 
       expect(expiresAt).toBeGreaterThanOrEqual(before + 14 * 60 * 1000);
       expect(expiresAt).toBeLessThanOrEqual(after + 16 * 60 * 1000);
+    });
+
+    it('looks up member email case-insensitively', async () => {
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
+      prismaMock.member.update.mockResolvedValue(mockMember);
+
+      await service.requestMagicLink('ANNA@CHOIR.DE');
+
+      expect(prismaMock.member.findFirst).toHaveBeenCalledWith({
+        where: { email: { equals: 'ANNA@CHOIR.DE', mode: 'insensitive' } },
+      });
     });
   });
 
