@@ -92,6 +92,17 @@ test.describe('Member magic link flow', () => {
     await expect(page.getByLabel('E-Mail-Adresse')).toBeVisible();
   });
 
+  test('resend button is initially disabled on code screen', async ({ page }) => {
+    await clearMailHog();
+
+    await page.goto('/login');
+    await page.getByLabel('E-Mail-Adresse').fill(memberEmail);
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await expect(page.getByText('6-stelliger Code')).toBeVisible();
+
+    await expect(page.getByRole('button', { name: /Erneut senden/ })).toBeDisabled();
+  });
+
   test('unknown email shows invalid credentials on request', async ({ page }) => {
     await clearMailHog();
 

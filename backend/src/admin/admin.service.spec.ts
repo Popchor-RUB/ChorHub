@@ -12,8 +12,6 @@ const mockMember = (overrides: Partial<any> = {}) => ({
   lastName: 'Müller',
   email: 'anna@choir.de',
   choirVoiceId: null,
-  loginCode: null,
-  loginCodeExpiresAt: null,
   lastLoginAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),

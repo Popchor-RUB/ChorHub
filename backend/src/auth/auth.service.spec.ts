@@ -17,8 +17,6 @@ const mockMember = {
   lastName: 'Müller',
   email: 'anna@choir.de',
   choirVoiceId: null,
-  loginCode: null,
-  loginCodeExpiresAt: null,
   lastLoginAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -32,8 +30,13 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     prismaMock = mockDeep<PrismaClient>();
-    // Allow $transaction to actually execute the provided operations
-    prismaMock.$transaction.mockImplementation((ops: any) => Promise.all(ops));
+    // Allow $transaction to execute both array and callback forms.
+    prismaMock.$transaction.mockImplementation((arg: any) => {
+      if (typeof arg === 'function') {
+        return arg(prismaMock);
+      }
+      return Promise.all(arg);
+    });
 
     mailService = {
       sendMagicLink: jest.fn().mockResolvedValue(undefined),
@@ -111,12 +114,14 @@ describe('AuthService', () => {
       await expect(service.requestMagicLink('unknown@example.com')).rejects.toThrow(UnauthorizedException);
       expect(mailService.sendMagicLink).not.toHaveBeenCalled();
       expect(prismaMock.memberLoginToken.create).not.toHaveBeenCalled();
+      expect(prismaMock.memberLoginCode.create).not.toHaveBeenCalled();
     });
 
-    it('creates a login token, updates member with code, and sends email when member exists', async () => {
+    it('creates login token + login code and sends email when member exists', async () => {
       prismaMock.member.findFirst.mockResolvedValue(mockMember);
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
-      prismaMock.member.update.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.create.mockResolvedValue({} as any);
+      prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 0 });
 
       await service.requestMagicLink('anna@choir.de');
 
@@ -128,12 +133,12 @@ describe('AuthService', () => {
           }),
         }),
       );
-      expect(prismaMock.member.update).toHaveBeenCalledWith(
+      expect(prismaMock.memberLoginCode.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'member-1' },
           data: expect.objectContaining({
-            loginCode: expect.any(String),
-            loginCodeExpiresAt: expect.any(Date),
+            memberId: mockMember.id,
+            hashedCode: expect.any(String),
+            expiresAt: expect.any(Date),
           }),
         }),
       );
@@ -146,43 +151,43 @@ describe('AuthService', () => {
       );
     });
 
-    it('stores hashed token (not raw) in MemberLoginToken', async () => {
+    it('stores hashed token/code (not raw values)', async () => {
       prismaMock.member.findFirst.mockResolvedValue(mockMember);
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
-      prismaMock.member.update.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.create.mockResolvedValue({} as any);
+      prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 0 });
 
       await service.requestMagicLink('anna@choir.de');
 
-      const createCall = prismaMock.memberLoginToken.create.mock.calls[0][0];
-      const storedHash = (createCall.data as Record<string, unknown>).hashedToken as string;
+      const tokenCreateCall = prismaMock.memberLoginToken.create.mock.calls[0][0];
+      const storedTokenHash = (tokenCreateCall.data as Record<string, unknown>).hashedToken as string;
+
+      const codeCreateCall = prismaMock.memberLoginCode.create.mock.calls[0][0];
+      const storedCodeHash = (codeCreateCall.data as Record<string, unknown>).hashedCode as string;
 
       const mailCall = mailService.sendMagicLink.mock.calls[0];
       const magicUrl = mailCall[1];
       const rawToken = new URL(magicUrl).searchParams.get('token')!;
       const rawCode = mailCall[3];
 
-      // Stored token must be the hash, not the raw value
-      expect(storedHash).not.toBe(rawToken);
-      expect(storedHash).toHaveLength(64); // SHA-256 hex = 64 chars
-
-      // The code stored in member update must also be hashed
-      const updateCall = prismaMock.member.update.mock.calls[0][0];
-      const storedCode = (updateCall.data as Record<string, unknown>).loginCode as string;
-      expect(storedCode).not.toBe(rawCode);
-      expect(storedCode).toHaveLength(64);
+      expect(storedTokenHash).not.toBe(rawToken);
+      expect(storedTokenHash).toHaveLength(64);
+      expect(storedCodeHash).not.toBe(rawCode);
+      expect(storedCodeHash).toHaveLength(64);
     });
 
-    it('sets loginCodeExpiresAt ~15 minutes from now', async () => {
+    it('sets code expiry to ~15 minutes from now', async () => {
       prismaMock.member.findFirst.mockResolvedValue(mockMember);
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
-      prismaMock.member.update.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.create.mockResolvedValue({} as any);
+      prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 0 });
 
       const before = Date.now();
       await service.requestMagicLink('anna@choir.de');
       const after = Date.now();
 
-      const updateCall = prismaMock.member.update.mock.calls[0][0];
-      const expiresAt = ((updateCall.data as Record<string, unknown>).loginCodeExpiresAt as Date).getTime();
+      const createCall = prismaMock.memberLoginCode.create.mock.calls[0][0];
+      const expiresAt = ((createCall.data as Record<string, unknown>).expiresAt as Date).getTime();
 
       expect(expiresAt).toBeGreaterThanOrEqual(before + 14 * 60 * 1000);
       expect(expiresAt).toBeLessThanOrEqual(after + 16 * 60 * 1000);
@@ -191,7 +196,8 @@ describe('AuthService', () => {
     it('looks up member email case-insensitively', async () => {
       prismaMock.member.findFirst.mockResolvedValue(mockMember);
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
-      prismaMock.member.update.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.create.mockResolvedValue({} as any);
+      prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 0 });
 
       await service.requestMagicLink('ANNA@CHOIR.DE');
 
@@ -206,68 +212,73 @@ describe('AuthService', () => {
 
     const rawCode = '123456';
     const hashedCode = createHash('sha256').update(rawCode).digest('hex');
-    const mockMemberWithCode = {
-      ...mockMember,
-      loginCode: hashedCode,
-      loginCodeExpiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min in future
+    const mockCodeRecord = {
+      id: 'code-1',
+      memberId: mockMember.id,
+      hashedCode,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      createdAt: new Date(),
     };
 
-    it('throws UnauthorizedException when member not found', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(null);
+    it('throws UnauthorizedException when code lookup fails', async () => {
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.findFirst.mockResolvedValue(null);
       await expect(service.verifyCode('nobody@example.com', rawCode)).rejects.toThrow(UnauthorizedException);
     });
 
-    it('throws UnauthorizedException for wrong code', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(mockMemberWithCode);
-      await expect(service.verifyCode('anna@choir.de', '000000')).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('throws UnauthorizedException for expired code', async () => {
-      const expired = {
-        ...mockMemberWithCode,
-        loginCodeExpiresAt: new Date(Date.now() - 1000), // 1 second ago
-      };
-      prismaMock.member.findUnique.mockResolvedValue(expired);
-      await expect(service.verifyCode('anna@choir.de', rawCode)).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('throws UnauthorizedException when loginCode is null', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(mockMember); // loginCode: null
-      await expect(service.verifyCode('anna@choir.de', rawCode)).rejects.toThrow(UnauthorizedException);
+    it('throws UnauthorizedException when member is not found', async () => {
+      prismaMock.member.findFirst.mockResolvedValue(null);
+      await expect(service.verifyCode('nobody@example.com', rawCode)).rejects.toThrow(UnauthorizedException);
+      expect(prismaMock.memberLoginCode.findFirst).not.toHaveBeenCalled();
     });
 
     it('returns new token and member data for valid code', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(mockMemberWithCode);
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.findFirst.mockResolvedValue(mockCodeRecord as any);
+      prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 1 });
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
-      prismaMock.member.update.mockResolvedValue(mockMember);
+      prismaMock.member.update.mockResolvedValue({ ...mockMember, lastLoginAt: new Date() });
 
       const result = await service.verifyCode('anna@choir.de', rawCode);
 
       expect(result.token).toBeDefined();
-      expect(result.token).toHaveLength(64); // raw hex token
+      expect(result.token).toHaveLength(64);
       expect(result.member.id).toBe(mockMember.id);
       expect(result.member.email).toBe(mockMember.email);
     });
 
-    it('clears loginCode and loginCodeExpiresAt after successful verification', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(mockMemberWithCode);
+    it('consumes the login code on successful verification', async () => {
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.findFirst.mockResolvedValue(mockCodeRecord as any);
+      prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 1 });
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
       prismaMock.member.update.mockResolvedValue(mockMember);
 
       await service.verifyCode('anna@choir.de', rawCode);
 
-      expect(prismaMock.member.update).toHaveBeenCalledWith(
+      expect(prismaMock.memberLoginCode.deleteMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            loginCode: null,
-            loginCodeExpiresAt: null,
+          where: expect.objectContaining({
+            id: mockCodeRecord.id,
+            expiresAt: expect.objectContaining({ gte: expect.any(Date) }),
           }),
         }),
       );
     });
 
-    it('creates a new MemberLoginToken with hashed token after successful verification', async () => {
-      prismaMock.member.findUnique.mockResolvedValue(mockMemberWithCode);
+    it('throws UnauthorizedException when code was already consumed concurrently', async () => {
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.findFirst.mockResolvedValue(mockCodeRecord as any);
+      prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.verifyCode('anna@choir.de', rawCode)).rejects.toThrow(UnauthorizedException);
+      expect(prismaMock.memberLoginToken.create).not.toHaveBeenCalled();
+    });
+
+    it('creates a new MemberLoginToken with hash of returned token', async () => {
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.findFirst.mockResolvedValue(mockCodeRecord as any);
+      prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 1 });
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
       prismaMock.member.update.mockResolvedValue(mockMember);
 
@@ -275,10 +286,27 @@ describe('AuthService', () => {
 
       const createCall = prismaMock.memberLoginToken.create.mock.calls[0][0];
       const storedHash = (createCall.data as Record<string, unknown>).hashedToken as string;
-
-      // Stored token must be the hash of the returned raw token
       const expectedHash = createHash('sha256').update(result.token).digest('hex');
+
       expect(storedHash).toBe(expectedHash);
+    });
+
+    it('searches member by email (case-insensitive) and code by member/hash/expiry', async () => {
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.findFirst.mockResolvedValue(null);
+
+      await expect(service.verifyCode('ANNA@CHOIR.DE', rawCode)).rejects.toThrow(UnauthorizedException);
+
+      expect(prismaMock.member.findFirst).toHaveBeenCalledWith({
+        where: { email: { equals: 'ANNA@CHOIR.DE', mode: 'insensitive' } },
+      });
+      expect(prismaMock.memberLoginCode.findFirst).toHaveBeenCalledWith({
+        where: {
+          memberId: mockMember.id,
+          hashedCode,
+          expiresAt: { gte: expect.any(Date) },
+        },
+      });
     });
   });
 
@@ -306,7 +334,6 @@ describe('AuthService', () => {
         where: { id: mockMember.id },
         data: { lastLoginAt: expect.any(Date) },
       });
-      // Token must NOT be cleared or modified (permanent)
       expect(prismaMock.memberLoginToken.delete).not.toHaveBeenCalled();
     });
   });

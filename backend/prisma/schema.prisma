@@ -14,24 +14,36 @@ enum AttendanceResponse {
 }
 
 model Member {
-  id         String     @id @default(uuid())
-  firstName  String
-  lastName   String
+  id           String     @id @default(uuid())
+  firstName    String
+  lastName     String
   email        String      @unique
   choirVoiceId String?     @map("choir_voice_id")
   choirVoice   ChoirVoice? @relation(fields: [choirVoiceId], references: [id])
-  loginCode          String?   // SHA-256 hash of 6-digit OTP
-  loginCodeExpiresAt DateTime? // 15-minute expiry window
-  lastLoginAt        DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  lastLoginAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
+  loginCodes       MemberLoginCode[]
   loginTokens       MemberLoginToken[]
   attendancePlans   AttendancePlan[]
   attendanceRecords AttendanceRecord[]
   pushSubscriptions PushSubscription[]
 
   @@map("members")
+}
+
+model MemberLoginCode {
+  id         String   @id @default(uuid())
+  memberId   String
+  hashedCode String
+  expiresAt  DateTime
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([memberId, hashedCode])
+  @@index([expiresAt])
+  @@map("member_login_codes")
 }
 
 model MemberLoginToken {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardBody, CardHeader, Input, Button } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
@@ -16,12 +16,23 @@ export function MagicLinkRequestPage() {
   const [view, setView] = useState<View>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { setMemberSession } = useAuthStore();
   const { visible: showGuide, forced: guideForced, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-login');
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setResendCooldown((current) => (current > 0 ? current - 1 : 0));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleSession = (token: string, member: { id: string; firstName: string; lastName: string }) => {
     setMemberSession({
@@ -49,6 +60,7 @@ export function MagicLinkRequestPage() {
       } else {
         await memberAuthApi.requestMagicLink(trimmed);
         setView('code');
+        setResendCooldown(30);
       }
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -76,6 +88,9 @@ export function MagicLinkRequestPage() {
   };
 
   const handleResend = async () => {
+    if (resendCooldown > 0) return;
+
+    setResendCooldown(30);
     setLoading(true);
     setError('');
     setCode('');
@@ -149,13 +164,19 @@ export function MagicLinkRequestPage() {
               <div className="flex gap-2">
                 <Button
                   variant="flat"
-                  onPress={() => { setView('email'); setCode(''); setError(''); }}
+                  onPress={() => { setView('email'); setCode(''); setError(''); setResendCooldown(0); }}
                   fullWidth
                 >
                   {t('common.back')}
                 </Button>
-                <Button variant="flat" onPress={handleResend} isLoading={loading} fullWidth>
-                  {t('auth.resend')}
+                <Button
+                  variant="flat"
+                  onPress={handleResend}
+                  isLoading={loading}
+                  isDisabled={loading || resendCooldown > 0}
+                  fullWidth
+                >
+                  {resendCooldown > 0 ? `${t('auth.resend')} (${resendCooldown}s)` : t('auth.resend')}
                 </Button>
               </div>
             </form>

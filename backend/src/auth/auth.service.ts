@@ -65,12 +65,14 @@ export class AuthService {
     const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     await this.prisma.$transaction([
+      this.prisma.memberLoginCode.deleteMany({
+        where: { memberId: member.id, expiresAt: { lt: new Date() } },
+      }),
       this.prisma.memberLoginToken.create({
         data: { memberId: member.id, hashedToken },
       }),
-      this.prisma.member.update({
-        where: { id: member.id },
-        data: { loginCode: hashedCode, loginCodeExpiresAt: codeExpiresAt },
+      this.prisma.memberLoginCode.create({
+        data: { memberId: member.id, hashedCode, expiresAt: codeExpiresAt },
       }),
     ]);
 
@@ -80,29 +82,48 @@ export class AuthService {
 
   async verifyCode(email: string, code: string) {
     const hashedCode = createHash('sha256').update(code).digest('hex');
-    const member = await this.prisma.member.findUnique({ where: { email } });
+    const member = await this.prisma.member.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
 
-    if (
-      !member ||
-      member.loginCode !== hashedCode ||
-      !member.loginCodeExpiresAt ||
-      member.loginCodeExpiresAt < new Date()
-    ) {
+    if (!member) {
       throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
     }
 
-    // Issue a permanent session token and clear the one-time code
+    const codeRecord = await this.prisma.memberLoginCode.findFirst({
+      where: {
+        memberId: member.id,
+        hashedCode,
+        expiresAt: { gte: new Date() },
+      },
+    });
+
+    if (!codeRecord) {
+      throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
+    }
+
+    // Issue a permanent session token and consume the one-time code atomically
     const rawToken = randomBytes(32).toString('hex');
     const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-    await this.prisma.$transaction([
-      this.prisma.memberLoginToken.create({
+    await this.prisma.$transaction(async (tx) => {
+      const consumed = await tx.memberLoginCode.deleteMany({
+        where: {
+          id: codeRecord.id,
+          expiresAt: { gte: new Date() },
+        },
+      });
+      if (consumed.count !== 1) {
+        throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
+      }
+
+      await tx.memberLoginToken.create({
         data: { memberId: member.id, hashedToken },
-      }),
-      this.prisma.member.update({
+      });
+      await tx.member.update({
         where: { id: member.id },
-        data: { loginCode: null, loginCodeExpiresAt: null, lastLoginAt: new Date() },
-      }),
-    ]);
+        data: { lastLoginAt: new Date() },
+      });
+    });
 
     return {
       token: rawToken,
