@@ -51,8 +51,10 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
 
   return (
     <Card
-      className={`w-full ${readOnly ? 'opacity-80' : ''} ${
-        rehearsal.isOptional ? 'bg-primary-50/45 border border-primary-200/70 opacity-75' : ''
+      className={`w-full border border-default-200 ${readOnly ? 'opacity-80' : ''} ${
+        rehearsal.isOptional
+          ? 'bg-primary-100/55 border border-primary-200/80 dark:border-primary-400/80 opacity-80'
+          : ''
       }`}
       data-testid="rehearsal-card"
     >
@@ -110,6 +112,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             size="sm"
             color="success"
             variant={rehearsal.myPlan === 'CONFIRMED' ? 'solid' : 'bordered'}
+            className={rehearsal.myPlan === 'CONFIRMED' ? '' : 'bg-content1'}
             isLoading={loading === 'CONFIRMED'}
             onPress={() => setPlan('CONFIRMED')}
             isDisabled={buttonsDisabled}
@@ -121,6 +124,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
               size="sm"
               color="danger"
               variant={rehearsal.myPlan === 'DECLINED' ? 'solid' : 'bordered'}
+              className={rehearsal.myPlan === 'DECLINED' ? '' : 'bg-content1'}
               isLoading={loading === 'DECLINED'}
               onPress={() => setPlan('DECLINED')}
               isDisabled={buttonsDisabled}

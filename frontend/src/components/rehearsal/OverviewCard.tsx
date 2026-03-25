@@ -28,8 +28,10 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
     <Card
       isPressable
       onPress={onClick}
-      className={`w-full text-left hover:shadow-md transition-shadow ${
-        item.isOptional ? 'bg-primary-50/45 border border-primary-200/70 opacity-75' : ''
+      className={`w-full text-left hover:shadow-md transition-shadow border border-default-200 ${
+        item.isOptional
+          ? 'bg-primary-100/55 border border-primary-200/80 dark:border-primary-400/80 opacity-80'
+          : ''
       }`}
     >
       <CardBody className="gap-2">
