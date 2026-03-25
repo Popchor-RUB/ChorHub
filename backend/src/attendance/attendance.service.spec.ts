@@ -68,13 +68,20 @@ describe('AttendanceService', () => {
       );
     });
 
-    it('rejects DECLINED for optional rehearsal', async () => {
+    it('allows DECLINED for optional rehearsal', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue({ ...mockRehearsal, isOptional: true } as any);
-      await expect(
-        service.setAttendancePlan('member-1', 'rehearsal-1', {
-          response: AttendanceResponse.DECLINED,
+      prismaMock.attendancePlan.upsert.mockResolvedValue({} as any);
+
+      await service.setAttendancePlan('member-1', 'rehearsal-1', {
+        response: AttendanceResponse.DECLINED,
+      });
+
+      expect(prismaMock.attendancePlan.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ response: AttendanceResponse.DECLINED }),
+          update: expect.objectContaining({ response: AttendanceResponse.DECLINED }),
         }),
-      ).rejects.toThrow(ForbiddenException);
+      );
     });
   });
 

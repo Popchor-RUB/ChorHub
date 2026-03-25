@@ -164,11 +164,9 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                       <Chip color="success" variant="flat">
                         {t('attendance_detail.confirmed_chip', { count: records.filter((r) => r.plan === 'CONFIRMED').length })}
                       </Chip>
-                      {!rehearsal.isOptional && (
-                        <Chip color="danger" variant="flat">
-                          {t('attendance_detail.declined_chip', { count: records.filter((r) => r.plan === 'DECLINED').length })}
-                        </Chip>
-                      )}
+                      <Chip color="danger" variant="flat">
+                        {t('attendance_detail.declined_chip', { count: records.filter((r) => r.plan === 'DECLINED').length })}
+                      </Chip>
                       <Chip color="default" variant="flat">
                         {t('attendance_detail.no_response_chip', { count: records.filter((r) => !r.plan).length })}
                       </Chip>

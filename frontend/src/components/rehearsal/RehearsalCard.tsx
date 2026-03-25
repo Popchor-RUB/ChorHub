@@ -119,19 +119,17 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
           >
             {t('rehearsals.attending')}
           </Button>
-          {!rehearsal.isOptional && (
-            <Button
-              size="sm"
-              color="danger"
-              variant={rehearsal.myPlan === 'DECLINED' ? 'solid' : 'bordered'}
-              className={rehearsal.myPlan === 'DECLINED' ? '' : 'bg-content1'}
-              isLoading={loading === 'DECLINED'}
-              onPress={() => setPlan('DECLINED')}
-              isDisabled={buttonsDisabled}
-            >
-              {t('rehearsals.not_attending')}
-            </Button>
-          )}
+          <Button
+            size="sm"
+            color="danger"
+            variant={rehearsal.myPlan === 'DECLINED' ? 'solid' : 'bordered'}
+            className={rehearsal.myPlan === 'DECLINED' ? '' : 'bg-content1'}
+            isLoading={loading === 'DECLINED'}
+            onPress={() => setPlan('DECLINED')}
+            isDisabled={buttonsDisabled}
+          >
+            {t('rehearsals.not_attending')}
+          </Button>
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}
       </CardBody>

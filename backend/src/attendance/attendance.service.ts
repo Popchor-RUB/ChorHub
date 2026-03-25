@@ -12,9 +12,6 @@ export class AttendanceService {
     if (rehearsal.date <= new Date()) {
       throw new ForbiddenException('Probe hat bereits begonnen oder ist vergangen');
     }
-    if (rehearsal.isOptional && dto.response === AttendanceResponse.DECLINED) {
-      throw new ForbiddenException('Absagen für optionale Proben sind nicht erlaubt');
-    }
     return this.prisma.attendancePlan.upsert({
       where: { memberId_rehearsalId: { memberId, rehearsalId } },
       create: { memberId, rehearsalId, response: dto.response },

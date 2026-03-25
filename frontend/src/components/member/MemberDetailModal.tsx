@@ -63,8 +63,11 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
     return 'CONFIRMED';
   };
 
-  const cycleOptionalPlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | null =>
-    current === 'CONFIRMED' ? null : 'CONFIRMED';
+  const cycleOptionalPlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | 'DECLINED' | null => {
+    if (current === 'CONFIRMED') return 'DECLINED';
+    if (current === 'DECLINED') return null;
+    return 'CONFIRMED';
+  };
 
   const handleTogglePlan = async (r: MemberRehearsalEntry, isPast: boolean) => {
     if (saving) return;
@@ -271,6 +274,8 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                                 {r.isOptional
                                   ? r.plan === 'CONFIRMED'
                                     ? t('detail_modal.plan_confirmed')
+                                    : r.plan === 'DECLINED'
+                                    ? t('detail_modal.plan_declined')
                                     : t('detail_modal.plan_none')
                                   : r.attended
                                   ? t('detail_modal.attended')

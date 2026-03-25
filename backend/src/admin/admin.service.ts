@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { AttendanceResponse } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
@@ -277,14 +277,11 @@ export class AdminService {
       this.prisma.member.findUnique({ where: { id: memberId }, select: { id: true } }),
       this.prisma.rehearsal.findUnique({
         where: { id: rehearsalId },
-        select: { id: true, isOptional: true },
+        select: { id: true },
       }),
     ]);
     if (!member) throw new NotFoundException('Mitglied nicht gefunden');
     if (!rehearsal) throw new NotFoundException('Probe nicht gefunden');
-    if (rehearsal.isOptional && response === AttendanceResponse.DECLINED) {
-      throw new BadRequestException('Absagen für optionale Proben sind nicht erlaubt');
-    }
 
     if (response === null) {
       await this.prisma.attendancePlan

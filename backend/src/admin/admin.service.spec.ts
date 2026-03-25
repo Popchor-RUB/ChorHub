@@ -470,14 +470,22 @@ describe('AdminService', () => {
       ).rejects.toThrow('Probe nicht gefunden');
     });
 
-    it('rejects DECLINED for optional rehearsal', async () => {
+    it('allows DECLINED for optional rehearsal', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue({
         id: rehearsalId,
         isOptional: true,
       } as any);
-      await expect(
-        service.adminSetMemberAttendancePlan(memberId, rehearsalId, 'DECLINED'),
-      ).rejects.toThrow('Absagen für optionale Proben sind nicht erlaubt');
+
+      prismaMock.attendancePlan.upsert.mockResolvedValue({} as any);
+      const result = await service.adminSetMemberAttendancePlan(memberId, rehearsalId, 'DECLINED');
+
+      expect(prismaMock.attendancePlan.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ response: 'DECLINED' }),
+          update: expect.objectContaining({ response: 'DECLINED' }),
+        }),
+      );
+      expect(result).toEqual({ plan: 'DECLINED' });
     });
   });
 
