@@ -7,11 +7,13 @@
  *   npm run admin -- list
  *   npm run admin -- passwd <username>
  *   npm run admin -- invite [--all]
+ *   npm run admin -- mailtemplate <template> <user e-mail>
  *
  * Or directly:
  *   npx tsx scripts/admin-cli.ts create <username> [password]
  *   npx tsx scripts/admin-cli.ts passwd <username>
  *   npx tsx scripts/admin-cli.ts invite [--all]
+ *   npx tsx scripts/admin-cli.ts mailtemplate <template> <user e-mail>
  *
  * If no password is supplied for "create" or "passwd", a secure random one is generated
  * and printed to stdout.
@@ -29,6 +31,8 @@ import { readFile } from 'fs/promises';
 import { resolve } from 'path';
 import * as Handlebars from 'handlebars';
 import * as nodemailer from 'nodemailer';
+
+type SupportedMailTemplate = 'invite' | 'magic-link';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -69,7 +73,131 @@ function usage(): never {
   console.error('  npx ts-node scripts/admin-cli.ts list');
   console.error('  npx ts-node scripts/admin-cli.ts passwd <username>');
   console.error('  npx ts-node scripts/admin-cli.ts invite [--all]');
+  console.error('  npx ts-node scripts/admin-cli.ts mailtemplate <template> <user e-mail>');
+  console.error('  templates: invite, magic-link');
   process.exit(1);
+}
+
+function getMailTransporter(): nodemailer.Transporter {
+  const smtpHost = process.env.SMTP_HOST;
+  if (!smtpHost) {
+    console.error('Error: SMTP_HOST is not set.');
+    process.exit(1);
+  }
+
+  const smtpPort = Number(process.env.SMTP_PORT ?? 587);
+  const smtpSecure = `${process.env.SMTP_SECURE ?? 'false'}`.toLowerCase() === 'true';
+  return nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpSecure,
+    auth: process.env.SMTP_USER
+      ? {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS ?? '',
+        }
+      : undefined,
+  });
+}
+
+async function getMemberByEmail(email: string) {
+  return prisma.member.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+  });
+}
+
+async function renderTemplate(template: SupportedMailTemplate, context: Record<string, string>) {
+  const templateSource = await readFile(
+    resolve(process.cwd(), `src/mail/templates/${template}.hbs`),
+    'utf8',
+  );
+  return Handlebars.compile(templateSource, { strict: true })(context);
+}
+
+async function buildInviteMail(member: { id: string; firstName: string; lastName: string; email: string }) {
+  const rawToken = randomBytes(32).toString('hex');
+  const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+  await prisma.memberLoginToken.create({
+    data: { memberId: member.id, hashedToken },
+  });
+
+  const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+  return {
+    subject: 'Willkommen bei ChorHub - Dein Zugangslink',
+    html: await renderTemplate('invite', {
+      firstName: member.firstName,
+      lastName: member.lastName,
+      magicUrl: `${appUrl}/auth/verify?token=${rawToken}`,
+    }),
+  };
+}
+
+async function buildMagicLinkMail(member: { id: string; firstName: string; email: string }) {
+  const rawToken = randomBytes(32).toString('hex');
+  const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+  const rawCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const hashedCode = createHash('sha256').update(rawCode).digest('hex');
+  const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  await prisma.$transaction([
+    prisma.memberLoginCode.deleteMany({
+      where: { memberId: member.id, expiresAt: { lt: new Date() } },
+    }),
+    prisma.memberLoginToken.create({
+      data: { memberId: member.id, hashedToken },
+    }),
+    prisma.memberLoginCode.create({
+      data: { memberId: member.id, hashedCode, expiresAt: codeExpiresAt },
+    }),
+  ]);
+
+  const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+  return {
+    subject: 'Dein ChorHub Anmeldelink',
+    html: await renderTemplate('magic-link', {
+      firstName: member.firstName,
+      magicUrl: `${appUrl}/auth/verify?token=${rawToken}`,
+      rawToken,
+      loginCode: rawCode,
+    }),
+  };
+}
+
+async function sendTemplateMail(template: SupportedMailTemplate, email: string): Promise<void> {
+  const member = await getMemberByEmail(email);
+  if (!member) {
+    console.error(`Error: no member found for e-mail "${email}".`);
+    process.exit(1);
+  }
+
+  const transporter = getMailTransporter();
+  const from = process.env.MAIL_FROM ?? 'noreply@chorhub.de';
+  const mail =
+    template === 'invite'
+      ? await buildInviteMail(member)
+      : template === 'magic-link'
+        ? await buildMagicLinkMail(member)
+        : null;
+
+  if (!mail) {
+    console.error(`Error: unsupported template "${template}".`);
+    console.error('Supported templates: invite, magic-link');
+    process.exit(1);
+  }
+
+  await transporter.sendMail({
+    from,
+    to: member.email,
+    subject: mail.subject,
+    html: mail.html,
+  });
+
+  console.log('════════════════════════════════════════');
+  console.log('  TEMPLATE MAIL SENT');
+  console.log(`  Template : ${template}`);
+  console.log(`  Member   : ${member.firstName} ${member.lastName}`);
+  console.log(`  E-Mail   : ${member.email}`);
+  console.log('════════════════════════════════════════');
 }
 
 async function createAdmin(username: string, plaintextPassword?: string): Promise<void> {
@@ -173,35 +301,8 @@ async function inviteMembers(sendToAll: boolean): Promise<void> {
     console.log(sendToAll ? 'No members found.' : 'No members found who have not logged in yet.');
     return;
   }
-
-  const smtpHost = process.env.SMTP_HOST;
-  if (!smtpHost) {
-    console.error('Error: SMTP_HOST is not set.');
-    process.exit(1);
-  }
-
-  const smtpPort = Number(process.env.SMTP_PORT ?? 587);
-  const smtpSecure = `${process.env.SMTP_SECURE ?? 'false'}`.toLowerCase() === 'true';
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpSecure,
-    auth: process.env.SMTP_USER
-      ? {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS ?? '',
-        }
-      : undefined,
-  });
-
-  const inviteTemplateSource = await readFile(
-    resolve(process.cwd(), 'src/mail/templates/invite.hbs'),
-    'utf8',
-  );
-  const renderInvite = Handlebars.compile(inviteTemplateSource, { strict: true });
+  const transporter = getMailTransporter();
   const from = process.env.MAIL_FROM ?? 'noreply@chorhub.de';
-  const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
-  const subject = 'Willkommen bei ChorHub – Ihr persönlicher Zugangslink';
 
   let sent = 0;
   let failed = 0;
@@ -218,23 +319,12 @@ async function inviteMembers(sendToAll: boolean): Promise<void> {
     }
 
     try {
-      const rawToken = randomBytes(32).toString('hex');
-      const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-      await prisma.memberLoginToken.create({
-        data: { memberId: member.id, hashedToken },
-      });
-      const magicUrl = `${appUrl}/auth/verify?token=${rawToken}`;
-      const html = renderInvite({
-        firstName: member.firstName,
-        lastName: member.lastName,
-        magicUrl,
-      });
-
+      const mail = await buildInviteMail(member);
       await transporter.sendMail({
         from,
         to: member.email,
-        subject,
-        html,
+        subject: mail.subject,
+        html: mail.html,
       });
       sent++;
     } catch (err) {
@@ -278,6 +368,10 @@ async function main(): Promise<void> {
       break;
     case 'invite':
       await inviteMembers(args.includes('--all'));
+      break;
+    case 'mailtemplate':
+      if (!args[0] || !args[1]) usage();
+      await sendTemplateMail(args[0] as SupportedMailTemplate, args[1]);
       break;
     default:
       usage();
