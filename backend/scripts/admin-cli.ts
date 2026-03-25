@@ -291,6 +291,7 @@ function renderProgress(current: number, total: number): void {
 }
 
 async function inviteMembers(sendToAll: boolean): Promise<void> {
+  const SENT_INTERVAL=60000
   const members = await prisma.member.findMany({
     where: sendToAll ? undefined : { lastLoginAt: null },
     orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
@@ -335,7 +336,7 @@ async function inviteMembers(sendToAll: boolean): Promise<void> {
     }
     processed++;
     renderProgress(processed, members.length);
-    nextAllowedAt = Date.now() + 1000;
+    nextAllowedAt = Date.now() + SENT_INTERVAL;
   }
 
   process.stdout.write('\n');
