@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { choirVoicesApi } from '../../services/api';
 import type { ChoirVoice } from '../../types';
+import { adminInputClassNames } from '../../styles/adminFormStyles';
 
 export function OptionsPage() {
   const [voices, setVoices] = useState<ChoirVoice[]>([]);
@@ -144,6 +145,7 @@ export function OptionsPage() {
                     value={editName}
                     onValueChange={setEditName}
                     className="flex-1"
+                    classNames={adminInputClassNames}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleRenameCommit(voice.id);
                       if (e.key === 'Escape') setEditingId(null);
@@ -226,6 +228,7 @@ export function OptionsPage() {
               placeholder={t('voice.name_placeholder')}
               value={newName}
               onValueChange={setNewName}
+              classNames={adminInputClassNames}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
             />
           </ModalBody>

@@ -19,6 +19,7 @@ import type { MemberOverview } from '../../types';
 import { MemberDetailModal } from '../../components/member/MemberDetailModal';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
+import { adminInputClassNames } from '../../styles/adminFormStyles';
 
 export function MemberOverviewPage() {
   const [members, setMembers] = useState<MemberOverview[]>([]);
@@ -85,21 +86,24 @@ export function MemberOverviewPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('members.title')}</h1>
-        <div className="flex gap-2 shrink-0">
+        <div className="grid grid-cols-3 gap-2 w-full sm:w-auto sm:flex sm:shrink-0">
           <Button size="sm" variant="flat" isLoading={exporting} onPress={handleExport}>
-            {t('members.export_excel')}
+            <span className="sm:hidden">{t('members.export_short')}</span>
+            <span className="hidden sm:inline">{t('members.export_excel')}</span>
           </Button>
           <Button
             size="sm"
             variant="flat"
             onPress={() => navigate('/admin/mitglieder/importieren')}
           >
-            {t('members.import_csv')}
+            <span className="sm:hidden">{t('members.import_short')}</span>
+            <span className="hidden sm:inline">{t('members.import_csv')}</span>
           </Button>
           <Button color="primary" size="sm" onPress={onCreateOpen}>
-            {t('members.create_new')}
+            <span className="sm:hidden">{t('members.create_short')}</span>
+            <span className="hidden sm:inline">{t('members.create_new')}</span>
           </Button>
         </div>
       </div>
@@ -109,6 +113,7 @@ export function MemberOverviewPage() {
         value={search}
         onValueChange={setSearch}
         isClearable
+        classNames={adminInputClassNames}
       />
       <VoiceFilterChips
         voices={voiceNames}

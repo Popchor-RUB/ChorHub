@@ -132,8 +132,10 @@
   "members": {
     "title": "Mitglieder",
     "import_title": "Mitglieder importieren",
-    "export_excel": "Excel exportieren",
-    "import_csv": "CSV importieren",
+    "export_excel": "Excel Export",
+    "export_short": "Excel Export",
+    "import_csv": "CSV Import",
+    "import_short": "CSV Import",
     "search_placeholder": "Name suchen…",
     "table_aria": "Mitgliederübersicht",
     "col_name": "Name",
@@ -154,6 +156,7 @@
     "import_failed_count": "{{count}} fehlerhaft",
     "import_errors_title": "Fehler:",
     "create_new": "+ Neu",
+    "create_short": "+ Neu",
     "create_title": "Mitglied anlegen",
     "create_first_name": "Vorname",
     "create_last_name": "Nachname",
@@ -205,8 +208,10 @@
   },
   "notifications": {
     "blocked": "Benachrichtigungen blockiert",
+    "blocked_help": "Benachrichtigungen sind in deinen Browser-/Geräteeinstellungen blockiert.",
     "disable": "Benachrichtigungen deaktivieren",
     "enable": "Benachrichtigungen aktivieren",
+    "member_help": "Du erhältst Benachrichtigungen, wenn das Orga-Team Mitteilungen an Mitglieder sendet oder eine Probe ansteht und du noch keinen Anwesenheitsstatus abgegeben hast.",
     "disable_title": "Benachrichtigungen deaktivieren",
     "disable_body": "Wenn du die Benachrichtigungen deaktivierst, erhältst du keine Mitteilungen mehr von dieser App.",
     "deactivate": "Deaktivieren"

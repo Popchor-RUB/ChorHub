@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Tabs, Tab, Textarea, Button } from '@heroui/react';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { adminTextareaClassNames } from '../../styles/adminFormStyles';
 
 interface Props {
   value: string;
@@ -37,7 +38,10 @@ export function MarkdownEditor({ value, onChange, onSave, saving }: Props) {
               onValueChange={onChange}
               minRows={10}
               maxRows={100}
-              classNames={{ input: 'font-mono text-sm' }}
+              classNames={{
+                ...adminTextareaClassNames,
+                input: `${adminTextareaClassNames.input} font-mono text-sm`,
+              }}
             />
           </Tab>
           <Tab key="preview" title="Vorschau">
@@ -58,7 +62,8 @@ export function MarkdownEditor({ value, onChange, onSave, saving }: Props) {
             onValueChange={onChange}
             style={{ height: textareaHeight ? `${textareaHeight}px` : undefined }}
             classNames={{
-              input: 'font-mono text-sm resize-y',
+              ...adminTextareaClassNames,
+              input: `${adminTextareaClassNames.input} font-mono text-sm resize-y`,
             }}
           />
         </div>

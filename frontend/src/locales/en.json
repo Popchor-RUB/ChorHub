@@ -133,7 +133,9 @@
     "title": "Members",
     "import_title": "Import Members",
     "export_excel": "Export Excel",
+    "export_short": "Excel",
     "import_csv": "Import CSV",
+    "import_short": "CSV",
     "search_placeholder": "Search name…",
     "table_aria": "Members overview",
     "col_name": "Name",
@@ -154,6 +156,7 @@
     "import_failed_count": "{{count}} failed",
     "import_errors_title": "Errors:",
     "create_new": "+ New",
+    "create_short": "New",
     "create_title": "Add Member",
     "create_first_name": "First name",
     "create_last_name": "Last name",
@@ -205,8 +208,10 @@
   },
   "notifications": {
     "blocked": "Notifications blocked",
+    "blocked_help": "Notifications are blocked in your browser/device settings.",
     "disable": "Disable notifications",
     "enable": "Enable notifications",
+    "member_help": "You receive notifications when admins send announcements to members.",
     "disable_title": "Disable notifications",
     "disable_body": "If you disable notifications, you will no longer receive any messages from this app.",
     "deactivate": "Disable"

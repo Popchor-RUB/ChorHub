@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, Input, Spinner, Textarea } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminPushApi } from '../../services/api';
+import { adminInputClassNames, adminTextareaClassNames } from '../../styles/adminFormStyles';
 
 export function PushNotificationsPage() {
   const [subscriberCount, setSubscriberCount] = useState<number | null>(null);
@@ -57,6 +58,7 @@ export function PushNotificationsPage() {
           value={title}
           onValueChange={setTitle}
           isRequired
+          classNames={adminInputClassNames}
         />
         <Textarea
           label={t('push.label_message')}
@@ -64,12 +66,14 @@ export function PushNotificationsPage() {
           onValueChange={setBody}
           isRequired
           minRows={3}
+          classNames={adminTextareaClassNames}
         />
         <Input
           label={t('push.label_url')}
           value={url}
           onValueChange={setUrl}
           placeholder={t('push.url_placeholder')}
+          classNames={adminInputClassNames}
         />
         <Button
           color="primary"

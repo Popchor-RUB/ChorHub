@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { adminMembersApi, choirVoicesApi } from '../../services/api';
 import type { ChoirVoice } from '../../types';
+import { adminInputClassNames, adminSelectClassNames } from '../../styles/adminFormStyles';
 
 interface Props {
   isOpen: boolean;
@@ -92,12 +93,14 @@ export function CreateMemberModal({ isOpen, onClose, onCreated, onCreatedWithId 
               onValueChange={(v) => setField('firstName', v)}
               isRequired
               autoFocus
+              classNames={adminInputClassNames}
             />
             <Input
               label={t('members.create_last_name')}
               value={form.lastName}
               onValueChange={(v) => setField('lastName', v)}
               isRequired
+              classNames={adminInputClassNames}
             />
           </div>
           <Input
@@ -106,11 +109,13 @@ export function CreateMemberModal({ isOpen, onClose, onCreated, onCreatedWithId 
             value={form.email}
             onValueChange={(v) => setField('email', v)}
             isRequired
+            classNames={adminInputClassNames}
           />
           {voices.length > 0 && (
             <Select
               label={t('members.create_voice')}
               selectedKeys={form.voiceId ? new Set([form.voiceId]) : new Set()}
+              classNames={adminSelectClassNames}
               onSelectionChange={(keys) => {
                 const selected = [...keys][0];
                 setField('voiceId', typeof selected === 'string' ? selected : '');

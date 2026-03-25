@@ -14,6 +14,7 @@ import {
   InformationCircleIcon,
   BellIcon,
   Cog6ToothIcon,
+  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import type { ComponentType, SVGProps } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -84,14 +85,24 @@ export function AdminLayout() {
           <NavbarItem>
             <span className="text-sm text-default-500 hidden sm:block">{adminSession?.username}</span>
           </NavbarItem>
-          <NavbarItem>
+          <NavbarItem className="hidden sm:flex">
             <LanguageSwitcher />
           </NavbarItem>
           <NavbarItem>
             <ThemeToggle />
           </NavbarItem>
           <NavbarItem>
-            <Button variant="flat" size="sm" onPress={handleLogout}>
+            <Button
+              className="sm:hidden"
+              variant="flat"
+              size="sm"
+              onPress={handleLogout}
+              isIconOnly
+              aria-label={t('nav.logout')}
+            >
+              <ArrowRightOnRectangleIcon className="w-5 h-5" />
+            </Button>
+            <Button className="hidden sm:flex" variant="flat" size="sm" onPress={handleLogout}>
               {t('nav.logout')}
             </Button>
           </NavbarItem>

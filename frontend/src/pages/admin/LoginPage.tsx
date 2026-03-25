@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { startAuthentication } from '@simplewebauthn/browser';
+import { adminInputClassNames } from '../../styles/adminFormStyles';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
@@ -71,6 +72,7 @@ export function LoginPage() {
               onValueChange={setUsername}
               isRequired
               autoComplete="username"
+              classNames={adminInputClassNames}
             />
             <Input
               label={t('auth.password')}
@@ -78,6 +80,7 @@ export function LoginPage() {
               value={password}
               onValueChange={setPassword}
               autoComplete="current-password"
+              classNames={adminInputClassNames}
             />
             {error && <p className="text-danger text-sm">{error}</p>}
             <Button type="submit" color="primary" isLoading={loading} fullWidth>

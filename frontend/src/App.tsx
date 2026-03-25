@@ -4,6 +4,7 @@ import { MemberLayout } from './pages/member/MemberLayout';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { InformationenPage } from './pages/member/DashboardPage';
 import { RehearsalsPage } from './pages/member/RehearsalsPage';
+import { MemberSettingsPage } from './pages/member/MemberSettingsPage';
 import { MagicLinkRequestPage } from './pages/auth/MagicLinkRequestPage';
 import { MagicLinkVerifyPage } from './pages/auth/MagicLinkVerifyPage';
 import { LoginPage } from './pages/admin/LoginPage';
@@ -32,6 +33,7 @@ const router = createBrowserRouter(
         { index: true, element: <Navigate to="/proben" replace /> },
         { path: 'proben', element: <RehearsalsPage /> },
         { path: 'informationen', element: <InformationenPage /> },
+        { path: 'einstellungen', element: <MemberSettingsPage /> },
       ],
     },
 

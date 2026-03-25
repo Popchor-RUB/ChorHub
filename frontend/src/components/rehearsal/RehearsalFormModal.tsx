@@ -19,6 +19,11 @@ import type { DateValue } from '@internationalized/date';
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi } from '../../services/api';
 import type { Rehearsal } from '../../types';
+import {
+  adminInputClassNames,
+  adminSelectClassNames,
+  adminTextareaClassNames,
+} from '../../styles/adminFormStyles';
 
 interface Props {
   rehearsal: Rehearsal | null;
@@ -183,6 +188,7 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
             <Select
               label={t('rehearsals.recurrence')}
               selectedKeys={[recurrencePattern]}
+              classNames={adminSelectClassNames}
               onSelectionChange={(keys) => {
                 if (keys === 'all') return;
                 const selected = Array.from(keys)[0] as RecurrencePattern | undefined;
@@ -216,12 +222,14 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
             value={title}
             onValueChange={setTitle}
             isRequired
+            classNames={adminInputClassNames}
           />
           <Input
             label={t('rehearsals.location')}
             value={location}
             onValueChange={setLocation}
             placeholder={t('common.optional')}
+            classNames={adminInputClassNames}
           />
           <Input
             type="number"
@@ -230,6 +238,7 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
             value={durationMinutes}
             onValueChange={setDurationMinutes}
             placeholder={t('common.optional')}
+            classNames={adminInputClassNames}
           />
           <Switch
             isSelected={isOptional}
@@ -242,6 +251,7 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
             value={description}
             onValueChange={setDescription}
             placeholder={t('common.optional')}
+            classNames={adminTextareaClassNames}
           />
         </ModalBody>
         <ModalFooter>

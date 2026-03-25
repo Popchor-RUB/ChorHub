@@ -11,6 +11,7 @@ import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
 import { useAttendanceKeyboard } from '../../hooks/useAttendanceKeyboard';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateLong, formatDateNumeric } from '../../utils/dateFormatting';
+import { adminInputClassNames, adminSelectClassNames } from '../../styles/adminFormStyles';
 
 const NO_VOICE_KEY = '__no_voice__';
 
@@ -278,6 +279,7 @@ export function AttendancePage() {
           label={t('attendance.rehearsal_label')}
           placeholder={t('attendance.select_rehearsal')}
           selectedKeys={selectedRehearsalId ? [selectedRehearsalId] : []}
+          classNames={adminSelectClassNames}
           onSelectionChange={(keys) => {
             const id = Array.from(keys)[0] as string;
             setSelectedRehearsalId(id ?? '');
@@ -321,6 +323,7 @@ export function AttendancePage() {
                 isClearable
                 size="sm"
                 className="flex-1"
+                classNames={adminInputClassNames}
               />
               <Button size="sm" color="primary" onPress={onCreateOpen}>
                 {t('members.create_new')}
