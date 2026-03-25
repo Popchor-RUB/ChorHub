@@ -82,10 +82,10 @@ export function AttendancePage() {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const pastRehearsals = rehearsals
-    .filter((r) => new Date(r.date) < startOfToday)
+    .filter((r) => !r.isOptional && new Date(r.date) < startOfToday)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const futureRehearsals = rehearsals
-    .filter((r) => new Date(r.date) >= startOfToday)
+    .filter((r) => !r.isOptional && new Date(r.date) >= startOfToday)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const selectedRehearsal = rehearsals.find((r) => r.id === selectedRehearsalId);

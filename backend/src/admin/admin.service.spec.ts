@@ -292,6 +292,9 @@ describe('AdminService', () => {
 
       const result = await service.getMemberOverview();
       expect(result[0].unexcusedAbsenceCount).toBe(0);
+      expect(prismaMock.rehearsal.count).toHaveBeenCalledWith({
+        where: { date: { lt: expect.any(Date) }, isOptional: false },
+      });
     });
 
     it('counts missed rehearsals with no plan as unentschuldigt', async () => {
@@ -342,11 +345,13 @@ describe('AdminService', () => {
     const mockRehearsalRow = (overrides: {
       attendanceRecords?: { id: string }[];
       attendancePlans?: { response: string }[];
+      isOptional?: boolean;
     } = {}) => ({
       id: 'rehearsal-1',
       date: new Date('2025-06-01'),
       title: 'Probe 1',
       description: null,
+      isOptional: overrides.isOptional ?? false,
       createdAt: new Date(),
       updatedAt: new Date(),
       attendanceRecords: overrides.attendanceRecords ?? [],
@@ -360,6 +365,14 @@ describe('AdminService', () => {
 
       const result = await service.getMemberRehearsals('member-1');
       expect(result[0].attended).toBe(true);
+    });
+
+    it('includes isOptional field in member rehearsal rows', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        mockRehearsalRow({ isOptional: true }),
+      ] as any);
+      const result = await service.getMemberRehearsals('member-1');
+      expect(result[0].isOptional).toBe(true);
     });
 
     it('returns attended=false and plan=DECLINED → entschuldigt', async () => {
@@ -416,6 +429,7 @@ describe('AdminService', () => {
       prismaMock.member.findUnique.mockResolvedValue(mockMember() as any);
       prismaMock.rehearsal.findUnique.mockResolvedValue({
         id: rehearsalId,
+        isOptional: false,
         date: new Date('2025-01-01'),
         title: 'Probe',
         description: null,
@@ -454,6 +468,16 @@ describe('AdminService', () => {
       await expect(
         service.adminSetMemberAttendancePlan(memberId, 'bad-id', 'DECLINED'),
       ).rejects.toThrow('Probe nicht gefunden');
+    });
+
+    it('rejects DECLINED for optional rehearsal', async () => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue({
+        id: rehearsalId,
+        isOptional: true,
+      } as any);
+      await expect(
+        service.adminSetMemberAttendancePlan(memberId, rehearsalId, 'DECLINED'),
+      ).rejects.toThrow('Absagen für optionale Proben sind nicht erlaubt');
     });
   });
 

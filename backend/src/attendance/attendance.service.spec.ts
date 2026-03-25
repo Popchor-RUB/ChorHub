@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
@@ -12,6 +12,7 @@ const mockRehearsal = {
   description: null,
   location: null,
   durationMinutes: null,
+  isOptional: false,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -66,6 +67,15 @@ describe('AttendanceService', () => {
         }),
       );
     });
+
+    it('rejects DECLINED for optional rehearsal', async () => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue({ ...mockRehearsal, isOptional: true } as any);
+      await expect(
+        service.setAttendancePlan('member-1', 'rehearsal-1', {
+          response: AttendanceResponse.DECLINED,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('getRecordsForRehearsal', () => {
@@ -76,6 +86,20 @@ describe('AttendanceService', () => {
     it('throws NotFoundException when rehearsal does not exist', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue(null);
       await expect(service.getRecordsForRehearsal('bad-id')).rejects.toThrow(NotFoundException);
+    });
+
+    it('returns records view for optional rehearsals so plans remain visible', async () => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue({ ...rehearsalC, isOptional: true } as any);
+      prismaMock.rehearsal.findMany.mockResolvedValue([rehearsalB] as any);
+      prismaMock.member.findMany.mockResolvedValue([
+        { ...mockMember, attendanceRecords: [], attendancePlans: [{ response: 'CONFIRMED' }] },
+      ] as any);
+      prismaMock.attendanceRecord.findMany.mockResolvedValue([] as any);
+
+      const result = await service.getRecordsForRehearsal('r-c');
+
+      expect(result[0].plan).toBe('CONFIRMED');
+      expect(result[0].attended).toBe(false);
     });
 
     it('computes lastAttendedRehearsalsAgo correctly', async () => {
@@ -159,6 +183,13 @@ describe('AttendanceService', () => {
       await service.bulkSetAttendanceRecords('rehearsal-1', []);
 
       expect(prismaMock.attendanceRecord.createMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects bulk records for optional rehearsal', async () => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue({ ...mockRehearsal, isOptional: true } as any);
+      await expect(service.bulkSetAttendanceRecords('rehearsal-1', ['m1'])).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 

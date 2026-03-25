@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class UpdateRehearsalDto {
   @IsDateString()
@@ -23,4 +23,9 @@ export class UpdateRehearsalDto {
   @Min(1)
   @IsOptional()
   durationMinutes?: number;
+
+  @Type(() => Boolean)
+  @IsBoolean()
+  @IsOptional()
+  isOptional?: boolean;
 }

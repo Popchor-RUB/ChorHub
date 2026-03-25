@@ -28,12 +28,21 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
     <Card
       isPressable
       onPress={onClick}
-      className="w-full text-left hover:shadow-md transition-shadow"
+      className={`w-full text-left hover:shadow-md transition-shadow ${
+        item.isOptional ? 'bg-primary-50/45 border border-primary-200/70 opacity-75' : ''
+      }`}
     >
       <CardBody className="gap-2">
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <p className="font-semibold">{item.title}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold">{item.title}</p>
+              {item.isOptional && (
+                <Chip size="sm" variant="flat" color="primary">
+                  {t('rehearsals.optional_badge')}
+                </Chip>
+              )}
+            </div>
             <p className="text-sm text-default-500">
               {formatDateTimeShort(item.date, dateLocale)}
               {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}

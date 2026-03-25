@@ -18,7 +18,7 @@ export class RehearsalReminderTask {
     const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     const nextRehearsal = await this.prisma.rehearsal.findFirst({
-      where: { date: { gte: startOfToday } },
+      where: { date: { gte: startOfToday }, isOptional: false },
       orderBy: { date: 'asc' },
     });
 

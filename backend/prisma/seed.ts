@@ -107,7 +107,13 @@ function buildRehearsalSeries(offsetDays: number, count: number, titleStartIndex
 }
 
 const PAST_REHEARSALS = buildRehearsalSeries(-7 * PAST_REHEARSAL_COUNT, PAST_REHEARSAL_COUNT, 1);
-const UPCOMING_REHEARSALS = buildRehearsalSeries(7, UPCOMING_REHEARSAL_COUNT, PAST_REHEARSAL_COUNT + 1);
+const OPTIONAL_UPCOMING_REHEARSAL_INDEXES = new Set([1, 4, 8]);
+const UPCOMING_REHEARSALS = buildRehearsalSeries(7, UPCOMING_REHEARSAL_COUNT, PAST_REHEARSAL_COUNT + 1).map(
+  (rehearsal, index) => ({
+    ...rehearsal,
+    isOptional: OPTIONAL_UPCOMING_REHEARSAL_INDEXES.has(index),
+  }),
+);
 
 // ── Attendance helpers ────────────────────────────────────────────────────────
 
@@ -229,6 +235,10 @@ async function main() {
   members.forEach((member, mi) => {
     allRehearsals.forEach((rehearsal, ri) => {
       const response = planResponse(mi, ri);
+      // Optional rehearsals do not allow DECLINED plans in app logic.
+      if (rehearsal.isOptional && response === AttendanceResponse.DECLINED) {
+        return;
+      }
       if (response !== null) {
         plans.push({ memberId: member.id, rehearsalId: rehearsal.id, response });
       }

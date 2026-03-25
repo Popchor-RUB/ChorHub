@@ -44,7 +44,7 @@ export class AdminService {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const pastRehearsals = await this.prisma.rehearsal.findMany({
-      where: { date: { lt: startOfToday } },
+      where: { date: { lt: startOfToday }, isOptional: false },
       select: { id: true },
     });
     if (pastRehearsals.length > 0) {
@@ -156,7 +156,7 @@ export class AdminService {
     startOfToday.setHours(0, 0, 0, 0);
 
     const [totalPastRehearsals, members] = await Promise.all([
-      this.prisma.rehearsal.count({ where: { date: { lt: startOfToday } } }),
+      this.prisma.rehearsal.count({ where: { date: { lt: startOfToday }, isOptional: false } }),
       this.prisma.member.findMany({
         orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
         select: {
@@ -168,11 +168,14 @@ export class AdminService {
           createdAt: true,
           _count: { select: { attendanceRecords: true } },
           attendanceRecords: {
-            where: { rehearsal: { date: { lt: startOfToday } } },
+            where: { rehearsal: { date: { lt: startOfToday }, isOptional: false } },
             select: { rehearsalId: true },
           },
           attendancePlans: {
-            where: { response: 'DECLINED', rehearsal: { date: { lt: startOfToday } } },
+            where: {
+              response: 'DECLINED',
+              rehearsal: { date: { lt: startOfToday }, isOptional: false },
+            },
             select: { rehearsalId: true },
           },
         },
@@ -192,7 +195,7 @@ export class AdminService {
         email: m.email,
         choirVoice: m.choirVoice,
         createdAt: m.createdAt,
-        attendanceCount: m._count.attendanceRecords,
+        attendanceCount: attendedPastIds.size,
         unexcusedAbsenceCount,
       };
     });
@@ -259,6 +262,7 @@ export class AdminService {
       id: r.id,
       date: r.date,
       title: r.title,
+      isOptional: r.isOptional,
       attended: r.attendanceRecords.length > 0,
       plan: r.attendancePlans[0]?.response ?? null,
     }));
@@ -271,10 +275,16 @@ export class AdminService {
   ) {
     const [member, rehearsal] = await Promise.all([
       this.prisma.member.findUnique({ where: { id: memberId }, select: { id: true } }),
-      this.prisma.rehearsal.findUnique({ where: { id: rehearsalId }, select: { id: true } }),
+      this.prisma.rehearsal.findUnique({
+        where: { id: rehearsalId },
+        select: { id: true, isOptional: true },
+      }),
     ]);
     if (!member) throw new NotFoundException('Mitglied nicht gefunden');
     if (!rehearsal) throw new NotFoundException('Probe nicht gefunden');
+    if (rehearsal.isOptional && response === AttendanceResponse.DECLINED) {
+      throw new BadRequestException('Absagen für optionale Proben sind nicht erlaubt');
+    }
 
     if (response === null) {
       await this.prisma.attendancePlan
@@ -297,7 +307,7 @@ export class AdminService {
 
     const [rehearsals, members] = await Promise.all([
       this.prisma.rehearsal.findMany({
-        where: { date: { lt: startOfToday } },
+        where: { date: { lt: startOfToday }, isOptional: false },
         orderBy: { date: 'asc' },
         select: { id: true, date: true, title: true },
       }),
@@ -310,11 +320,14 @@ export class AdminService {
           email: true,
           choirVoice: { select: { name: true } },
           attendanceRecords: {
-            where: { rehearsal: { date: { lt: startOfToday } } },
+            where: { rehearsal: { date: { lt: startOfToday }, isOptional: false } },
             select: { rehearsalId: true },
           },
           attendancePlans: {
-            where: { response: 'DECLINED', rehearsal: { date: { lt: startOfToday } } },
+            where: {
+              response: 'DECLINED',
+              rehearsal: { date: { lt: startOfToday }, isOptional: false },
+            },
             select: { rehearsalId: true },
           },
         },

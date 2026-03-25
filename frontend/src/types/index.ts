@@ -23,6 +23,7 @@ export interface Rehearsal {
   description: string | null;
   location: string | null;
   durationMinutes: number | null;
+  isOptional: boolean;
   myPlan?: AttendanceResponse | null;
   myAttended?: boolean | null;
 }
@@ -43,6 +44,7 @@ export interface MemberRehearsalEntry {
   id: string;
   date: string;
   title: string;
+  isOptional: boolean;
   attended: boolean;
   plan: AttendanceResponse | null;
 }
@@ -82,6 +84,7 @@ export interface RehearsalOverview {
   date: string;
   title: string;
   durationMinutes?: number | null;
+  isOptional?: boolean;
   totalConfirmed?: number;
   totalAttended?: number;
   byVoice: VoiceBreakdown;

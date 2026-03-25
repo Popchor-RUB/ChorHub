@@ -13,6 +13,7 @@ const mockRehearsal = {
   description: null,
   location: null,
   durationMinutes: null,
+  isOptional: false,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -65,6 +66,14 @@ describe('RehearsalsService', () => {
       ] as any);
       const result = await service.findUpcoming('member-1');
       expect(result[0].myPlan).toBe('CONFIRMED');
+    });
+
+    it('maps isOptional from rehearsal payload', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        { ...mockRehearsal, isOptional: true, attendancePlans: [], attendanceRecords: [], _count: { attendanceRecords: 0 } },
+      ] as any);
+      const result = await service.findUpcoming('member-1');
+      expect(result[0].isOptional).toBe(true);
     });
 
     it('returns null myPlan when no plan set', async () => {
@@ -184,6 +193,7 @@ describe('RehearsalsService', () => {
         title: 'Probe 1',
         location: 'Gemeindesaal',
         durationMinutes: 90,
+        isOptional: true,
       });
       expect(prismaMock.rehearsal.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -191,6 +201,7 @@ describe('RehearsalsService', () => {
             title: 'Probe 1',
             location: 'Gemeindesaal',
             durationMinutes: 90,
+            isOptional: true,
           }),
         }),
       );

@@ -55,18 +55,31 @@ test.describe('Member rehearsal page', () => {
     await expect(firstCard.getByText('Zugesagt')).toBeVisible();
   });
 
-  test('set DECLINED plan on second upcoming rehearsal', async ({ page }) => {
+  test('set DECLINED plan on an upcoming non-optional rehearsal', async ({ page }) => {
     const cards = page.getByTestId('rehearsal-card');
-    const secondCard = cards.nth(1);
+    const totalCards = await cards.count();
+
+    let targetCard = cards.first();
+    let foundDeclineButton = false;
+    for (let i = 0; i < totalCards; i++) {
+      const card = cards.nth(i);
+      const declineButton = card.getByRole('button', { name: 'Ich komme nicht' });
+      if (await declineButton.count()) {
+        targetCard = card;
+        foundDeclineButton = true;
+        break;
+      }
+    }
+    expect(foundDeclineButton).toBeTruthy();
 
     // Reset to neutral if currently DECLINED
-    if (await secondCard.getByText('Abgesagt').isVisible().catch(() => false)) {
-      await secondCard.getByRole('button', { name: 'Ich komme nicht' }).click();
-      await expect(secondCard.getByText('Keine Angabe')).toBeVisible();
+    if (await targetCard.getByText('Abgesagt').isVisible().catch(() => false)) {
+      await targetCard.getByRole('button', { name: 'Ich komme nicht' }).click();
+      await expect(targetCard.getByText('Keine Angabe')).toBeVisible();
     }
 
-    await secondCard.getByRole('button', { name: 'Ich komme nicht' }).click();
-    await expect(secondCard.getByText('Abgesagt')).toBeVisible();
+    await targetCard.getByRole('button', { name: 'Ich komme nicht' }).click();
+    await expect(targetCard.getByText('Abgesagt')).toBeVisible();
   });
 
   test('clicking the same plan button twice removes the plan', async ({ page }) => {

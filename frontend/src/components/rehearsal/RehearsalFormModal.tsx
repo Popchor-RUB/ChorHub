@@ -11,6 +11,7 @@ import {
   SelectItem,
   Textarea,
   DatePicker,
+  Switch,
 } from '@heroui/react';
 import { I18nProvider } from '@react-aria/i18n';
 import { CalendarDateTime } from '@internationalized/date';
@@ -63,6 +64,7 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [durationMinutes, setDurationMinutes] = useState('');
+  const [isOptional, setIsOptional] = useState(false);
   const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern>('NONE');
   const [seriesEndDate, setSeriesEndDate] = useState<DateValue | null>(null);
   const [saving, setSaving] = useState(false);
@@ -90,12 +92,14 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
             ? String(rehearsal.durationMinutes)
             : '',
         );
+        setIsOptional(Boolean(rehearsal.isOptional));
       } else {
         setDate(null);
         setTitle('');
         setDescription('');
         setLocation('');
         setDurationMinutes('');
+        setIsOptional(false);
         setRecurrencePattern('NONE');
         setSeriesEndDate(null);
       }
@@ -124,6 +128,7 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
         description: description || undefined,
         location: location || undefined,
         durationMinutes: Number.isFinite(parsedDuration) ? parsedDuration : undefined,
+        isOptional,
       };
 
       if (rehearsal) {
@@ -226,6 +231,12 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
             onValueChange={setDurationMinutes}
             placeholder={t('common.optional')}
           />
+          <Switch
+            isSelected={isOptional}
+            onValueChange={setIsOptional}
+          >
+            {t('rehearsals.optional_rehearsal')}
+          </Switch>
           <Textarea
             label={t('common.description')}
             value={description}

@@ -12,6 +12,9 @@ export class AttendanceService {
     if (rehearsal.date <= new Date()) {
       throw new ForbiddenException('Probe hat bereits begonnen oder ist vergangen');
     }
+    if (rehearsal.isOptional && dto.response === AttendanceResponse.DECLINED) {
+      throw new ForbiddenException('Absagen für optionale Proben sind nicht erlaubt');
+    }
     return this.prisma.attendancePlan.upsert({
       where: { memberId_rehearsalId: { memberId, rehearsalId } },
       create: { memberId, rehearsalId, response: dto.response },
@@ -35,7 +38,7 @@ export class AttendanceService {
 
     // Past rehearsals ordered most-recent first — position i+1 = "i+1 rehearsals ago"
     const pastRehearsals = await this.prisma.rehearsal.findMany({
-      where: { date: { lt: rehearsal.date } },
+      where: { date: { lt: rehearsal.date }, isOptional: false },
       orderBy: { date: 'desc' },
       select: { id: true },
     });
@@ -60,7 +63,10 @@ export class AttendanceService {
     const lastAttendedMap = new Map<string, number>();
     if (pastRehearsals.length > 0) {
       const pastAttendances = await this.prisma.attendanceRecord.findMany({
-        where: { rehearsalId: { in: pastRehearsals.map((r) => r.id) } },
+        where: {
+          rehearsalId: { in: pastRehearsals.map((r) => r.id) },
+          rehearsal: { isOptional: false },
+        },
         select: { memberId: true, rehearsalId: true },
       });
       for (const rec of pastAttendances) {
@@ -86,7 +92,10 @@ export class AttendanceService {
   }
 
   async bulkSetAttendanceRecords(rehearsalId: string, memberIds: string[]) {
-    await this.ensureRehearsalExists(rehearsalId);
+    const rehearsal = await this.ensureRehearsalExists(rehearsalId);
+    if (rehearsal.isOptional) {
+      throw new ForbiddenException('Für optionale Proben wird keine Anwesenheit erfasst');
+    }
 
     await this.prisma.attendanceRecord.deleteMany({ where: { rehearsalId } });
 
@@ -119,6 +128,7 @@ export class AttendanceService {
       date: r.date,
       title: r.title,
       durationMinutes: r.durationMinutes,
+      isOptional: r.isOptional,
       totalConfirmed: r.attendancePlans.length,
       byVoice: this.groupByVoice(
         r.attendancePlans.map((p) => p.member.choirVoice?.name),
@@ -144,6 +154,7 @@ export class AttendanceService {
       date: r.date,
       title: r.title,
       durationMinutes: r.durationMinutes,
+      isOptional: r.isOptional,
       totalAttended: r.attendanceRecords.length,
       byVoice: this.groupByVoice(
         r.attendanceRecords.map((rec) => rec.member.choirVoice?.name),

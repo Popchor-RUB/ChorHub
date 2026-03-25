@@ -48,9 +48,11 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
   startOfToday.setHours(0, 0, 0, 0);
   const past = rehearsals.filter((r) => new Date(r.date) < startOfToday).reverse();
   const upcoming = rehearsals.filter((r) => new Date(r.date) >= startOfToday);
+  const countablePast = past.filter((r) => !r.isOptional);
+  const countableUpcoming = upcoming.filter((r) => !r.isOptional);
 
-  const unexcusedCount = past.filter((r) => !r.attended && r.plan !== 'DECLINED').length;
-  const excusedCount = past.filter((r) => !r.attended && r.plan === 'DECLINED').length;
+  const unexcusedCount = countablePast.filter((r) => !r.attended && r.plan !== 'DECLINED').length;
+  const excusedCount = countablePast.filter((r) => !r.attended && r.plan === 'DECLINED').length;
 
   const cycleAbsencePlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'DECLINED' | null =>
     current === 'DECLINED' ? null : 'DECLINED';
@@ -61,9 +63,16 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
     return 'CONFIRMED';
   };
 
+  const cycleOptionalPlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | null =>
+    current === 'CONFIRMED' ? null : 'CONFIRMED';
+
   const handleTogglePlan = async (r: MemberRehearsalEntry, isPast: boolean) => {
     if (saving) return;
-    const newResponse = isPast ? cycleAbsencePlan(r.plan) : cycleUpcomingPlan(r.plan);
+    const newResponse = r.isOptional
+      ? cycleOptionalPlan(r.plan)
+      : isPast
+      ? cycleAbsencePlan(r.plan)
+      : cycleUpcomingPlan(r.plan);
     setRehearsals((prev) =>
       prev.map((x) => (x.id === r.id ? { ...x, plan: newResponse } : x)),
     );
@@ -158,7 +167,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
             <>
               <div className="flex flex-wrap gap-2 mb-4">
                 <Chip color="success" variant="flat">
-                  {t('detail_modal.present_count', { count: past.filter((r) => r.attended).length })}
+                  {t('detail_modal.present_count', { count: countablePast.filter((r) => r.attended).length })}
                 </Chip>
                 <Chip color="danger" variant="flat">
                   {t('detail_modal.unexcused_count', { count: unexcusedCount })}
@@ -166,11 +175,11 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                 <Chip color="default" variant="flat">
                   {t('detail_modal.excused_count', { count: excusedCount })}
                 </Chip>
-                {upcoming.length > 0 && (
+                {countableUpcoming.length > 0 && (
                   <Chip color="primary" variant="flat">
                     {t('detail_modal.confirmed_upcoming', {
-                      confirmed: upcoming.filter((r) => r.plan === 'CONFIRMED').length,
-                      total: upcoming.length,
+                      confirmed: countableUpcoming.filter((r) => r.plan === 'CONFIRMED').length,
+                      total: countableUpcoming.length,
                     })}
                   </Chip>
                 )}
@@ -184,16 +193,22 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                   <div className="flex flex-col gap-1">
                     {upcoming.map((r) => {
                       const isSaving = saving === r.id;
+                      const isToggleable = editMode;
                       return (
                         <div
                           key={r.id}
-                          onClick={editMode ? () => handleTogglePlan(r, false) : undefined}
+                          onClick={isToggleable ? () => handleTogglePlan(r, false) : undefined}
                           className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-default-50 ${
-                            editMode ? 'cursor-pointer hover:opacity-75 transition-opacity' : ''
+                            isToggleable ? 'cursor-pointer hover:opacity-75 transition-opacity' : ''
                           }`}
                         >
                           <span className="font-medium text-default-700">
                             {formatDateMedium(r.date, dateLocale)} – {r.title}
+                            {r.isOptional && (
+                              <span className="ml-2 text-[11px] uppercase tracking-wide text-warning-700">
+                                {t('rehearsals.optional_badge')}
+                              </span>
+                            )}
                           </span>
                           <span className="text-xs text-default-500 flex items-center gap-1">
                             {isSaving ? (
@@ -205,7 +220,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                                   : r.plan === 'DECLINED'
                                   ? t('detail_modal.plan_declined')
                                   : t('detail_modal.plan_none')}
-                                {editMode && <span className="opacity-50 ml-1">⇄</span>}
+                                {isToggleable && <span className="opacity-50 ml-1">⇄</span>}
                               </>
                             )}
                           </span>
@@ -223,15 +238,17 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                   </p>
                   <div className="flex flex-col gap-1">
                     {past.map((r) => {
-                      const unexcused = !r.attended && r.plan !== 'DECLINED';
-                      const isToggleable = editMode && !r.attended;
+                      const unexcused = !r.isOptional && !r.attended && r.plan !== 'DECLINED';
+                      const isToggleable = editMode && (r.isOptional || !r.attended);
                       const isSaving = saving === r.id;
                       return (
                         <div
                           key={r.id}
                           onClick={isToggleable ? () => handleTogglePlan(r, true) : undefined}
                           className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
-                            r.attended
+                            r.isOptional
+                              ? 'bg-default-50 text-default-500'
+                              : r.attended
                               ? 'bg-success-50 text-success-800'
                               : unexcused
                               ? 'bg-danger-50 text-danger-800'
@@ -240,13 +257,22 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                         >
                           <span className="font-medium">
                             {formatDateMedium(r.date, dateLocale)} – {r.title}
+                            {r.isOptional && (
+                              <span className="ml-2 text-[11px] uppercase tracking-wide text-warning-700">
+                                {t('rehearsals.optional_badge')}
+                              </span>
+                            )}
                           </span>
                           <span className="text-xs flex items-center gap-1">
                             {isSaving ? (
                               <Spinner size="sm" />
                             ) : (
                               <>
-                                {r.attended
+                                {r.isOptional
+                                  ? r.plan === 'CONFIRMED'
+                                    ? t('detail_modal.plan_confirmed')
+                                    : t('detail_modal.plan_none')
+                                  : r.attended
                                   ? t('detail_modal.attended')
                                   : r.plan === 'DECLINED'
                                   ? t('detail_modal.excused_short')

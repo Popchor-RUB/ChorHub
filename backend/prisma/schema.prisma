@@ -75,6 +75,7 @@ model Rehearsal {
   description String?
   location    String?
   durationMinutes Int? @map("duration_minutes")
+  isOptional  Boolean  @default(false) @map("is_optional")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

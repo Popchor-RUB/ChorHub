@@ -44,6 +44,7 @@ export class RehearsalsService {
         description: r.description,
         location: r.location,
         durationMinutes: r.durationMinutes,
+        isOptional: r.isOptional,
         myPlan: r.attendancePlans[0]?.response ?? null,
         myAttended:
           r.attendanceRecords.length > 0
@@ -62,6 +63,7 @@ export class RehearsalsService {
       description: r.description,
       location: r.location,
       durationMinutes: r.durationMinutes,
+      isOptional: r.isOptional,
       myPlan: undefined,
       myAttended: undefined,
     }));
@@ -121,6 +123,7 @@ export class RehearsalsService {
         description: dto.description,
         location: dto.location,
         durationMinutes: dto.durationMinutes,
+        isOptional: dto.isOptional ?? false,
       },
     });
   }
@@ -135,6 +138,7 @@ export class RehearsalsService {
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.location !== undefined && { location: dto.location }),
         ...(dto.durationMinutes !== undefined && { durationMinutes: dto.durationMinutes }),
+        ...(dto.isOptional !== undefined && { isOptional: dto.isOptional }),
       },
     });
   }

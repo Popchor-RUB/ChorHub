@@ -79,6 +79,7 @@ export const rehearsalsApi = {
     description?: string;
     location?: string;
     durationMinutes?: number;
+    isOptional?: boolean;
   }) =>
     api.post('/rehearsals', data),
   update: (
@@ -89,6 +90,7 @@ export const rehearsalsApi = {
       description: string;
       location: string;
       durationMinutes: number;
+      isOptional: boolean;
     }>,
   ) =>
     api.patch(`/rehearsals/${id}`, data),

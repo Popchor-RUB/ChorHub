@@ -50,10 +50,20 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
   };
 
   return (
-    <Card className={`w-full ${readOnly ? 'opacity-80' : ''}`} data-testid="rehearsal-card">
+    <Card
+      className={`w-full ${readOnly ? 'opacity-80' : ''} ${
+        rehearsal.isOptional ? 'bg-primary-50/45 border border-primary-200/70 opacity-75' : ''
+      }`}
+      data-testid="rehearsal-card"
+    >
       <CardHeader className="flex flex-col items-start gap-1">
         <div className="flex items-center gap-2 w-full">
           <h3 className="text-lg font-semibold flex-1">{rehearsal.title}</h3>
+          {rehearsal.isOptional && (
+            <Chip size="sm" variant="flat" color="primary">
+              {t('rehearsals.optional_badge')}
+            </Chip>
+          )}
           {readOnly && (
             <Chip size="sm" variant="flat" color="default">
               {t('rehearsals.past_chip')}
@@ -106,16 +116,18 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
           >
             {t('rehearsals.attending')}
           </Button>
-          <Button
-            size="sm"
-            color="danger"
-            variant={rehearsal.myPlan === 'DECLINED' ? 'solid' : 'bordered'}
-            isLoading={loading === 'DECLINED'}
-            onPress={() => setPlan('DECLINED')}
-            isDisabled={buttonsDisabled}
-          >
-            {t('rehearsals.not_attending')}
-          </Button>
+          {!rehearsal.isOptional && (
+            <Button
+              size="sm"
+              color="danger"
+              variant={rehearsal.myPlan === 'DECLINED' ? 'solid' : 'bordered'}
+              isLoading={loading === 'DECLINED'}
+              onPress={() => setPlan('DECLINED')}
+              isDisabled={buttonsDisabled}
+            >
+              {t('rehearsals.not_attending')}
+            </Button>
+          )}
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}
       </CardBody>

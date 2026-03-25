@@ -83,7 +83,7 @@ export function RehearsalsPage() {
     return <div className="flex justify-center pt-16"><Spinner size="lg" /></div>;
   }
 
-  const recorded = past.filter((r) => r.myAttended != null);
+  const recorded = past.filter((r) => !r.isOptional && r.myAttended != null);
   const attended = recorded.filter((r) => r.myAttended === true).length;
   const excused = recorded.filter((r) => r.myAttended === false && r.myPlan === 'DECLINED').length;
   const unexcused = recorded.filter((r) => r.myAttended === false && r.myPlan !== 'DECLINED').length;
