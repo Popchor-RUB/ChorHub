@@ -11,70 +11,136 @@
   </noscript>
   <![endif]-->
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family:Arial, sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4">
     <tr>
-      <td align="center" style="padding: 32px 16px;">
-
-        <!-- Card -->
-        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="max-width: 600px; border-radius: 8px; overflow: hidden;">
+      <td align="center" style="padding:24px 12px;">
+        <table cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="max-width:800px;">
           <tr>
-            <td style="padding: 32px 40px;">
-
-              <!-- Heading -->
-              <h1 style="margin: 0 0 16px 0; font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; color: #1a1a1a;">
-                Willkommen, {{firstName}} {{lastName}}!
+            <td style="padding:28px 28px 12px 28px;">
+              <h1 style="margin:0; font-size:26px; line-height:1.3; color:#111827;">
+                Hallo {{firstName}}, willkommen im ChorHub.
               </h1>
+            </td>
+          </tr>
 
-              <!-- Body text -->
-              <p style="margin: 0 0 32px 0; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #444444;">
-                Du wurdest als Mitglied in ChorHub aufgenommen. Mit dem Button unten kannst du dich jederzeit in deinen persönlichen Bereich einloggen:
+          <tr>
+            <td style="padding:0 28px 8px 28px;">
+              <p style="margin:0 0 14px 0; font-size:16px; line-height:1.6; color:#374151;">
+                Kurz gesagt: Im ChorHub sagst du uns, ob du bei Proben und Aktivitäten dabei bist oder nicht.
+                So sehen wir frühzeitig, wie viele Menschen ungefähr da sind und können besser planen.
               </p>
+              <p style="margin:0 0 14px 0; font-size:16px; line-height:1.6; color:#374151;">
+                Bitte nutze nach Möglichkeit den ChorHub dafür und schreibe uns für Abmeldungen keine Mails oder WhatsApp-Nachrichten.
+                Das spart uns viel Handarbeit und macht die Planung für alle einfacher.
+              </p>
+              <p style="margin:0 0 14px 0; font-size:16px; line-height:1.6; color:#374151;">
+                Auf der Seite "Informationen" findest du außerdem alle wichtigen Hinweise gesammelt an einem Ort,
+                damit du nicht lange nach Mails oder Nachrichten suchen musst.
+              </p>
+              <p style="margin:0 0 14px 0; font-size:16px; line-height:1.6; color:#374151;">
+                Bei der Anmeldung haben wir abgefragt in welcher Stimme du singen möchtest. Einige haben hierbei mehrere Stimmen ausgewählt. Für den Anfang haben wir eine Zuordnung vorgenommen, sodass die Stimmen ausgeglichen sind. Eine Änderung deiner Stimme ist jederzeit auf der Startseite möglich.
+              </p>
+            </td>
+          </tr>
 
-              <!-- Bulletproof button -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding:8px 28px 20px 28px;" align="center">
+              <!--[if mso]>
+              <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
+                href="{{magicUrl}}" style="height:52px;v-text-anchor:middle;width:260px;" arcsize="14%" fillcolor="#006FEE" strokecolor="#006FEE">
+                <w:anchorlock/>
+                <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:17px;font-weight:bold;">Jetzt bei ChorHub einloggen</center>
+              </v:roundrect>
+              <![endif]-->
+              <!--[if !mso]><!-->
+              <a href="{{magicUrl}}" target="_blank"
+                 style="background-color:#006FEE; color:#ffffff; display:inline-block; font-family:Arial,sans-serif;
+                        font-size:17px; font-weight:bold; line-height:1; padding:17px 26px;
+                        text-decoration:none; border-radius:8px; mso-hide:all;">
+                Jetzt bei ChorHub einloggen
+              </a>
+              <!--<![endif]-->
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 28px 16px 28px;" align="center">
+              <p style="margin:0; font-size:14px; line-height:1.6; color:#6b7280;">
+                Wenn der Button nicht funktioniert, kopiere diesen Link in deinen Browser:<br />
+                <a href="{{magicUrl}}" target="_blank" style="color:#006FEE; word-break:break-all;">{{magicUrl}}</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 28px 14px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f9fafb" style="border:1px solid #e5e7eb;">
                 <tr>
-                  <td align="center" style="padding: 0 0 32px 0;">
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
-                      href="{{magicUrl}}" style="height:50px;v-text-anchor:middle;width:200px;" arcsize="16%" fillcolor="#006FEE" strokecolor="#006FEE">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Zu ChorHub</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-->
-                    <a href="{{magicUrl}}" target="_blank"
-                       style="background-color: #006FEE; color: #ffffff; display: inline-block; font-family: Arial, sans-serif;
-                              font-size: 16px; font-weight: bold; line-height: 1; padding: 16px 36px;
-                              text-decoration: none; border-radius: 8px; mso-hide: all;">
-                      Zu ChorHub
-                    </a>
-                    <!--<![endif]-->
+                  <td style="padding:14px 14px 4px 14px;">
+                    <p style="margin:0; font-size:15px; font-weight:bold; color:#111827;">So funktioniert's:</p>
                   </td>
                 </tr>
-              </table>
-
-              <!-- Note -->
-              <p style="margin: 0 0 24px 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #888888;">
-                Bitte speichere diesen Link – er ist dein persönlicher Zugang zu ChorHub. Teile ihn nicht mit anderen.
-              </p>
-
-              <!-- Divider -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td style="border-top: 1px solid #eeeeee; padding-top: 24px;">
-                    <p style="margin: 0; font-family: Arial, sans-serif; font-size: 12px; color: #aaaaaa;">
-                      ChorHub – Chororganisation
+                  <td style="padding:6px 14px;">
+                    <p style="margin:0; font-size:15px; line-height:1.6; color:#374151;">
+                      1. Klicke den Button (oder den Link) oben.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 14px 6px 14px;">
+                    <p style="margin:0; font-size:15px; line-height:1.6; color:#374151;">
+                      2. Du bist damit direkt in deinem persönlichen Bereich angemeldet.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 14px 6px 14px;">
+                    <p style="margin:0; font-size:15px; line-height:1.6; color:#374151;">
+                      3. Bei jeder Probe/Aktivität klickst du einfach auf "Ich komme" oder "Ich komme nicht". Deine Angabe wird automatisch gespeichert.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 14px 14px 14px;">
+                    <p style="margin:0; font-size:15px; line-height:1.6; color:#374151;">
+                      4. Auf der Seite "Informationen" kannst du jederzeit alles Wichtige nachlesen.
                     </p>
                   </td>
                 </tr>
               </table>
+            </td>
+          </tr>
 
+          <tr>
+            <td style="padding:0 28px 16px 28px;">
+              <p style="margin:0 0 10px 0; font-size:14px; line-height:1.6; color:#6b7280;">
+                Wenn dein Handy oder Browser nach Push-Benachrichtigungen fragt, darfst du das gern erlauben.
+                Wir nutzen das für Erinnerungen und wichtige Updates, nicht zum Zuspammen.
+              </p>
+              <p style="margin:0 0 10px 0; font-size:14px; line-height:1.6; color:#6b7280;">
+                Tipp: Speichere dir den Link oben als Lesezeichen. Er ist dein persönlicher Zugang ohne Passwort.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 28px 20px 28px;">
+              <p style="margin:0; font-size:14px; line-height:1.6; color:#374151;">
+                Falls etwas hakt, melde dich einfach - wir helfen dir gern weiter.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="border-top:1px solid #e5e7eb; padding:16px 28px 22px 28px;">
+              <p style="margin:0; font-size:12px; color:#9ca3af;">
+                ChorHub - Chororganisation
+              </p>
             </td>
           </tr>
         </table>
-        <!-- /Card -->
-
       </td>
     </tr>
   </table>
