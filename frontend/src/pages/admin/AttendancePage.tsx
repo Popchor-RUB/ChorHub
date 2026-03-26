@@ -423,6 +423,7 @@ export function AttendancePage() {
                 variant="flat"
                 isIconOnly
                 aria-label={t('checkin.admin_scan_button')}
+                data-testid="attendance-open-qr-scanner"
                 onPress={onScannerOpen}
               >
                 <QrCodeIcon className="w-5 h-5" />
@@ -489,7 +490,7 @@ export function AttendancePage() {
       />
 
       <Modal isOpen={isScanResultOpen} onClose={closeScanResultModal} size="2xl">
-        <ModalContent>
+        <ModalContent data-testid="qr-scan-result-modal">
           <ModalHeader>{t('checkin.admin_result_title')}</ModalHeader>
           <ModalBody>
             {!scanResult ? (

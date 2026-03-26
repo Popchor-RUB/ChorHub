@@ -39,6 +39,25 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
   }, [onScanSuccess]);
 
   useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+
+    const onE2eScan = (event: Event) => {
+      const customEvent = event as CustomEvent<QrScanResult>;
+      const detail = customEvent.detail;
+      if (!detail?.payload?.memberId) return;
+      hasRecognizedRef.current = true;
+      controlsRef.current?.stop();
+      onCloseRef.current();
+      onScanSuccessRef.current(detail);
+    };
+
+    window.addEventListener('chorhub:e2e-qr-scan', onE2eScan as EventListener);
+    return () => {
+      window.removeEventListener('chorhub:e2e-qr-scan', onE2eScan as EventListener);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) {
       controlsRef.current?.stop();
       controlsRef.current = null;
@@ -123,7 +142,7 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
-      <ModalContent>
+      <ModalContent data-testid="qr-scanner-modal">
         <ModalHeader>{t('checkin.admin_modal_title')}</ModalHeader>
         <ModalBody>
           <div className="bg-black rounded-xl overflow-hidden relative min-h-[260px]">
