@@ -4,7 +4,6 @@ import { Card, CardBody, CardHeader, Input, Button, Divider } from '@heroui/reac
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { startAuthentication } from '@simplewebauthn/browser';
 import { adminInputClassNames } from '../../styles/adminFormStyles';
 
 export function LoginPage() {
@@ -40,6 +39,7 @@ export function LoginPage() {
     setPasskeyLoading(true);
     setError('');
     try {
+      const { startAuthentication } = await import('@simplewebauthn/browser');
       const challengeRes = await adminApi.passkeyChallenge(username);
       const { options, adminId } = challengeRes.data;
       const assertion = await startAuthentication({ optionsJSON: options });

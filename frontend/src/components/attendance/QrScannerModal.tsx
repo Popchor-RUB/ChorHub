@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
-import { BrowserQRCodeReader, type IScannerControls } from '@zxing/browser';
 import type { CheckinPayload } from '../../types';
 import { getCheckinVerificationKey } from '../../services/checkinPublicKey';
 import { verifyCheckinToken } from '../../utils/checkinToken';
@@ -21,8 +20,7 @@ type Props = {
 export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<IScannerControls | null>(null);
-  const readerRef = useRef<BrowserQRCodeReader | null>(null);
+  const controlsRef = useRef<{ stop: () => void } | null>(null);
   const lastTokenRef = useRef<string | null>(null);
   const hasRecognizedRef = useRef(false);
 
@@ -44,7 +42,6 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
     if (!isOpen) {
       controlsRef.current?.stop();
       controlsRef.current = null;
-      readerRef.current = null;
       lastTokenRef.current = null;
       hasRecognizedRef.current = false;
       setScannerError(null);
@@ -71,11 +68,11 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
       if (!videoRef.current || closed) return;
 
       try {
+        const { BrowserQRCodeReader } = await import('@zxing/browser');
         const reader = new BrowserQRCodeReader(undefined, {
           delayBetweenScanAttempts: 250,
           delayBetweenScanSuccess: 1000,
         });
-        readerRef.current = reader;
 
         const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
           if (!result) return;
@@ -121,7 +118,6 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
       hasRecognizedRef.current = false;
       controlsRef.current?.stop();
       controlsRef.current = null;
-      readerRef.current = null;
     };
   }, [isOpen, t]);
 
