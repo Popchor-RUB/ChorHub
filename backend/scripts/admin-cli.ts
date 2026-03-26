@@ -7,12 +7,14 @@
  *   npm run admin -- list
  *   npm run admin -- passwd <username>
  *   npm run admin -- invite [--all]
+ *   npm run admin -- impersonate <member-email>
  *   npm run admin -- mailtemplate <template> <user e-mail>
  *
  * Or directly:
  *   npx tsx scripts/admin-cli.ts create <username> [password]
  *   npx tsx scripts/admin-cli.ts passwd <username>
  *   npx tsx scripts/admin-cli.ts invite [--all]
+ *   npx tsx scripts/admin-cli.ts impersonate <member-email>
  *   npx tsx scripts/admin-cli.ts mailtemplate <template> <user e-mail>
  *
  * If no password is supplied for "create" or "passwd", a secure random one is generated
@@ -73,6 +75,7 @@ function usage(): never {
   console.error('  npx ts-node scripts/admin-cli.ts list');
   console.error('  npx ts-node scripts/admin-cli.ts passwd <username>');
   console.error('  npx ts-node scripts/admin-cli.ts invite [--all]');
+  console.error('  npx ts-node scripts/admin-cli.ts impersonate <member-email>');
   console.error('  npx ts-node scripts/admin-cli.ts mailtemplate <template> <user e-mail>');
   console.error('  templates: invite, magic-link');
   process.exit(1);
@@ -115,12 +118,7 @@ async function renderTemplate(template: SupportedMailTemplate, context: Record<s
 }
 
 async function buildInviteMail(member: { id: string; firstName: string; lastName: string; email: string }) {
-  const rawToken = randomBytes(32).toString('hex');
-  const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-  await prisma.memberLoginToken.create({
-    data: { memberId: member.id, hashedToken },
-  });
-
+  const rawToken = await createMemberSessionToken(member.id);
   const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
   return {
     subject: 'Willkommen bei ChorHub - Dein Zugangslink',
@@ -161,6 +159,39 @@ async function buildMagicLinkMail(member: { id: string; firstName: string; email
       loginCode: rawCode,
     }),
   };
+}
+
+async function createMemberSessionToken(memberId: string): Promise<string> {
+  const rawToken = randomBytes(32).toString('hex');
+  const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+  await prisma.memberLoginToken.create({
+    data: { memberId, hashedToken },
+  });
+  return rawToken;
+}
+
+function buildMemberVerifyUrl(rawToken: string): string {
+  const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+  return `${appUrl}/auth/verify?token=${rawToken}`;
+}
+
+async function impersonateMember(email: string): Promise<void> {
+  const member = await getMemberByEmail(email);
+  if (!member) {
+    console.error(`Error: no member found for e-mail "${email}".`);
+    process.exit(1);
+  }
+
+  const rawToken = await createMemberSessionToken(member.id);
+  const verifyUrl = buildMemberVerifyUrl(rawToken);
+
+  console.log('════════════════════════════════════════');
+  console.log('  MEMBER IMPERSONATION LINK');
+  console.log(`  Member : ${member.firstName} ${member.lastName}`);
+  console.log(`  E-Mail : ${member.email}`);
+  console.log('  Verify :');
+  console.log(`  ${verifyUrl}`);
+  console.log('════════════════════════════════════════');
 }
 
 async function sendTemplateMail(template: SupportedMailTemplate, email: string): Promise<void> {
@@ -369,6 +400,10 @@ async function main(): Promise<void> {
       break;
     case 'invite':
       await inviteMembers(args.includes('--all'));
+      break;
+    case 'impersonate':
+      if (!args[0]) usage();
+      await impersonateMember(args[0]);
       break;
     case 'mailtemplate':
       if (!args[0] || !args[1]) usage();
