@@ -16,6 +16,7 @@ import { RehearsalOverviewPage } from './pages/admin/RehearsalOverviewPage';
 import { PushNotificationsPage } from './pages/admin/PushNotificationsPage';
 import { OptionsPage } from './pages/admin/OptionsPage';
 import { normalizeBasePath } from './utils/basePath';
+import { RouteErrorBoundary } from './components/common/RouteErrorBoundary';
 
 const basename = normalizeBasePath(import.meta.env.VITE_BASE_PATH);
 
@@ -29,6 +30,7 @@ const router = createBrowserRouter(
           <MemberLayout />
         </ProtectedRoute>
       ),
+      errorElement: <RouteErrorBoundary />,
       children: [
         { index: true, element: <Navigate to="/proben" replace /> },
         { path: 'proben', element: <RehearsalsPage /> },
@@ -45,6 +47,7 @@ const router = createBrowserRouter(
           <AdminLayout />
         </ProtectedRoute>
       ),
+      errorElement: <RouteErrorBoundary />,
       children: [
         { index: true, element: <Navigate to="/admin/mitglieder" replace /> },
         { path: 'mitglieder', element: <MemberOverviewPage /> },
@@ -58,10 +61,10 @@ const router = createBrowserRouter(
     },
 
     // Public auth routes
-    { path: '/login', element: <MagicLinkRequestPage /> },
-    { path: '/auth/verify', element: <MagicLinkVerifyPage /> },
-    { path: '/admin/login', element: <LoginPage /> },
-    { path: '*', element: <Navigate to="/" replace /> },
+    { path: '/login', element: <MagicLinkRequestPage />, errorElement: <RouteErrorBoundary /> },
+    { path: '/auth/verify', element: <MagicLinkVerifyPage />, errorElement: <RouteErrorBoundary /> },
+    { path: '/admin/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
+    { path: '*', element: <Navigate to="/" replace />, errorElement: <RouteErrorBoundary /> },
   ],
   { basename },
 );
