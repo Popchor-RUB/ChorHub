@@ -175,3 +175,8 @@ export const membersApi = {
   me: () => api.get('/members/me'),
   updateVoice: (voiceId: string | null) => api.patch('/members/me/voice', { voiceId }),
 };
+
+export const checkinApi = {
+  getMemberQr: () => api.get<{ token: string; qrCodeDataUrl: string }>('/members/me/checkin-qr'),
+  getPublicKey: () => api.get<{ publicKey: string }>('/attendance/checkin/public-key'),
+};

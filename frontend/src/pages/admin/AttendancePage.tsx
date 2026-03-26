@@ -1,9 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
-import { Select, SelectItem, SelectSection, Input, Button, Spinner, useDisclosure } from '@heroui/react';
+import {
+  Select,
+  SelectItem,
+  SelectSection,
+  Input,
+  Button,
+  Spinner,
+  useDisclosure,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from '@heroui/react';
+import { QrCodeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, attendanceApi } from '../../services/api';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import { MemberDetailModal } from '../../components/member/MemberDetailModal';
+import { QrScannerModal, type QrScanResult } from '../../components/attendance/QrScannerModal';
 import type { Rehearsal, AttendanceRecord } from '../../types';
 import { VoiceGroupList, useCollapsedVoices } from '../../components/common/VoiceGroupList';
 import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
@@ -14,6 +29,22 @@ import { formatDateLong, formatDateNumeric } from '../../utils/dateFormatting';
 import { adminInputClassNames, adminSelectClassNames } from '../../styles/adminFormStyles';
 
 const NO_VOICE_KEY = '__no_voice__';
+
+function formatRelativeDateTime(isoDate: string, locale: string): string {
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  const diffMs = parsed.getTime() - Date.now();
+  const abs = Math.abs(diffMs);
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+
+  if (abs < minute) return rtf.format(Math.round(diffMs / 1000), 'second');
+  if (abs < hour) return rtf.format(Math.round(diffMs / minute), 'minute');
+  if (abs < day) return rtf.format(Math.round(diffMs / hour), 'hour');
+  return rtf.format(Math.round(diffMs / day), 'day');
+}
 
 export function AttendancePage() {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
@@ -36,8 +67,13 @@ export function AttendancePage() {
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
+  const { isOpen: isScannerOpen, onOpen: onScannerOpen, onClose: onScannerClose } = useDisclosure();
+  const { isOpen: isScanResultOpen, onOpen: onScanResultOpen, onClose: onScanResultClose } = useDisclosure();
+  const [scanResult, setScanResult] = useState<QrScanResult | null>(null);
+  const [scanRecordSaving, setScanRecordSaving] = useState(false);
+  const [scanRecordError, setScanRecordError] = useState<string | null>(null);
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dateLocale = useDateLocale();
 
   // Stable refs to avoid stale closures
@@ -180,9 +216,66 @@ export function AttendancePage() {
     return t('attendance.last_ago', { count: ago });
   };
 
+  const relativeIssuedAt = scanResult
+    ? formatRelativeDateTime(scanResult.payload.issuedAt, i18n.language)
+    : '';
+  const scannedMember = scanResult
+    ? records.find((r) => r.id === scanResult.payload.memberId)
+    : null;
+  const scannedMemberAttended = Boolean(scannedMember?.attended);
+
   const openMemberDetail = (member: AttendanceRecord) => {
     setSelectedMember(member);
     onMemberOpen();
+  };
+
+  const closeScanResultModal = () => {
+    setScanRecordError(null);
+    setScanRecordSaving(false);
+    setScanResult(null);
+    onScanResultClose();
+  };
+
+  const handleScanSuccess = (result: QrScanResult) => {
+    setScanRecordError(null);
+    setScanRecordSaving(false);
+    setScanResult(result);
+    onScanResultOpen();
+  };
+
+  const handleCreateAttendanceFromScan = async () => {
+    if (!scanResult || !selectedRehearsalIdRef.current || scanRecordSaving) return;
+    setScanRecordSaving(true);
+    setScanRecordError(null);
+
+    const memberId = scanResult.payload.memberId;
+    const currentlyAttended = recordsRef.current.some((r) => r.id === memberId && r.attended);
+    const newAttendedIds = currentlyAttended
+      ? recordsRef.current.filter((r) => r.attended && r.id !== memberId).map((r) => r.id)
+      : [...recordsRef.current.filter((r) => r.attended).map((r) => r.id), memberId];
+
+    setRecords((prev) =>
+      prev.map((r) => (r.id === memberId ? { ...r, attended: !currentlyAttended } : r)),
+    );
+
+    try {
+      await attendanceApi.bulkSetRecords(selectedRehearsalIdRef.current, newAttendedIds);
+    } catch {
+      setRecords((prev) =>
+        prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),
+      );
+      setScanRecordError(t('attendance.save_failed'));
+    } finally {
+      setScanRecordSaving(false);
+    }
+  };
+
+  const handleScanNextFromResult = () => {
+    setScanRecordError(null);
+    setScanRecordSaving(false);
+    setScanResult(null);
+    onScanResultClose();
+    onScannerOpen();
   };
 
   const buildMemberRow = (member: AttendanceRecord) => {
@@ -325,6 +418,15 @@ export function AttendancePage() {
                 className="flex-1"
                 classNames={adminInputClassNames}
               />
+              <Button
+                size="sm"
+                variant="flat"
+                isIconOnly
+                aria-label={t('checkin.admin_scan_button')}
+                onPress={onScannerOpen}
+              >
+                <QrCodeIcon className="w-5 h-5" />
+              </Button>
               <Button size="sm" color="primary" onPress={onCreateOpen}>
                 {t('members.create_new')}
               </Button>
@@ -379,6 +481,79 @@ export function AttendancePage() {
           onDelete={(id) => setRecords((prev) => prev.filter((r) => r.id !== id))}
         />
       )}
+
+      <QrScannerModal
+        isOpen={isScannerOpen}
+        onClose={onScannerClose}
+        onScanSuccess={handleScanSuccess}
+      />
+
+      <Modal isOpen={isScanResultOpen} onClose={closeScanResultModal} size="2xl">
+        <ModalContent>
+          <ModalHeader>{t('checkin.admin_result_title')}</ModalHeader>
+          <ModalBody>
+            {!scanResult ? (
+              <p className="text-default-500 text-sm">{t('checkin.admin_waiting')}</p>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <p>
+                  <span className="text-default-500">{t('checkin.admin_member_id')}:</span>{' '}
+                  <span className="font-medium">{scanResult.payload.memberId}</span>
+                </p>
+                <p>
+                  <span className="text-default-500">{t('checkin.admin_name')}:</span>{' '}
+                  <span className="font-medium">{scanResult.payload.name}</span>
+                </p>
+                <p>
+                  <span className="text-default-500">{t('checkin.admin_email')}:</span>{' '}
+                  <span className="font-medium">{scanResult.payload.email}</span>
+                </p>
+                <p>
+                  <span className="text-default-500">{t('checkin.admin_created')}:</span>{' '}
+                  <span className="font-medium">{relativeIssuedAt}</span>
+                </p>
+                <p>
+                  <span className="text-default-500">{t('checkin.admin_signature')}:</span>{' '}
+                  <span className={scanResult.signatureValid ? 'text-success font-semibold' : 'text-danger font-semibold'}>
+                    {scanResult.signatureValid ? t('checkin.admin_signature_valid') : t('checkin.admin_signature_invalid')}
+                  </span>
+                </p>
+                {scanRecordError && <p className="text-danger">{scanRecordError}</p>}
+                {!scanResult.signatureValid && (
+                  <p className="text-warning text-sm">{t('checkin.admin_signature_invalid_hint')}</p>
+                )}
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color={scannedMemberAttended ? 'success' : 'default'}
+              variant={scannedMemberAttended ? 'solid' : 'bordered'}
+              isLoading={scanRecordSaving}
+              isDisabled={!scanResult?.signatureValid || !scanResult}
+              onPress={handleCreateAttendanceFromScan}
+            >
+              {scannedMemberAttended ? t('attendance.btn_present') : t('attendance.btn_record')}
+            </Button>
+            <Button
+              variant="flat"
+              isIconOnly
+              aria-label={t('checkin.admin_scan_next')}
+              onPress={handleScanNextFromResult}
+            >
+              <QrCodeIcon className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="flat"
+              isIconOnly
+              aria-label={t('checkin.admin_close_result')}
+              onPress={closeScanResultModal}
+            >
+              <XMarkIcon className="w-5 h-5" />
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

@@ -5,10 +5,14 @@ import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { MemberUser } from '../auth/types/auth-user.types';
+import { CheckinService } from '../checkin/checkin.service';
 
 @Controller('attendance')
 export class AttendanceController {
-  constructor(private readonly attendanceService: AttendanceService) {}
+  constructor(
+    private readonly attendanceService: AttendanceService,
+    private readonly checkinService: CheckinService,
+  ) {}
 
   @Put('plans/:rehearsalId')
   @UseGuards(MemberTokenGuard)
@@ -54,5 +58,11 @@ export class AttendanceController {
   @UseGuards(JwtAdminGuard)
   getPastOverview() {
     return this.attendanceService.getPastOverview();
+  }
+
+  @Get('checkin/public-key')
+  @UseGuards(JwtAdminGuard)
+  getCheckinPublicKey() {
+    return { publicKey: this.checkinService.getPublicKeyBase64() };
   }
 }

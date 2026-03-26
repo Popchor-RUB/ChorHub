@@ -95,3 +95,11 @@ export interface GeneralInfo {
   markdownContent: string;
   updatedAt: string;
 }
+
+export interface CheckinPayload {
+  memberId: string;
+  name: string;
+  email: string;
+  issuedAt: string;
+  version: 'v1';
+}

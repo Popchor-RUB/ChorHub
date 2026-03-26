@@ -5,6 +5,7 @@ import { AdminLayout } from './pages/admin/AdminLayout';
 import { InformationenPage } from './pages/member/DashboardPage';
 import { RehearsalsPage } from './pages/member/RehearsalsPage';
 import { MemberSettingsPage } from './pages/member/MemberSettingsPage';
+import { MemberQrCheckinPage } from './pages/member/MemberQrCheckinPage';
 import { MagicLinkRequestPage } from './pages/auth/MagicLinkRequestPage';
 import { MagicLinkVerifyPage } from './pages/auth/MagicLinkVerifyPage';
 import { LoginPage } from './pages/admin/LoginPage';
@@ -34,6 +35,7 @@ const router = createBrowserRouter(
       children: [
         { index: true, element: <Navigate to="/proben" replace /> },
         { path: 'proben', element: <RehearsalsPage /> },
+        { path: 'qr-checkin', element: <MemberQrCheckinPage /> },
         { path: 'informationen', element: <InformationenPage /> },
         { path: 'einstellungen', element: <MemberSettingsPage /> },
       ],
