@@ -212,7 +212,7 @@ export function AttendancePage() {
               className="font-medium text-sm truncate cursor-pointer hover:text-primary transition-colors"
               onClick={(e) => { e.stopPropagation(); openMemberDetail(member); }}
             >
-              {member.lastName}, {member.firstName}
+              {member.firstName} {member.lastName}
             </p>
             <p className="text-xs text-default-400 sm:hidden mt-0.5">
               {formatLastAttended(member.lastAttendedRehearsalsAgo)}

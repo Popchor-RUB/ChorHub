@@ -95,7 +95,7 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                 onMemberClick ? 'cursor-pointer hover:opacity-75 transition-opacity' : '',
               ].filter(Boolean).join(' ')}
             >
-              <span className="font-medium">{m.lastName}, {m.firstName}</span>
+              <span className="font-medium">{m.firstName} {m.lastName}</span>
               {!showPlanStatus ? (
                 <span className="text-xs">
                   {m.attended

@@ -13,7 +13,7 @@ test.beforeAll(async () => {
     getFirstMember(token),
   ]);
   upcomingRehearsalTitle = rehearsal.title;
-  memberFullName = `${member.lastName}, ${member.firstName}`;
+  memberFullName = `${member.firstName} ${member.lastName}`;
 });
 
 test.describe.configure({ mode: 'serial' });

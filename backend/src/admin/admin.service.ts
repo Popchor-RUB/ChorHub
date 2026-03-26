@@ -158,7 +158,7 @@ export class AdminService {
     const [totalPastRehearsals, members] = await Promise.all([
       this.prisma.rehearsal.count({ where: { date: { lt: startOfToday }, isOptional: false } }),
       this.prisma.member.findMany({
-        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
         select: {
           id: true,
           firstName: true,
@@ -239,7 +239,7 @@ export class AdminService {
         email: true,
       },
       take: 10,
-      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
     });
   }
 
@@ -309,7 +309,7 @@ export class AdminService {
         select: { id: true, date: true, title: true },
       }),
       this.prisma.member.findMany({
-        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
         select: {
           id: true,
           firstName: true,

@@ -42,7 +42,7 @@ export class AttendanceService {
     const agoByRehearsalId = new Map(pastRehearsals.map((r, i) => [r.id, i + 1]));
 
     const members = await this.prisma.member.findMany({
-      orderBy: [{ choirVoice: { sortOrder: 'asc' } }, { lastName: 'asc' }],
+      orderBy: [{ choirVoice: { sortOrder: 'asc' } }, { firstName: 'asc' }, { lastName: 'asc' }],
       include: {
         choirVoice: { select: { id: true, name: true } },
         attendanceRecords: {

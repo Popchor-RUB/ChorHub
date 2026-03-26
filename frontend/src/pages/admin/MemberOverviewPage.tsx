@@ -46,7 +46,9 @@ export function MemberOverviewPage() {
     const matchesSearch =
       !q ||
       m.firstName.toLowerCase().includes(q) ||
-      m.lastName.toLowerCase().includes(q);
+      m.lastName.toLowerCase().includes(q) ||
+      `${m.firstName} ${m.lastName}`.toLowerCase().includes(q) || 
+      `${m.lastName} ${m.firstName}`.toLowerCase().includes(q.replace(/[,\s]+/, " "));
     const matchesVoice = !voiceFilter || m.choirVoice?.name === voiceFilter;
     return matchesSearch && matchesVoice;
   });
@@ -146,7 +148,7 @@ export function MemberOverviewPage() {
           <TableBody emptyContent={t('members.no_members')}>
             {filteredMembers.map((m) => (
               <TableRow key={m.id}>
-                <TableCell>{m.lastName}, {m.firstName}</TableCell>
+                <TableCell>{m.firstName} {m.lastName}</TableCell>
                 <TableCell className="text-sm text-default-500">{m.email}</TableCell>
                 <TableCell>
                   <Chip size="sm" variant="flat">
