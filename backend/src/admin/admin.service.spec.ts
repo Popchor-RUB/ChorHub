@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { AdminService } from './admin.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
-import { ConfigService } from '@nestjs/config';
+import { AuthService } from '../auth/auth.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { PrismaClient } from '../generated/prisma/client';
 
@@ -22,23 +22,29 @@ describe('AdminService', () => {
   let service: AdminService;
   let prismaMock: DeepMockProxy<PrismaClient>;
   let mailService: jest.Mocked<MailService>;
+  let authService: jest.Mocked<AuthService>;
 
   beforeEach(async () => {
     prismaMock = mockDeep<PrismaClient>();
     mailService = {
       sendMagicLink: jest.fn().mockResolvedValue(undefined),
       sendMemberInvite: jest.fn().mockResolvedValue(undefined),
+      sendPushFallbackReminderMail: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<MailService>;
+    authService = {
+      issueMemberMagicLink: jest.fn().mockResolvedValue({
+        rawToken: 'raw-token',
+        loginCode: '123456',
+        magicUrl: 'http://localhost:5173/auth/verify?token=raw-token',
+      }),
+    } as unknown as jest.Mocked<AuthService>;
 
     const module = await Test.createTestingModule({
       providers: [
         AdminService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: MailService, useValue: mailService },
-        {
-          provide: ConfigService,
-          useValue: { get: jest.fn().mockReturnValue('http://localhost:5173') },
-        },
+        { provide: AuthService, useValue: authService },
       ],
     }).compile();
 
@@ -55,7 +61,6 @@ describe('AdminService', () => {
       prismaMock.member.create.mockResolvedValue(createdMember);
       prismaMock.rehearsal.findMany.mockResolvedValue([pastRehearsal] as any);
       prismaMock.attendancePlan.createMany.mockResolvedValue({ count: 1 });
-      prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
     });
 
     it('creates member with provided fields', async () => {

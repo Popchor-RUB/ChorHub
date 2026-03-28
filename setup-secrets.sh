@@ -78,6 +78,7 @@ SMTP_PORT=$(prompt SMTP_PORT "SMTP port" "1025")
 SMTP_SECURE=$(prompt SMTP_SECURE "Use implicit TLS / secure SMTP on port 465 (true/false)" "false")
 SMTP_USER=$(prompt SMTP_USER "SMTP username" "")
 SMTP_PASS=$(prompt_secret SMTP_PASS "SMTP password (hidden)")
+IS_STAGING=$(prompt IS_STAGING "Enable staging mode (true/false)" "false")
 
 # ── generate secrets ──────────────────────────────────────────────────────────
 
@@ -133,6 +134,7 @@ SMTP_USER=${SMTP_USER}
 SMTP_PASS=${SMTP_PASS}
 MAIL_FROM=${MAIL_FROM}
 APP_URL=${APP_URL}
+IS_STAGING=${IS_STAGING}
 NODE_ENV=production
 VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
 VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}

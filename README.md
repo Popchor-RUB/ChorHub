@@ -188,6 +188,7 @@ Secrets und Konfiguration sind auf mehrere `.env`-Dateien aufgeteilt, die von `s
 | `SMTP_USER` / `SMTP_PASS` | SMTP-Zugangsdaten |
 | `MAIL_FROM` | Absender-Adresse |
 | `APP_URL` | URL der Frontend-App (für Magic Links) |
+| `IS_STAGING` | Aktiviert Staging-Modus (OTP `111111` gültig und Reminder-Mail-Throttling deaktiviert) |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web-Push-Schlüssel |
 | `VAPID_EMAIL` | Kontakt-E-Mail für Web Push |
 

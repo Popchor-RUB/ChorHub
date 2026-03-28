@@ -24,6 +24,7 @@ import type {
 
 @Injectable()
 export class AuthService {
+  private static readonly STAGING_OTP_BYPASS_CODE = '111111';
   // sessionId → { adminId, challenge } — adminId is never sent to the client
   private readonly passkeySessionStore = new Map<string, { adminId: string; challenge: string }>();
   // adminId → challenge — for registration (admin is already authenticated via JWT)
@@ -49,6 +50,34 @@ export class AuthService {
     );
   }
 
+  async issueMemberMagicLink(memberId: string): Promise<{
+    rawToken: string;
+    loginCode: string;
+    magicUrl: string;
+  }> {
+    const rawToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+
+    const loginCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedCode = createHash('sha256').update(loginCode).digest('hex');
+    const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await this.prisma.$transaction([
+      this.prisma.memberLoginCode.deleteMany({
+        where: { memberId, expiresAt: { lt: new Date() } },
+      }),
+      this.prisma.memberLoginToken.create({
+        data: { memberId, hashedToken },
+      }),
+      this.prisma.memberLoginCode.create({
+        data: { memberId, hashedCode, expiresAt: codeExpiresAt },
+      }),
+    ]);
+
+    const magicUrl = `${this.config.getOrThrow<string>('APP_URL')}/auth/verify?token=${rawToken}`;
+    return { rawToken, loginCode, magicUrl };
+  }
+
   async requestMagicLink(email: string): Promise<void> {
     const member = await this.prisma.member.findFirst({
       where: { email: { equals: email, mode: 'insensitive' } },
@@ -57,31 +86,11 @@ export class AuthService {
       throw new UnauthorizedException('Ungültige Zugangsdaten');
     }
 
-    const rawToken = randomBytes(32).toString('hex');
-    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-
-    const rawCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashedCode = createHash('sha256').update(rawCode).digest('hex');
-    const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-    await this.prisma.$transaction([
-      this.prisma.memberLoginCode.deleteMany({
-        where: { memberId: member.id, expiresAt: { lt: new Date() } },
-      }),
-      this.prisma.memberLoginToken.create({
-        data: { memberId: member.id, hashedToken },
-      }),
-      this.prisma.memberLoginCode.create({
-        data: { memberId: member.id, hashedCode, expiresAt: codeExpiresAt },
-      }),
-    ]);
-
-    const magicUrl = `${this.config.getOrThrow<string>('APP_URL')}/auth/verify?token=${rawToken}`;
-    await this.mailService.sendMagicLink(member, magicUrl, rawToken, rawCode);
+    const { magicUrl, rawToken, loginCode } = await this.issueMemberMagicLink(member.id);
+    await this.mailService.sendMagicLink(member, magicUrl, rawToken, loginCode);
   }
 
   async verifyCode(email: string, code: string) {
-    const hashedCode = createHash('sha256').update(code).digest('hex');
     const member = await this.prisma.member.findFirst({
       where: { email: { equals: email, mode: 'insensitive' } },
     });
@@ -90,32 +99,73 @@ export class AuthService {
       throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
     }
 
-    const codeRecord = await this.prisma.memberLoginCode.findFirst({
+    if (this.isStaging()) {
+      return this.verifyCodeInStagingMode(member, code);
+    }
+    return this.verifyCodeInDefaultMode(member, code);
+  }
+
+  private async verifyCodeInStagingMode(
+    member: { id: string; firstName: string; lastName: string; email: string },
+    code: string,
+  ) {
+    if (code === AuthService.STAGING_OTP_BYPASS_CODE) {
+      return this.issueMemberSessionToken(member);
+    }
+
+    const codeRecord = await this.findValidCodeRecord(member.id, code);
+    if (!codeRecord) {
+      throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
+    }
+    await this.consumeCodeOrThrow(codeRecord.id);
+    return this.issueMemberSessionToken(member);
+  }
+
+  private async verifyCodeInDefaultMode(
+    member: { id: string; firstName: string; lastName: string; email: string },
+    code: string,
+  ) {
+    const codeRecord = await this.findValidCodeRecord(member.id, code);
+    if (!codeRecord) {
+      throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
+    }
+    await this.consumeCodeOrThrow(codeRecord.id);
+    return this.issueMemberSessionToken(member);
+  }
+
+  private async findValidCodeRecord(memberId: string, code: string) {
+    const hashedCode = createHash('sha256').update(code).digest('hex');
+    return this.prisma.memberLoginCode.findFirst({
       where: {
-        memberId: member.id,
+        memberId,
         hashedCode,
         expiresAt: { gte: new Date() },
       },
     });
+  }
 
-    if (!codeRecord) {
+  private async consumeCodeOrThrow(codeId: string): Promise<void> {
+    const consumed = await this.prisma.memberLoginCode.deleteMany({
+      where: {
+        id: codeId,
+        expiresAt: { gte: new Date() },
+      },
+    });
+    if (consumed.count !== 1) {
       throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
     }
+  }
 
-    // Issue a permanent session token and consume the one-time code atomically
+  private async issueMemberSessionToken(member: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  }) {
     const rawToken = randomBytes(32).toString('hex');
     const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-    await this.prisma.$transaction(async (tx) => {
-      const consumed = await tx.memberLoginCode.deleteMany({
-        where: {
-          id: codeRecord.id,
-          expiresAt: { gte: new Date() },
-        },
-      });
-      if (consumed.count !== 1) {
-        throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
-      }
 
+    await this.prisma.$transaction(async (tx) => {
       await tx.memberLoginToken.create({
         data: { memberId: member.id, hashedToken },
       });
@@ -134,6 +184,11 @@ export class AuthService {
         email: member.email,
       },
     };
+  }
+
+  private isStaging(): boolean {
+    const raw = this.config.get<string>('IS_STAGING', 'false');
+    return raw.toLowerCase() === 'true';
   }
 
   async verifyMagicLink(rawToken: string) {

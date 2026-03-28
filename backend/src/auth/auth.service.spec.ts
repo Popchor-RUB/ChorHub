@@ -27,8 +27,10 @@ describe('AuthService', () => {
   let prismaMock: MockPrisma;
   let mailService: jest.Mocked<MailService>;
   let jwtService: jest.Mocked<JwtService>;
+  let isStagingValue: 'true' | 'false' | undefined = 'false';
 
   beforeEach(async () => {
+    isStagingValue = 'false';
     prismaMock = mockDeep<PrismaClient>();
     // Allow $transaction to execute both array and callback forms.
     prismaMock.$transaction.mockImplementation((arg: any) => {
@@ -41,6 +43,7 @@ describe('AuthService', () => {
     mailService = {
       sendMagicLink: jest.fn().mockResolvedValue(undefined),
       sendMemberInvite: jest.fn().mockResolvedValue(undefined),
+      sendPushFallbackReminderMail: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<MailService>;
     jwtService = {
       sign: jest.fn().mockReturnValue('signed-jwt-token'),
@@ -55,7 +58,12 @@ describe('AuthService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((_k: string, def?: string) => def ?? 'http://localhost:5173'),
+            get: jest.fn((key: string, def?: string) => {
+              if (key === 'IS_STAGING') {
+                return isStagingValue ?? def;
+              }
+              return def ?? 'http://localhost:5173';
+            }),
             getOrThrow: jest.fn(() => 'http://localhost:5173'),
           },
         },
@@ -207,6 +215,37 @@ describe('AuthService', () => {
     });
   });
 
+  describe('issueMemberMagicLink', () => {
+    it('creates hashed token/code and returns raw artifacts', async () => {
+      prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
+      prismaMock.memberLoginCode.create.mockResolvedValue({} as any);
+      prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 0 });
+
+      const result = await service.issueMemberMagicLink(mockMember.id);
+
+      expect(result.magicUrl).toContain('/auth/verify?token=');
+      expect(result.rawToken).toHaveLength(64);
+      expect(result.loginCode).toMatch(/^\d{6}$/);
+      expect(prismaMock.memberLoginToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            memberId: mockMember.id,
+            hashedToken: expect.any(String),
+          }),
+        }),
+      );
+      expect(prismaMock.memberLoginCode.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            memberId: mockMember.id,
+            hashedCode: expect.any(String),
+            expiresAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+  });
+
   describe('verifyCode', () => {
     const { createHash } = jest.requireActual<typeof import('crypto')>('crypto');
 
@@ -307,6 +346,40 @@ describe('AuthService', () => {
           expiresAt: { gte: expect.any(Date) },
         },
       });
+    });
+
+    it('accepts staging bypass code 111111 without requiring a stored login code', async () => {
+      isStagingValue = 'true';
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
+      prismaMock.member.update.mockResolvedValue(mockMember);
+
+      const result = await service.verifyCode('anna@choir.de', '111111');
+
+      expect(result.token).toHaveLength(64);
+      expect(result.member.id).toBe(mockMember.id);
+      expect(prismaMock.memberLoginCode.findFirst).not.toHaveBeenCalled();
+      expect(prismaMock.memberLoginCode.deleteMany).not.toHaveBeenCalled();
+      expect(prismaMock.memberLoginToken.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects bypass code 111111 when staging mode is disabled', async () => {
+      isStagingValue = 'false';
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.findFirst.mockResolvedValue(null);
+
+      await expect(service.verifyCode('anna@choir.de', '111111')).rejects.toThrow(UnauthorizedException);
+      expect(prismaMock.memberLoginToken.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects bypass code 111111 when IS_STAGING is unset', async () => {
+      isStagingValue = undefined;
+      prismaMock.member.findFirst.mockResolvedValue(mockMember);
+      prismaMock.memberLoginCode.findFirst.mockResolvedValue(null);
+
+      await expect(service.verifyCode('anna@choir.de', '111111')).rejects.toThrow(UnauthorizedException);
+      expect(prismaMock.memberLoginCode.findFirst).toHaveBeenCalledTimes(1);
+      expect(prismaMock.memberLoginToken.create).not.toHaveBeenCalled();
     });
   });
 

@@ -2,8 +2,7 @@ import { Injectable, BadRequestException, ConflictException, NotFoundException }
 import { AttendanceResponse } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
-import { ConfigService } from '@nestjs/config';
-import { randomBytes, createHash } from 'crypto';
+import { AuthService } from '../auth/auth.service';
 import { parse } from 'csv-parse/sync';
 import * as ExcelJS from 'exceljs';
 import type { CreateMemberDto } from './dto/create-member.dto';
@@ -20,7 +19,7 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
-    private readonly config: ConfigService,
+    private readonly authService: AuthService,
   ) {}
 
   async createMember(dto: CreateMemberDto) {
@@ -57,10 +56,7 @@ export class AdminService {
       });
     }
 
-    const rawToken = randomBytes(32).toString('hex');
-    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-    await this.prisma.memberLoginToken.create({ data: { memberId: member.id, hashedToken } });
-    const magicUrl = `${this.config.get('APP_URL')}/auth/verify?token=${rawToken}`;
+    const { magicUrl } = await this.authService.issueMemberMagicLink(member.id);
     await this.mailService.sendMemberInvite(member, magicUrl);
 
     return member;
@@ -131,12 +127,7 @@ export class AdminService {
 
         if (!existing) {
           if (sendEmails) {
-            const rawToken = randomBytes(32).toString('hex');
-            const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-            await this.prisma.memberLoginToken.create({
-              data: { memberId: member.id, hashedToken },
-            });
-            const magicUrl = `${this.config.get('APP_URL')}/auth/verify?token=${rawToken}`;
+            const { magicUrl } = await this.authService.issueMemberMagicLink(member.id);
             await this.mailService.sendMemberInvite(member, magicUrl);
           }
           results.created++;
