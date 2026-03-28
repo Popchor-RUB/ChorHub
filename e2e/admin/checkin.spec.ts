@@ -17,7 +17,13 @@ async function selectPastRehearsal(page: Page) {
   await expect(page.getByPlaceholder('Name filtern…')).toBeVisible();
 }
 
-async function openScanResultForMember(page: Page, memberId: string, memberName: string) {
+async function openScanResultForMember(
+  page: Page,
+  memberId: string,
+  memberName: string,
+  opts: { assertName?: boolean } = {},
+) {
+  const { assertName = true } = opts;
   await page.getByTestId('attendance-open-qr-scanner').click();
   await expect(page.getByTestId('qr-scanner-modal')).toBeVisible();
 
@@ -40,8 +46,9 @@ async function openScanResultForMember(page: Page, memberId: string, memberName:
 
   const resultDialog = page.getByTestId('qr-scan-result-modal');
   await expect(resultDialog).toBeVisible();
-  await expect(resultDialog.getByText(memberName)).toBeVisible();
-  await expect(resultDialog.getByText(`e2e-${memberId}@chorhub.test`, { exact: true })).toBeVisible();
+  if (assertName) {
+    await expect(resultDialog.getByText(memberName)).toBeVisible();
+  }
   return resultDialog;
 }
 
@@ -89,5 +96,17 @@ test.describe('Admin QR check-in flow', () => {
 
     await expect(page.getByTestId('qr-scanner-modal')).toBeVisible();
     await expect(page.getByTestId('qr-scan-result-modal')).not.toBeVisible();
+  });
+
+  test('shows an error when scanned member id is invalid', async ({ page }) => {
+    const invalidMemberId = 'invalid-member-id-e2e';
+    const scannedName = 'Unbekanntes Mitglied';
+
+    const resultDialog = await openScanResultForMember(page, invalidMemberId, scannedName, { assertName: false });
+
+    await expect(
+      resultDialog.getByText('Mitgliedsdaten konnten nicht geladen werden. Die Mitglieds-ID ist ungültig.'),
+    ).toBeVisible();
+    await expect(resultDialog.getByText(scannedName)).not.toBeVisible();
   });
 });

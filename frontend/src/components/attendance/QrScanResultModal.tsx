@@ -6,6 +6,7 @@ import type { QrScanResult } from './QrScannerModal';
 type Props = {
   isOpen: boolean;
   scanResult: QrScanResult | null;
+  memberEmail: string;
   relativeIssuedAt: string;
   lastAttendedText: string;
   lastAttendedRehearsalsAgo: number | null;
@@ -15,6 +16,7 @@ type Props = {
   scannedMemberAttended: boolean;
   scanRecordSaving: boolean;
   scanRecordError: string | null;
+  memberInfoFetchError: boolean;
   canOpenMemberDetail: boolean;
   onClose: () => void;
   onRecordAttendance: () => void;
@@ -25,6 +27,7 @@ type Props = {
 export function QrScanResultModal({
   isOpen,
   scanResult,
+  memberEmail,
   relativeIssuedAt,
   lastAttendedText,
   lastAttendedRehearsalsAgo,
@@ -34,6 +37,7 @@ export function QrScanResultModal({
   scannedMemberAttended,
   scanRecordSaving,
   scanRecordError,
+  memberInfoFetchError,
   canOpenMemberDetail,
   onClose,
   onRecordAttendance,
@@ -57,6 +61,8 @@ export function QrScanResultModal({
         <ModalBody>
           {!scanResult ? (
             <p className="text-default-500 text-sm">{t('checkin.admin_waiting')}</p>
+          ) : memberInfoFetchError ? (
+            <p className="text-danger font-medium">{t('checkin.admin_member_info_fetch_error')}</p>
           ) : (
             <div className="space-y-2 text-sm">
               <p>
@@ -80,7 +86,7 @@ export function QrScanResultModal({
               </p>
               <p>
                 <span className="text-default-500">{t('checkin.admin_email')}:</span>{' '}
-                <span className="font-medium">{scanResult.payload.email}</span>
+                <span className="font-medium">{memberEmail}</span>
               </p>
               <p>
                 <span className="text-default-500">{t('checkin.admin_last_attended')}:</span>{' '}
@@ -121,7 +127,7 @@ export function QrScanResultModal({
             color={scannedMemberAttended ? 'success' : 'default'}
             variant={scannedMemberAttended ? 'solid' : 'bordered'}
             isLoading={scanRecordSaving}
-            isDisabled={!scanResult?.signatureValid || !scanResult}
+            isDisabled={!scanResult?.signatureValid || !scanResult || memberInfoFetchError}
             onPress={onRecordAttendance}
           >
             {scannedMemberAttended ? t('attendance.btn_present') : t('attendance.btn_record')}

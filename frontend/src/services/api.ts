@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { MemberCheckinQr } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { withBasePath } from '../utils/basePath';
 
@@ -200,6 +201,6 @@ export const membersApi = {
 };
 
 export const checkinApi = {
-  getMemberQr: () => api.get<{ token: string; qrCodeDataUrl: string }>('/members/me/checkin-qr'),
+  getMemberQr: () => api.get<MemberCheckinQr>('/members/me/checkin-qr'),
   getPublicKey: () => api.get<{ publicKey: string }>('/attendance/checkin/public-key'),
 };

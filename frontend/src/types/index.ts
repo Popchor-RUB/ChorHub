@@ -99,7 +99,11 @@ export interface GeneralInfo {
 export interface CheckinPayload {
   memberId: string;
   name: string;
-  email: string;
   issuedAt: string;
   version: 'v1';
+}
+
+export interface MemberCheckinQr {
+  token: string;
+  qrCodeDataUrl: string;
 }

@@ -34,7 +34,7 @@ describe('CheckinService', () => {
 
   it('creates deterministic signatures for the same payload', () => {
     const payload = service.createPayload(
-      { id: 'member-1', firstName: 'Anna', lastName: 'Muster', email: 'anna@example.com' },
+      { id: 'member-1', firstName: 'Anna', lastName: 'Muster' },
       new Date('2026-03-26T12:00:00.000Z'),
     );
 
@@ -46,7 +46,7 @@ describe('CheckinService', () => {
 
   it('verifies a valid token and returns its payload', () => {
     const payload = service.createPayload(
-      { id: 'member-1', firstName: 'Anna', lastName: 'Muster', email: 'anna@example.com' },
+      { id: 'member-1', firstName: 'Anna', lastName: 'Muster' },
       new Date('2026-03-26T12:00:00.000Z'),
     );
     const token = service.createSignedToken(payload);
@@ -58,7 +58,7 @@ describe('CheckinService', () => {
 
   it('rejects tampered payload values', () => {
     const payload = service.createPayload(
-      { id: 'member-1', firstName: 'Anna', lastName: 'Muster', email: 'anna@example.com' },
+      { id: 'member-1', firstName: 'Anna', lastName: 'Muster' },
       new Date('2026-03-26T12:00:00.000Z'),
     );
     const token = service.createSignedToken(payload);
@@ -66,7 +66,7 @@ describe('CheckinService', () => {
 
     const tamperedPayload = {
       ...JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')),
-      email: 'mallory@example.com',
+      name: 'Mallory',
     };
     const tamperedToken = `${prefix}.${Buffer.from(JSON.stringify(tamperedPayload)).toString('base64url')}.${encodedSignature}`;
 
@@ -76,7 +76,7 @@ describe('CheckinService', () => {
 
   it('rejects unsupported versions', () => {
     const payload = service.createPayload(
-      { id: 'member-1', firstName: 'Anna', lastName: 'Muster', email: 'anna@example.com' },
+      { id: 'member-1', firstName: 'Anna', lastName: 'Muster' },
       new Date('2026-03-26T12:00:00.000Z'),
     );
     const token = service.createSignedToken(payload);
@@ -87,14 +87,38 @@ describe('CheckinService', () => {
   });
 
   it('generates a data URL QR image', async () => {
+    const qrModuleMock = {
+      QRCodeJs: class {
+        async serialize() {
+          return '<svg xmlns="http://www.w3.org/2000/svg"><defs><mask id="mask-dot-color-0-0" maskUnits="userSpaceOnUse" x="0" y="0" width="230" height="230"><g fill="#fff"><path d="M 10 100 v 10 h 5 a 5 5, 0, 0, 0, 0 -10 z" transform="rotate(180,15,105)"/><circle cx="45" cy="45" r="5"/></g></mask></defs><rect x="0" y="0" width="230" height="230" fill="#ffffff"/><rect x="10" y="10" width="210" height="210" style="mask:url(#mask-dot-color-0-0)" fill="#111111"/></svg>';
+        }
+      },
+      ErrorCorrectionLevel: { H: 'H' },
+    };
+    jest.spyOn(service as any, 'loadQrCodeModule').mockResolvedValue(qrModuleMock);
+
     const result = await service.generateMemberCheckinQr({
       id: 'member-1',
       firstName: 'Anna',
       lastName: 'Muster',
-      email: 'anna@example.com',
     });
 
     expect(result.token.startsWith('v1.')).toBe(true);
     expect(result.qrCodeDataUrl.startsWith('data:image/svg+xml;base64,')).toBe(true);
+
+    const encodedSvg = result.qrCodeDataUrl.replace('data:image/svg+xml;base64,', '');
+    const svg = Buffer.from(encodedSvg, 'base64').toString('utf8');
+
+    expect(svg).toContain('@keyframes qr-blob-color');
+    expect(svg).toContain('.qr-animated-blob');
+    expect(svg).toContain('fill: #111111;');
+    expect(svg).toContain('#6f8fa3');
+    expect(svg).toContain('id="qr-animated-blobs"');
+    expect(svg).toContain('class="qr-animated-blob"');
+    expect(svg).toContain('<circle cx="45" cy="45" r="5" class="qr-animated-blob"');
+    expect(svg).toContain('--qr-blob-delay:');
+    expect(svg).toContain('--qr-blob-duration:');
+    expect(svg).not.toContain('style="mask:url(#mask-dot-color-0-0)" fill="#111111"');
+    expect(svg).toContain('<rect x="0" y="0" width="230" height="230" fill="#ffffff"/>');
   });
 });

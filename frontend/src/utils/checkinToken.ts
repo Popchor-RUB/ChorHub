@@ -18,7 +18,6 @@ function decodePayload(bytes: Uint8Array): CheckinPayload {
     payload.version !== 'v1' ||
     typeof payload.memberId !== 'string' ||
     typeof payload.name !== 'string' ||
-    typeof payload.email !== 'string' ||
     typeof payload.issuedAt !== 'string'
   ) {
     throw new Error('invalid payload');

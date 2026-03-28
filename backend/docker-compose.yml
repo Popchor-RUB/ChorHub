@@ -16,14 +16,12 @@ services:
 
   backend:
     build:
-      context: .
+      context: ..
+      dockerfile: backend/Dockerfile
       target: production
     restart: unless-stopped
     env_file:
       - ../.env.backend
-    volumes:
-      - ./src:/app/src
-      - ./prisma:/app/prisma
     expose:
       - "3000"
     depends_on:

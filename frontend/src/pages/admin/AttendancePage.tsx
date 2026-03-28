@@ -69,6 +69,7 @@ export function AttendancePage() {
   const [scanRecordSaving, setScanRecordSaving] = useState(false);
   const [scanRecordError, setScanRecordError] = useState<string | null>(null);
   const [unexcusedByMemberId, setUnexcusedByMemberId] = useState<Record<string, number>>({});
+  const [emailByMemberId, setEmailByMemberId] = useState<Record<string, string>>({});
 
   const { t, i18n } = useTranslation();
   const dateLocale = useDateLocale();
@@ -85,8 +86,8 @@ export function AttendancePage() {
     rehearsalsApi.getAll().then((res) => setRehearsals(res.data as Rehearsal[]));
     adminMembersApi.list().then((res) => {
       const members = res.data as MemberOverview[];
-      const mapped = Object.fromEntries(members.map((m) => [m.id, m.unexcusedAbsenceCount]));
-      setUnexcusedByMemberId(mapped);
+      setUnexcusedByMemberId(Object.fromEntries(members.map((m) => [m.id, m.unexcusedAbsenceCount])));
+      setEmailByMemberId(Object.fromEntries(members.map((m) => [m.id, m.email])));
     });
   }, []);
 
@@ -224,7 +225,11 @@ export function AttendancePage() {
   const scannedMember = scanResult
     ? records.find((r) => r.id === scanResult.payload.memberId)
     : null;
+  const scannedMemberInfoFetchError = Boolean(scanResult && !scannedMember);
   const scannedMemberAttended = Boolean(scannedMember?.attended);
+  const scannedMemberEmail = scanResult
+    ? (emailByMemberId[scanResult.payload.memberId] ?? '—')
+    : '—';
   const scannedMemberLastAttendedText = scannedMember
     ? formatLastAttended(scannedMember.lastAttendedRehearsalsAgo)
     : '—';
@@ -260,6 +265,10 @@ export function AttendancePage() {
 
   const handleCreateAttendanceFromScan = async () => {
     if (!scanResult || !selectedRehearsalIdRef.current || scanRecordSaving) return;
+    if (scannedMemberInfoFetchError) {
+      setScanRecordError(t('checkin.admin_member_info_fetch_error'));
+      return;
+    }
     setScanRecordSaving(true);
     setScanRecordError(null);
 
@@ -520,6 +529,7 @@ export function AttendancePage() {
       <QrScanResultModal
         isOpen={isScanResultOpen}
         scanResult={scanResult}
+        memberEmail={scannedMemberEmail}
         relativeIssuedAt={relativeIssuedAt}
         lastAttendedText={scannedMemberLastAttendedText}
         lastAttendedRehearsalsAgo={scannedMemberLastAttendedRehearsalsAgo}
@@ -529,6 +539,7 @@ export function AttendancePage() {
         scannedMemberAttended={scannedMemberAttended}
         scanRecordSaving={scanRecordSaving}
         scanRecordError={scanRecordError}
+        memberInfoFetchError={scannedMemberInfoFetchError}
         canOpenMemberDetail={Boolean(scannedMember)}
         onClose={closeScanResultModal}
         onRecordAttendance={handleCreateAttendanceFromScan}
