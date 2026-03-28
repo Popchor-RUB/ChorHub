@@ -81,6 +81,7 @@ export class AttendanceService {
       id: m.id,
       firstName: m.firstName,
       lastName: m.lastName,
+      email: m.email,
       choirVoice: m.choirVoice,
       attended: m.attendanceRecords.length > 0,
       plan: m.attendancePlans[0]?.response ?? null,

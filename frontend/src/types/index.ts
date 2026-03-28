@@ -69,6 +69,7 @@ export interface AttendanceRecord {
   id: string;
   firstName: string;
   lastName: string;
+  email: string;
   choirVoice: ChoirVoice | null;
   attended: boolean;
   plan: AttendanceResponse | null;

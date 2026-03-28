@@ -25,6 +25,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
   const [rehearsals, setRehearsals] = useState<MemberRehearsalEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -34,9 +35,11 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
   useEffect(() => {
     if (!isOpen) {
       setEditMode(false);
+      setShowAllUpcoming(false);
       setConfirmingDelete(false);
       return;
     }
+    setShowAllUpcoming(false);
     setLoading(true);
     adminMembersApi.rehearsals(member.id).then((res) => {
       setRehearsals(res.data as MemberRehearsalEntry[]);
@@ -48,6 +51,8 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
   startOfToday.setHours(0, 0, 0, 0);
   const past = rehearsals.filter((r) => new Date(r.date) < startOfToday).reverse();
   const upcoming = rehearsals.filter((r) => new Date(r.date) >= startOfToday);
+  const visibleUpcoming = showAllUpcoming ? upcoming : upcoming.slice(0, 5);
+  const hasHiddenUpcoming = upcoming.length > visibleUpcoming.length;
   const countablePast = past.filter((r) => !r.isOptional);
   const countableUpcoming = upcoming.filter((r) => !r.isOptional);
 
@@ -194,7 +199,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                     {t('detail_modal.upcoming_rehearsals')}
                   </p>
                   <div className="flex flex-col gap-1">
-                    {upcoming.map((r) => {
+                    {visibleUpcoming.map((r) => {
                       const isSaving = saving === r.id;
                       const isToggleable = editMode;
                       return (
@@ -231,6 +236,13 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                       );
                     })}
                   </div>
+                  {!showAllUpcoming && hasHiddenUpcoming && (
+                    <div className="mt-3 flex justify-center">
+                      <Button color="primary" onPress={() => setShowAllUpcoming(true)}>
+                        {t('rehearsals.show_all')}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
