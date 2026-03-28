@@ -7,6 +7,27 @@ interface Props {
   onDismiss: () => void;
 }
 
+function getIOSMajorVersion(): number | null {
+  if (typeof navigator === 'undefined') return null;
+  const ua = navigator.userAgent;
+
+  // Safari on iOS 26+ freezes "iPhone OS" at 18.x.
+  // The changing part is "Version/<major>": e.g. Version/26.0.
+  const safariVersionMatch = ua.match(/Version\/(\d+)(?:\.\d+)?[^)]*Safari\//i);
+  if (safariVersionMatch) return Number.parseInt(safariVersionMatch[1], 10);
+
+  // Fallback for non-Safari iOS browsers.
+  const osMatch = ua.match(/(?:CPU (?:iPhone )?OS|iPhone OS|CPU OS)\s+(\d+)(?:[._]\d+)?/i);
+  if (osMatch) return Number.parseInt(osMatch[1], 10);
+
+  return null;
+}
+
+function isIOS26OrAbove(): boolean {
+  const major = getIOSMajorVersion();
+  return major !== null && major >= 26;
+}
+
 // iOS share button icon (box with arrow pointing up)
 function ShareIcon({ className }: { className?: string }) {
   return (
@@ -43,13 +64,28 @@ function Step({ icon, title, desc }: { icon: React.ReactNode; title: string; des
 
 function StepList({ className }: { className?: string }) {
   const { t } = useTranslation();
-  const step1Words = t('ios_guide.step1_desc').split(' ');
+  const ios26 = isIOS26OrAbove();
+  const step1Words = t(ios26 ? 'ios_guide.step26_2_desc' : 'ios_guide.step1_desc').split(' ');
+  const tutorialUrl = ios26
+    ? `${import.meta.env.BASE_URL}videos/ios-pwa-setup.mp4`
+    : `${import.meta.env.BASE_URL}videos/ios-pwa-setup-ios18.mp4`;
 
   return (
     <ol className={`space-y-4 ${className ?? ''}`}>
+      {ios26 && (
+        <Step
+          icon={
+            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm6 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm6 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+            </svg>
+          }
+          title={t('ios_guide.step26_1_title')}
+          desc={t('ios_guide.step26_1_desc')}
+        />
+      )}
       <Step
         icon={<ShareIcon className="w-4 h-4 text-primary" />}
-        title={t('ios_guide.step1_title')}
+        title={t(ios26 ? 'ios_guide.step26_2_title' : 'ios_guide.step1_title')}
         desc={
           <>
             {step1Words.slice(0, -1).join(' ')}{' '}
@@ -76,7 +112,50 @@ function StepList({ className }: { className?: string }) {
         title={t('ios_guide.step3_title')}
         desc={t('ios_guide.step3_desc')}
       />
+      <li aria-hidden className="border-t border-divider pt-1 mt-1" />
+      <Step
+        icon={
+          <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9a3.75 3.75 0 1 1 7.02 1.875c-.66 1.292-2.024 1.84-2.977 2.625-.575.473-1.043 1.05-1.043 2.25m.01 3h.008v.008h-.008v-.008Z" />
+          </svg>
+        }
+        title={t('ios_guide.step4_title')}
+        desc={(
+          <a href={tutorialUrl} target="_blank" rel="noreferrer" className="underline underline-offset-2 text-primary">
+            {t('ios_guide.step4_link')}
+          </a>
+        )}
+      />
     </ol>
+  );
+}
+
+function ToolbarHint({ inSheet = false }: { inSheet?: boolean }) {
+  const { t } = useTranslation();
+  const ios26 = isIOS26OrAbove();
+  const wrapperClasses = inSheet
+    ? ios26
+      ? 'flex flex-col items-end gap-1'
+      : 'flex flex-col items-center gap-1'
+    : ios26
+      ? 'absolute right-[50px] bottom-[calc(env(safe-area-inset-bottom))] flex flex-col items-end gap-1'
+      : 'absolute left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+2px)] flex flex-col items-center gap-1';
+  const arrowPath = 'm19.5 8.25-7.5 7.5-7.5-7.5';
+
+  return (
+    <div className={wrapperClasses}>
+      <p className="text-xs text-default-400">{t(ios26 ? 'ios_guide.menu_hint' : 'ios_guide.share_hint')}</p>
+      <svg
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={2.5}
+        stroke="currentColor"
+        className="w-5 h-5 text-default-400 animate-bounce"
+        aria-hidden
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d={arrowPath} />
+      </svg>
+    </div>
   );
 }
 
@@ -100,7 +179,7 @@ function ForcedGuide() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-center p-6 touch-none">
+    <div className="fixed inset-0 z-[9999] bg-background flex flex-col items-center justify-start p-6 pt-[calc(env(safe-area-inset-top)+1.25rem)] touch-none">
       <div className="flex flex-col items-center gap-3 mb-8">
         <img
           src={`${import.meta.env.BASE_URL}icons/apple-touch-icon.png`}
@@ -115,20 +194,7 @@ function ForcedGuide() {
         <StepList />
       </div>
 
-      {/* Arrow hinting at the Safari toolbar */}
-      <div className="absolute bottom-8 flex flex-col items-center gap-1">
-        <p className="text-xs text-default-400">{t('ios_guide.share_hint')}</p>
-        <svg
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2.5}
-          stroke="currentColor"
-          className="w-5 h-5 text-default-400 animate-bounce"
-          aria-hidden
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-        </svg>
-      </div>
+      <ToolbarHint />
     </div>
   );
 }
@@ -180,19 +246,8 @@ function DismissableGuide({ onDismiss }: { onDismiss: () => void }) {
             {t('ios_guide.understood')}
           </Button>
 
-          {/* Arrow hinting at the Safari toolbar */}
-          <div className="flex flex-col items-center gap-0.5 pb-1">
-            <p className="text-xs text-default-400">{t('ios_guide.share_hint')}</p>
-            <svg
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2.5}
-              stroke="currentColor"
-              className="w-5 h-5 text-default-400 animate-bounce"
-              aria-hidden
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-            </svg>
+          <div className="-mb-2 flex justify-center">
+            <ToolbarHint inSheet />
           </div>
         </div>
       </div>

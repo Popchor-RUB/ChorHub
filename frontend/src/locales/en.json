@@ -257,14 +257,23 @@
   "ios_guide": {
     "install_title": "Install ChorHub",
     "install_subtitle": "Add app to home screen",
+    "step26_1_title": "Open the three-dot menu",
+    "step26_1_desc": "Tap the three-dot button next to the URL bar",
+    "step26_2_title": "Tap Share from the menu",
+    "step26_2_desc": "In the three-dot menu, tap the Share icon",
     "step1_title": "Tap the Share button",
     "step1_desc": "Tap the share icon in the Safari bar at the bottom",
     "step2_title": "Select \"Add to Home Screen\"",
     "step2_desc": "Scroll down in the share menu and tap the entry",
     "step3_title": "Confirm \"Add\"",
     "step3_desc": "Tap \"Add\" in the top right",
+    "step4_title": "Video Tutorial",
+    "step4_link": "Watch the video tutorial here",
     "understood": "Got it",
-    "share_hint": "Share button is here"
+    "menu_hint": "Three-dot menu is here",
+    "share_hint": "Share button is here",
+    "step0_title": "Open the three-dot menu",
+    "step0_desc": "Tap the three-dot button next to the URL bar"
   },
   "detail_modal": {
     "present_count": "{{count}} present",
