@@ -71,6 +71,11 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
 
     let closed = false;
 
+    const describeError = (error: unknown): string => {
+      if (error instanceof Error && error.message) return error.message;
+      return String(error);
+    };
+
     const start = async () => {
       setScannerError(null);
       setKeyError(null);
@@ -78,8 +83,8 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
 
       try {
         await getCheckinVerificationKey();
-      } catch {
-        if (!closed) setKeyError(t('checkin.admin_key_error'));
+      } catch (error) {
+        if (!closed) setKeyError(`${t('checkin.admin_key_error')} (${describeError(error)})`);
       } finally {
         if (!closed) setKeyLoading(false);
       }
@@ -87,6 +92,13 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
       if (!videoRef.current || closed) return;
 
       try {
+        if (!window.isSecureContext) {
+          throw new Error('Secure context required (HTTPS or localhost)');
+        }
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('Camera API is not available in this browser');
+        }
+
         const { BrowserQRCodeReader } = await import('@zxing/browser');
         const reader = new BrowserQRCodeReader(undefined, {
           delayBetweenScanAttempts: 250,
@@ -125,8 +137,8 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
         });
 
         controlsRef.current = controls;
-      } catch {
-        if (!closed) setScannerError(t('checkin.admin_camera_error'));
+      } catch (error) {
+        if (!closed) setScannerError(`${t('checkin.admin_camera_error')} (${describeError(error)})`);
       }
     };
 
@@ -163,8 +175,9 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
             onPress={() => {
               setKeyError(null);
               setScannerError(null);
-              void getCheckinVerificationKey(true).catch(() => {
-                setKeyError(t('checkin.admin_key_error'));
+              void getCheckinVerificationKey(true).catch((error: unknown) => {
+                const detail = error instanceof Error ? error.message : String(error);
+                setKeyError(`${t('checkin.admin_key_error')} (${detail})`);
               });
             }}
           >

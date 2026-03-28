@@ -8,7 +8,7 @@ import { clearMailHog, getLatestMagicLinkCode } from './helpers/mailhog';
 const AUTH_DIR = path.join(__dirname, '.auth');
 const ADMIN_STATE_PATH = path.join(AUTH_DIR, 'admin.json');
 const MEMBER_STATE_PATH = path.join(AUTH_DIR, 'member.json');
-const FRONTEND_URL = 'http://localhost:5173';
+const FRONTEND_URL = 'https://localhost:5173';
 const BACKEND_DIR = path.join(__dirname, '..', 'backend');
 
 export default async function globalSetup() {
@@ -20,7 +20,10 @@ export default async function globalSetup() {
   const browser = await chromium.launch();
 
   // ── Admin auth ────────────────────────────────────────────────────────────
-  const adminContext = await browser.newContext({ locale: 'de-DE' });
+  const adminContext = await browser.newContext({
+    locale: 'de-DE',
+    ignoreHTTPSErrors: true,
+  });
   const adminPage = await adminContext.newPage();
 
   await adminPage.goto(`${FRONTEND_URL}/admin/login`);
@@ -59,7 +62,10 @@ export default async function globalSetup() {
 
   await clearMailHog();
 
-  const memberContext = await browser.newContext({ locale: 'de-DE' });
+  const memberContext = await browser.newContext({
+    locale: 'de-DE',
+    ignoreHTTPSErrors: true,
+  });
   const memberPage = await memberContext.newPage();
 
   await memberPage.goto(`${FRONTEND_URL}/login`);

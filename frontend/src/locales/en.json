@@ -186,7 +186,9 @@
     "last_never": "Never",
     "last_previous": "Last rehearsal",
     "last_ago": "{{count}} rehearsals ago",
-    "no_voice_group": "No voice assigned"
+    "no_voice_group": "No voice assigned",
+    "no_plan_notice": "No attendance plan submitted",
+    "unexcused_warning": "{{count}}x unexcused absences"
   },
   "checkin": {
     "member_title": "QR-Code Checkin",
@@ -198,14 +200,16 @@
     "admin_modal_title": "Scan QR code",
     "admin_result_title": "Scan result",
     "admin_waiting": "Waiting for a QR code...",
-    "admin_member_id": "Member ID",
     "admin_name": "Name",
     "admin_email": "Email",
+    "admin_last_attended": "Last rehearsal attended",
+    "admin_plan": "Attendance plan",
     "admin_created": "Created",
     "admin_signature": "Signature verification",
     "admin_signature_valid": "Valid",
     "admin_signature_invalid": "Invalid",
     "admin_signature_invalid_hint": "Attendance can only be recorded for valid signatures.",
+    "admin_unexcused_warning": "{{count}}x unexcused absences",
     "admin_create_record": "Create attendance record",
     "admin_scan_next": "Scan next QR code",
     "admin_close_result": "Close",

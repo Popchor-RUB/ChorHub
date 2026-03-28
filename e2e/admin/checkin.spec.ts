@@ -40,8 +40,8 @@ async function openScanResultForMember(page: Page, memberId: string, memberName:
 
   const resultDialog = page.getByTestId('qr-scan-result-modal');
   await expect(resultDialog).toBeVisible();
-  await expect(resultDialog.getByText(memberId, { exact: true })).toBeVisible();
   await expect(resultDialog.getByText(memberName)).toBeVisible();
+  await expect(resultDialog.getByText(`e2e-${memberId}@chorhub.test`, { exact: true })).toBeVisible();
   return resultDialog;
 }
 

@@ -186,7 +186,9 @@
     "last_never": "Noch nie",
     "last_previous": "Letzte Probe",
     "last_ago": "Vor {{count}} Proben",
-    "no_voice_group": "Ohne Stimmzuordnung"
+    "no_voice_group": "Ohne Stimmzuordnung",
+    "no_plan_notice": "Keine Anwesenheitsplanung abgegeben",
+    "unexcused_warning": "{{count}}x unentschuldigt gefehlt"
   },
   "checkin": {
     "member_title": "QR-Code Checkin",
@@ -198,14 +200,16 @@
     "admin_modal_title": "QR-Code scannen",
     "admin_result_title": "Scan-Ergebnis",
     "admin_waiting": "Warte auf einen QR-Code...",
-    "admin_member_id": "Mitglied-ID",
     "admin_name": "Name",
     "admin_email": "E-Mail",
+    "admin_last_attended": "Zuletzt besuchte Probe",
+    "admin_plan": "Anwesenheitsplan",
     "admin_created": "Erstellt",
     "admin_signature": "Signaturprüfung",
     "admin_signature_valid": "Gültig",
     "admin_signature_invalid": "Ungültig",
     "admin_signature_invalid_hint": "Anwesenheit kann nur bei gültiger Signatur erfasst werden.",
+    "admin_unexcused_warning": "{{count}}x unentschuldigt gefehlt",
     "admin_create_record": "Anwesenheit erfassen",
     "admin_scan_next": "Nächsten QR-Code scannen",
     "admin_close_result": "Schließen",

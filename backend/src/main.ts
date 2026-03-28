@@ -3,12 +3,93 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import type { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaService } from './prisma/prisma.service';
 
+const DEV_LOG_LEVELS: ('log' | 'error' | 'warn' | 'debug' | 'verbose')[] = [
+  'log',
+  'error',
+  'warn',
+  'debug',
+  'verbose',
+];
+
+const MAX_LOG_BODY_LENGTH = 10_000;
+
+function normalizeOrigin(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed;
+  }
+}
+
+function formatBodyForLog(body: unknown): string {
+  if (body === undefined || body === null) return '';
+
+  let serialized: string;
+  if (typeof body === 'string') {
+    serialized = body;
+  } else if (Buffer.isBuffer(body)) {
+    serialized = body.toString('utf8');
+  } else {
+    try {
+      serialized = JSON.stringify(body);
+    } catch {
+      serialized = '[unserializable body]';
+    }
+  }
+
+  if (serialized.length > MAX_LOG_BODY_LENGTH) {
+    return `${serialized.slice(0, MAX_LOG_BODY_LENGTH)}...[truncated]`;
+  }
+
+  return serialized;
+}
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const debugLoggingEnabled = process.env.ENABLE_DEBUG_LOGGING === '1';
+  const app = await NestFactory.create(AppModule, {
+    logger: debugLoggingEnabled ? DEV_LOG_LEVELS : undefined,
+  });
+  const httpLogger = new Logger('HTTP');
+
+  if (debugLoggingEnabled) {
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      const startedAt = process.hrtime.bigint();
+      const requestPath = req.originalUrl ?? req.url;
+      const requestBody = formatBodyForLog(req.body);
+      let responseBody = '';
+
+      const originalJson = res.json.bind(res);
+      const originalSend = res.send.bind(res);
+
+      res.json = ((body: unknown) => {
+        responseBody = formatBodyForLog(body);
+        return originalJson(body);
+      }) as Response['json'];
+
+      res.send = ((body: unknown) => {
+        responseBody = formatBodyForLog(body);
+        return originalSend(body);
+      }) as Response['send'];
+
+      const requestSuffix = requestBody ? ` body=${requestBody}` : '';
+      httpLogger.debug(`--> ${req.method} ${requestPath}${requestSuffix}`);
+
+      res.on('finish', () => {
+        const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+        const responseSuffix = responseBody ? ` body=${responseBody}` : '';
+        httpLogger.debug(`<-- ${req.method} ${requestPath} ${res.statusCode} ${elapsedMs.toFixed(1)}ms${responseSuffix}`);
+      });
+
+      next();
+    });
+  }
 
   app.use(cookieParser());
 
@@ -22,12 +103,19 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  const appOrigin = normalizeOrigin(process.env.APP_URL ?? 'http://localhost:5173');
+  const extraOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((value) => normalizeOrigin(value))
+    .filter((value): value is string => Boolean(value));
+  const allowedOrigins = Array.from(new Set([appOrigin, ...extraOrigins].filter(Boolean)));
+
   app.enableCors({
-    origin: process.env.APP_URL ?? 'http://localhost:5173',
+    origin: allowedOrigins,
     credentials: true,
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, process.env.HOST ?? '0.0.0.0');
 
   const prisma = app.get(PrismaService);
   const adminCount = await prisma.adminUser.count();
