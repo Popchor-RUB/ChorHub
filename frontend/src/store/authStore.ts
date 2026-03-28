@@ -27,8 +27,8 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       memberSession: null,
       adminSession: null,
-      setMemberSession: (session) => set({ memberSession: session }),
-      setAdminSession: (session) => set({ adminSession: session }),
+      setMemberSession: (session) => set({ memberSession: session, adminSession: null }),
+      setAdminSession: (session) => set({ adminSession: session, memberSession: null }),
       logoutMember: () => set({ memberSession: null }),
       logoutAdmin: () => set({ adminSession: null }),
     }),

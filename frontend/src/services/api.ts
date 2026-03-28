@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { InternalAxiosRequestConfig } from 'axios';
 import type { MemberCheckinQr } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { withBasePath } from '../utils/basePath';
@@ -36,13 +37,24 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const state = useAuthStore.getState();
+  const headers = axios.AxiosHeaders.from(config.headers);
+  const isAdminRoute = window.location.pathname.startsWith(withBasePath('/admin', BASE_PATH));
 
-  if (state.adminSession?.token) {
-    config.headers['Authorization'] = `Bearer ${state.adminSession.token}`;
+  // Ensure we never send both auth mechanisms on the same request.
+  headers.delete('Authorization');
+  headers.delete('X-Member-Token');
+
+  if (isAdminRoute && state.adminSession?.token) {
+    headers.set('Authorization', `Bearer ${state.adminSession.token}`);
+  } else if (!isAdminRoute && state.memberSession?.token) {
+    headers.set('X-Member-Token', state.memberSession.token);
+  } else if (state.adminSession?.token) {
+    headers.set('Authorization', `Bearer ${state.adminSession.token}`);
   } else if (state.memberSession?.token) {
-    config.headers['X-Member-Token'] = state.memberSession.token;
+    headers.set('X-Member-Token', state.memberSession.token);
   }
 
+  config.headers = headers;
   return config;
 });
 
@@ -50,11 +62,30 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      const originalConfig = error.config as (InternalAxiosRequestConfig & { _authRetryCount?: number }) | undefined;
+      const requestHeaders = axios.AxiosHeaders.from(originalConfig?.headers);
+      const retryCount = originalConfig?._authRetryCount ?? 0;
+      const hadAdminAuth = Boolean(requestHeaders.get('Authorization'));
+      const hadMemberAuth = Boolean(requestHeaders.get('X-Member-Token'));
+
+      // Ignore 401s from unauthenticated endpoints (e.g. wrong login code).
+      if (!hadAdminAuth && !hadMemberAuth) {
+        return Promise.reject(error);
+      }
+
+      // Retry once to avoid hard logout on transient deploy-time 401s.
+      if (originalConfig && retryCount < 1) {
+        originalConfig._authRetryCount = retryCount + 1;
+        return new Promise((resolve) => setTimeout(resolve, 500))
+          .then(() => api.request(originalConfig));
+      }
+
       const state = useAuthStore.getState();
-      if (state.adminSession) {
+
+      if (hadAdminAuth && state.adminSession) {
         state.logoutAdmin();
         window.location.href = withBasePath('/admin/login', BASE_PATH);
-      } else if (state.memberSession) {
+      } else if (hadMemberAuth && state.memberSession) {
         state.logoutMember();
         window.location.href = withBasePath('/login', BASE_PATH);
       }
