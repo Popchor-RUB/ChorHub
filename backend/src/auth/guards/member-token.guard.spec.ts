@@ -18,6 +18,7 @@ const mockMember = {
   lastName: 'Müller',
   email: 'anna@choir.de',
   choirVoice: 'SOPRAN' as const,
+  lastLoginAt: null as Date | null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -58,6 +59,7 @@ describe('MemberTokenGuard', () => {
 
   it('sets request.user and returns true for valid token', async () => {
     prismaMock.memberLoginToken.findUnique.mockResolvedValue(mockTokenRecord as any);
+    prismaMock.member.updateMany.mockResolvedValue({ count: 1 });
     const request = { headers: { 'x-member-token': 'valid-raw-token' }, user: undefined as any };
     const ctx = {
       switchToHttp: () => ({ getRequest: () => request }),
@@ -68,10 +70,12 @@ describe('MemberTokenGuard', () => {
     expect(result).toBe(true);
     expect(request.user.id).toBe(mockMember.id);
     expect(request.user.role).toBe('member');
+    expect(prismaMock.member.updateMany).toHaveBeenCalledTimes(1);
   });
 
   it('accepts token from Authorization Bearer header', async () => {
     prismaMock.memberLoginToken.findUnique.mockResolvedValue(mockTokenRecord as any);
+    prismaMock.member.updateMany.mockResolvedValue({ count: 1 });
     const request = {
       headers: { authorization: 'Bearer valid-raw-token' },
       user: undefined as any,
@@ -82,5 +86,44 @@ describe('MemberTokenGuard', () => {
 
     const result = await guard.canActivate(ctx);
     expect(result).toBe(true);
+  });
+
+  it('does not update lastLoginAt when already set today', async () => {
+    const now = new Date();
+    prismaMock.memberLoginToken.findUnique.mockResolvedValue({
+      ...mockTokenRecord,
+      member: { ...mockMember, lastLoginAt: now },
+    } as any);
+    const request = { headers: { 'x-member-token': 'valid-raw-token' }, user: undefined as any };
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => request }),
+    } as unknown as ExecutionContext;
+
+    await guard.canActivate(ctx);
+
+    expect(prismaMock.member.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('throttles updates to once per member per day', async () => {
+    const oldDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    prismaMock.memberLoginToken.findUnique.mockResolvedValue({
+      ...mockTokenRecord,
+      member: { ...mockMember, lastLoginAt: oldDate },
+    } as any);
+    prismaMock.member.updateMany.mockResolvedValue({ count: 1 });
+
+    const request1 = { headers: { 'x-member-token': 'valid-raw-token' }, user: undefined as any };
+    const ctx1 = {
+      switchToHttp: () => ({ getRequest: () => request1 }),
+    } as unknown as ExecutionContext;
+    await guard.canActivate(ctx1);
+
+    const request2 = { headers: { 'x-member-token': 'valid-raw-token' }, user: undefined as any };
+    const ctx2 = {
+      switchToHttp: () => ({ getRequest: () => request2 }),
+    } as unknown as ExecutionContext;
+    await guard.canActivate(ctx2);
+
+    expect(prismaMock.member.updateMany).toHaveBeenCalledTimes(1);
   });
 });
