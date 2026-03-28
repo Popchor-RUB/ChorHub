@@ -94,6 +94,8 @@ function getMailTransporter(): nodemailer.Transporter {
     host: smtpHost,
     port: smtpPort,
     secure: smtpSecure,
+    // Keep behavior consistent with backend runtime config.
+    ignoreTLS: !smtpSecure,
     auth: process.env.SMTP_USER
       ? {
           user: process.env.SMTP_USER,
