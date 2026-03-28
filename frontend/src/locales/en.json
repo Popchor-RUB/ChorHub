@@ -196,6 +196,7 @@
     "member_qr_alt": "Check-in QR code",
     "member_refresh": "Refresh QR code",
     "member_load_error": "Could not load QR code.",
+    "member_refresh_in": "Auto refresh in {{time}}",
     "admin_scan_button": "Scan QR code",
     "admin_modal_title": "Scan QR code",
     "admin_result_title": "Scan result",

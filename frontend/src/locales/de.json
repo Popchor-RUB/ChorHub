@@ -192,10 +192,11 @@
   },
   "checkin": {
     "member_title": "QR-Code Checkin",
-    "member_hint": "Zeige diesen QR-Code beim Einchecken vor.",
+    "member_hint": "Zeige diesen QR-Code bei der Anmeldung vor.",
     "member_qr_alt": "Check-in QR-Code",
     "member_refresh": "QR-Code aktualisieren",
     "member_load_error": "QR-Code konnte nicht geladen werden.",
+    "member_refresh_in": "Automatische Aktualisierung in {{time}}",
     "admin_scan_button": "QR-Code scannen",
     "admin_modal_title": "QR-Code scannen",
     "admin_result_title": "Scan-Ergebnis",
