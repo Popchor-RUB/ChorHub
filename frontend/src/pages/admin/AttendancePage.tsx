@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { Select, SelectItem, SelectSection, Input, Button, Spinner, useDisclosure } from '@heroui/react';
+import {
+  Select,
+  SelectItem,
+  SelectSection,
+  Input,
+  Button,
+  Spinner,
+  useDisclosure,
+} from '@heroui/react';
+import { QrCodeIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
-import { rehearsalsApi, attendanceApi } from '../../services/api';
+import { rehearsalsApi, attendanceApi, adminMembersApi } from '../../services/api';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import { MemberDetailModal } from '../../components/member/MemberDetailModal';
-import type { Rehearsal, AttendanceRecord } from '../../types';
+import { QrScannerModal, type QrScanResult } from '../../components/attendance/QrScannerModal';
+import { QrScanResultModal } from '../../components/attendance/QrScanResultModal';
+import type { Rehearsal, AttendanceRecord, MemberOverview } from '../../types';
 import { VoiceGroupList, useCollapsedVoices } from '../../components/common/VoiceGroupList';
 import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
@@ -14,6 +25,22 @@ import { formatDateLong, formatDateNumeric } from '../../utils/dateFormatting';
 import { adminInputClassNames, adminSelectClassNames } from '../../styles/adminFormStyles';
 
 const NO_VOICE_KEY = '__no_voice__';
+
+function formatRelativeDateTime(isoDate: string, locale: string): string {
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  const diffMs = parsed.getTime() - Date.now();
+  const abs = Math.abs(diffMs);
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+
+  if (abs < minute) return rtf.format(Math.round(diffMs / 1000), 'second');
+  if (abs < hour) return rtf.format(Math.round(diffMs / minute), 'minute');
+  if (abs < day) return rtf.format(Math.round(diffMs / hour), 'hour');
+  return rtf.format(Math.round(diffMs / day), 'day');
+}
 
 export function AttendancePage() {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
@@ -36,8 +63,15 @@ export function AttendancePage() {
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
+  const { isOpen: isScannerOpen, onOpen: onScannerOpen, onClose: onScannerClose } = useDisclosure();
+  const { isOpen: isScanResultOpen, onOpen: onScanResultOpen, onClose: onScanResultClose } = useDisclosure();
+  const [scanResult, setScanResult] = useState<QrScanResult | null>(null);
+  const [scanRecordSaving, setScanRecordSaving] = useState(false);
+  const [scanRecordError, setScanRecordError] = useState<string | null>(null);
+  const [unexcusedByMemberId, setUnexcusedByMemberId] = useState<Record<string, number>>({});
+  const [emailByMemberId, setEmailByMemberId] = useState<Record<string, string>>({});
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dateLocale = useDateLocale();
 
   // Stable refs to avoid stale closures
@@ -50,6 +84,11 @@ export function AttendancePage() {
 
   useEffect(() => {
     rehearsalsApi.getAll().then((res) => setRehearsals(res.data as Rehearsal[]));
+    adminMembersApi.list().then((res) => {
+      const members = res.data as MemberOverview[];
+      setUnexcusedByMemberId(Object.fromEntries(members.map((m) => [m.id, m.unexcusedAbsenceCount])));
+      setEmailByMemberId(Object.fromEntries(members.map((m) => [m.id, m.email])));
+    });
   }, []);
 
   useEffect(() => {
@@ -180,9 +219,87 @@ export function AttendancePage() {
     return t('attendance.last_ago', { count: ago });
   };
 
+  const relativeIssuedAt = scanResult
+    ? formatRelativeDateTime(scanResult.payload.issuedAt, i18n.language)
+    : '';
+  const scannedMember = scanResult
+    ? records.find((r) => r.id === scanResult.payload.memberId)
+    : null;
+  const scannedMemberInfoFetchError = Boolean(scanResult && !scannedMember);
+  const scannedMemberAttended = Boolean(scannedMember?.attended);
+  const scannedMemberEmail = scanResult
+    ? (emailByMemberId[scanResult.payload.memberId] ?? '—')
+    : '—';
+  const scannedMemberLastAttendedText = scannedMember
+    ? formatLastAttended(scannedMember.lastAttendedRehearsalsAgo)
+    : '—';
+  const scannedMemberLastAttendedRehearsalsAgo = scannedMember?.lastAttendedRehearsalsAgo ?? null;
+  const scannedMemberPlanText = scannedMember?.plan === 'CONFIRMED'
+    ? t('detail_modal.plan_confirmed')
+    : scannedMember?.plan === 'DECLINED'
+      ? t('detail_modal.plan_declined')
+      : t('detail_modal.plan_none');
+  const scannedMemberPlanMissing = scannedMember?.plan === null;
+  const scannedMemberUnexcusedAbsenceCount = scanResult
+    ? (unexcusedByMemberId[scanResult.payload.memberId] ?? null)
+    : null;
+
   const openMemberDetail = (member: AttendanceRecord) => {
     setSelectedMember(member);
     onMemberOpen();
+  };
+
+  const closeScanResultModal = () => {
+    setScanRecordError(null);
+    setScanRecordSaving(false);
+    setScanResult(null);
+    onScanResultClose();
+  };
+
+  const handleScanSuccess = (result: QrScanResult) => {
+    setScanRecordError(null);
+    setScanRecordSaving(false);
+    setScanResult(result);
+    onScanResultOpen();
+  };
+
+  const handleCreateAttendanceFromScan = async () => {
+    if (!scanResult || !selectedRehearsalIdRef.current || scanRecordSaving) return;
+    if (scannedMemberInfoFetchError) {
+      setScanRecordError(t('checkin.admin_member_info_fetch_error'));
+      return;
+    }
+    setScanRecordSaving(true);
+    setScanRecordError(null);
+
+    const memberId = scanResult.payload.memberId;
+    const currentlyAttended = recordsRef.current.some((r) => r.id === memberId && r.attended);
+    const newAttendedIds = currentlyAttended
+      ? recordsRef.current.filter((r) => r.attended && r.id !== memberId).map((r) => r.id)
+      : [...recordsRef.current.filter((r) => r.attended).map((r) => r.id), memberId];
+
+    setRecords((prev) =>
+      prev.map((r) => (r.id === memberId ? { ...r, attended: !currentlyAttended } : r)),
+    );
+
+    try {
+      await attendanceApi.bulkSetRecords(selectedRehearsalIdRef.current, newAttendedIds);
+    } catch {
+      setRecords((prev) =>
+        prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),
+      );
+      setScanRecordError(t('attendance.save_failed'));
+    } finally {
+      setScanRecordSaving(false);
+    }
+  };
+
+  const handleScanNextFromResult = () => {
+    setScanRecordError(null);
+    setScanRecordSaving(false);
+    setScanResult(null);
+    onScanResultClose();
+    onScannerOpen();
   };
 
   const buildMemberRow = (member: AttendanceRecord) => {
@@ -190,6 +307,9 @@ export function AttendancePage() {
     const isSaving = saving === member.id;
     const visibleIdx = visibleMembers.findIndex((m) => m.id === member.id);
     const shortcutNum = ctrlHeld && visibleIdx >= 0 && visibleIdx < 9 ? visibleIdx + 1 : null;
+    const hasNoPlan = member.plan === null;
+    const unexcusedAbsenceCount = unexcusedByMemberId[member.id];
+    const hasHighUnexcusedAbsences = typeof unexcusedAbsenceCount === 'number' && unexcusedAbsenceCount > 3;
     return {
       key: member.id,
       content: (
@@ -214,6 +334,16 @@ export function AttendancePage() {
             >
               {member.firstName} {member.lastName}
             </p>
+            {hasNoPlan && (
+              <p className="text-xs text-danger mt-0.5">
+                {t('attendance.no_plan_notice')}
+              </p>
+            )}
+            {hasHighUnexcusedAbsences && (
+              <p className="text-xs text-danger mt-0.5">
+                {t('attendance.unexcused_warning', { count: unexcusedAbsenceCount })}
+              </p>
+            )}
             <p className="text-xs text-default-400 sm:hidden mt-0.5">
               {formatLastAttended(member.lastAttendedRehearsalsAgo)}
             </p>
@@ -325,6 +455,16 @@ export function AttendancePage() {
                 className="flex-1"
                 classNames={adminInputClassNames}
               />
+              <Button
+                size="sm"
+                variant="flat"
+                isIconOnly
+                aria-label={t('checkin.admin_scan_button')}
+                data-testid="attendance-open-qr-scanner"
+                onPress={onScannerOpen}
+              >
+                <QrCodeIcon className="w-5 h-5" />
+              </Button>
               <Button size="sm" color="primary" onPress={onCreateOpen}>
                 {t('members.create_new')}
               </Button>
@@ -379,6 +519,36 @@ export function AttendancePage() {
           onDelete={(id) => setRecords((prev) => prev.filter((r) => r.id !== id))}
         />
       )}
+
+      <QrScannerModal
+        isOpen={isScannerOpen}
+        onClose={onScannerClose}
+        onScanSuccess={handleScanSuccess}
+      />
+
+      <QrScanResultModal
+        isOpen={isScanResultOpen}
+        scanResult={scanResult}
+        memberEmail={scannedMemberEmail}
+        relativeIssuedAt={relativeIssuedAt}
+        lastAttendedText={scannedMemberLastAttendedText}
+        lastAttendedRehearsalsAgo={scannedMemberLastAttendedRehearsalsAgo}
+        attendancePlanText={scannedMemberPlanText}
+        attendancePlanMissing={scannedMemberPlanMissing}
+        unexcusedAbsenceCount={scannedMemberUnexcusedAbsenceCount}
+        scannedMemberAttended={scannedMemberAttended}
+        scanRecordSaving={scanRecordSaving}
+        scanRecordError={scanRecordError}
+        memberInfoFetchError={scannedMemberInfoFetchError}
+        canOpenMemberDetail={Boolean(scannedMember)}
+        onClose={closeScanResultModal}
+        onRecordAttendance={handleCreateAttendanceFromScan}
+        onScanNext={handleScanNextFromResult}
+        onOpenMemberDetail={() => {
+          if (!scannedMember) return;
+          openMemberDetail(scannedMember);
+        }}
+      />
     </div>
   );
 }

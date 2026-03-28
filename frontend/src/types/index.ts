@@ -95,3 +95,15 @@ export interface GeneralInfo {
   markdownContent: string;
   updatedAt: string;
 }
+
+export interface CheckinPayload {
+  memberId: string;
+  name: string;
+  issuedAt: string;
+  version: 'v1';
+}
+
+export interface MemberCheckinQr {
+  token: string;
+  qrCodeDataUrl: string;
+}

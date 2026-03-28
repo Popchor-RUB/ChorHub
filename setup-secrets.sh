@@ -96,6 +96,17 @@ VAPID_LINES=$(cd "$SCRIPT_DIR/backend" && node -e "
 VAPID_PUBLIC_KEY=$(echo "$VAPID_LINES" | head -1)
 VAPID_PRIVATE_KEY=$(echo "$VAPID_LINES" | tail -1)
 
+CHECKIN_KEY_LINES=$(node -e "
+  const { generateKeyPairSync } = require('crypto');
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const privateDer = privateKey.export({ format: 'der', type: 'pkcs8' });
+  const publicDer = publicKey.export({ format: 'der', type: 'spki' });
+  console.log(Buffer.from(privateDer).toString('base64'));
+  console.log(Buffer.from(publicDer).toString('base64'));
+")
+QR_CHECKIN_PRIVATE_KEY_BASE64=$(echo "$CHECKIN_KEY_LINES" | head -1)
+QR_CHECKIN_PUBLIC_KEY_BASE64=$(echo "$CHECKIN_KEY_LINES" | tail -1)
+
 # ── write .env.db ─────────────────────────────────────────────────────────────
 
 ENV_DB="$SCRIPT_DIR/.env.db"
@@ -126,6 +137,8 @@ NODE_ENV=production
 VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
 VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
 VAPID_EMAIL=${VAPID_EMAIL}
+QR_CHECKIN_PRIVATE_KEY_BASE64=${QR_CHECKIN_PRIVATE_KEY_BASE64}
+QR_CHECKIN_PUBLIC_KEY_BASE64=${QR_CHECKIN_PUBLIC_KEY_BASE64}
 EOF
   echo "  Written: .env.backend"
 fi

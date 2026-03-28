@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --env-file-if-exists .env.development scripts/generate-manifest.cjs && node --env-file-if-exists .env.development scripts/generate-sw.cjs && vite",
+    "dev": "node --env-file-if-exists .env.development scripts/generate-manifest.cjs && node --env-file-if-exists .env.development scripts/generate-sw.cjs && node scripts/generate-dev-cert.cjs && vite",
     "build": "node --env-file-if-exists .env.production scripts/generate-manifest.cjs && node --env-file-if-exists .env.production scripts/generate-sw.cjs && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -14,6 +14,7 @@
     "@heroui/react": "^2.8.9",
     "@simplewebauthn/browser": "^13.2.2",
     "@tailwindcss/vite": "^4.2.0",
+    "@zxing/browser": "^0.1.5",
     "axios": "^1.13.5",
     "framer-motion": "^12.34.3",
     "i18next": "^25.8.18",

@@ -6,7 +6,7 @@ import {
   NavbarItem,
   Button,
 } from '@heroui/react';
-import { MusicalNoteIcon, InformationCircleIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { MusicalNoteIcon, InformationCircleIcon, Cog6ToothIcon, QrCodeIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import { ThemeToggle } from '../../components/ThemeToggle';
@@ -54,6 +54,16 @@ export function MemberLayout() {
               {t('nav.information')}
             </NavLink>
           </NavbarItem>
+          <NavbarItem>
+            <NavLink
+              to="/qr-checkin"
+              className={({ isActive }) =>
+                isActive ? 'text-primary font-medium' : 'text-default-600'
+              }
+            >
+              {t('nav.qr_checkin')}
+            </NavLink>
+          </NavbarItem>
         </NavbarContent>
         <NavbarContent justify="end">
           <NavbarItem>
@@ -97,6 +107,15 @@ export function MemberLayout() {
         >
           <InformationCircleIcon className="w-6 h-6 mb-0.5" />
           <span>{t('nav.info_short')}</span>
+        </NavLink>
+        <NavLink
+          to="/qr-checkin"
+          className={({ isActive }) =>
+            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
+          }
+        >
+          <QrCodeIcon className="w-6 h-6 mb-0.5" />
+          <span>{t('nav.qr_short')}</span>
         </NavLink>
         <NavLink
           to="/einstellungen"

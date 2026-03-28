@@ -1,8 +1,32 @@
 import axios from 'axios';
+import type { MemberCheckinQr } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { withBasePath } from '../utils/basePath';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+function resolveApiBaseUrl(): string {
+  const configured = import.meta.env.VITE_API_URL;
+  if (!configured) return '/api';
+
+  if (import.meta.env.DEV) {
+    try {
+      const url = new URL(configured);
+      const browserHost = window.location.hostname;
+      const isLocalhostConfig = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      const isLocalhostBrowser = browserHost === 'localhost' || browserHost === '127.0.0.1';
+
+      if (isLocalhostConfig && !isLocalhostBrowser) {
+        url.hostname = browserHost;
+        return url.toString();
+      }
+    } catch {
+      // Ignore non-absolute URLs such as '/api'.
+    }
+  }
+
+  return configured;
+}
+
+const BASE_URL = resolveApiBaseUrl();
 const BASE_PATH = import.meta.env.VITE_BASE_PATH ?? '/';
 
 export const api = axios.create({
@@ -174,4 +198,9 @@ export const choirVoicesApi = {
 export const membersApi = {
   me: () => api.get('/members/me'),
   updateVoice: (voiceId: string | null) => api.patch('/members/me/voice', { voiceId }),
+};
+
+export const checkinApi = {
+  getMemberQr: () => api.get<MemberCheckinQr>('/members/me/checkin-qr'),
+  getPublicKey: () => api.get<{ publicKey: string }>('/attendance/checkin/public-key'),
 };
