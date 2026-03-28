@@ -377,7 +377,7 @@ export function AttendancePage() {
     voice: NO_VOICE_KEY,
     label: t('attendance.no_voice_group'),
     headerRight: (
-      <span className="text-xs font-normal text-default-500">
+      <span className="block w-full text-left text-xs font-normal text-default-500 sm:w-auto sm:text-right">
         {t('attendance.group_present', { attended: noVoiceMembers.filter((m) => m.attended).length, total: noVoiceMembers.length })}
       </span>
     ),
@@ -390,7 +390,7 @@ export function AttendancePage() {
       return {
         voice: group.voice,
         headerRight: (
-          <span className="text-xs font-normal text-default-500">
+          <span className="block w-full text-left text-xs font-normal text-default-500 sm:w-auto sm:text-right">
             {t('attendance.group_present', { attended: groupAttended, total: group.members.length })}
           </span>
         ),

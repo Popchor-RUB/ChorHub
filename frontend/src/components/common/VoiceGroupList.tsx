@@ -31,7 +31,7 @@ export function VoiceGroupList({ groups, collapsedVoices, onToggle, header, empt
           <div key={voice}>
             <button
               className={[
-                'w-full flex items-center justify-between px-4 py-2.5',
+                'w-full flex flex-col items-start gap-1 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-0',
                 'bg-default-100 hover:bg-default-200 transition-colors',
                 'text-sm font-semibold text-default-700',
                 !isCollapsed || !isLastGroup ? 'border-b border-divider' : '',
@@ -42,7 +42,7 @@ export function VoiceGroupList({ groups, collapsedVoices, onToggle, header, empt
                 <span className="text-default-400">{isCollapsed ? '▸' : '▾'}</span>
                 <span>{label ?? voice} ({rows.length})</span>
               </span>
-              {headerRight}
+              <span className="w-full sm:w-auto">{headerRight}</span>
             </button>
             {!isCollapsed &&
               rows.map(({ key, content }, rowIdx) => (

@@ -49,14 +49,16 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
               {formatDateTimeShort(item.date, dateLocale)}
               {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}
             </p>
+            <div className="mt-1">
+              <Chip color={type === 'future' ? 'primary' : 'success'} variant="flat" size="sm">
+                {total}{' '}
+                {type === 'future'
+                  ? t('attendance_detail.label_confirmed')
+                  : t('attendance_detail.label_present')}
+              </Chip>
+            </div>
           </div>
           <div className="flex items-center gap-1">
-            <Chip color={type === 'future' ? 'primary' : 'success'} variant="flat" size="lg">
-              {total}{' '}
-              {type === 'future'
-                ? t('attendance_detail.label_confirmed')
-                : t('attendance_detail.label_present')}
-            </Chip>
             <Button
               isIconOnly
               size="sm"

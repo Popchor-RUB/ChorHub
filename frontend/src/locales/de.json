@@ -307,6 +307,7 @@
     "no_response_chip": "{{count}} keine Angabe",
     "label_confirmed": "zugesagt",
     "label_present": "anwesend",
+    "label_absent": "gefehlt",
     "label_no_response": "keine Angabe",
     "row_present": "✓ anwesend",
     "row_declined": "abgesagt",

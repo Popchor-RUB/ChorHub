@@ -307,6 +307,7 @@
     "no_response_chip": "{{count}} no response",
     "label_confirmed": "confirmed",
     "label_present": "present",
+    "label_absent": "absent",
     "label_no_response": "no response",
     "row_present": "✓ present",
     "row_declined": "declined",

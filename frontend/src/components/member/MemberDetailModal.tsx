@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, ModalContent, ModalHeader, ModalBody, Chip, Spinner, Button } from '@heroui/react';
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Chip, Spinner, Button } from '@heroui/react';
+import { CheckIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { adminMembersApi } from '../../services/api';
 import type { ChoirVoice, MemberRehearsalEntry } from '../../types';
@@ -27,7 +28,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
   const [editMode, setEditMode] = useState(false);
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
@@ -36,7 +37,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
     if (!isOpen) {
       setEditMode(false);
       setShowAllUpcoming(false);
-      setConfirmingDelete(false);
+      setIsDeleteConfirmOpen(false);
       return;
     }
     setShowAllUpcoming(false);
@@ -100,73 +101,57 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
     setDeleting(true);
     try {
       await adminMembersApi.delete(member.id);
+      setIsDeleteConfirmOpen(false);
       onClose();
       onDelete?.(member.id);
     } finally {
       setDeleting(false);
-      setConfirmingDelete(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
-      <ModalContent>
-        <ModalHeader className="flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-0.5">
-            <span>
-              {member.firstName} {member.lastName}
-            </span>
-            <span className="text-sm font-normal text-default-500">
-              {member.choirVoice?.name ?? '—'}{member.email ? ` · ${member.email}` : ''}
-            </span>
-          </div>
-          {!loading && (
-            <div className="flex items-center gap-2 shrink-0 mt-0.5">
-              {editMode && onDelete && (
-                confirmingDelete ? (
-                  <>
-                    <span className="text-xs text-danger font-medium">{t('detail_modal.delete_confirm_prompt')}</span>
-                    <Button
-                      size="sm"
-                      color="danger"
-                      variant="solid"
-                      isLoading={deleting}
-                      onPress={handleDeleteConfirm}
-                    >
-                      {t('detail_modal.delete_confirm_yes')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="flat"
-                      onPress={() => setConfirmingDelete(false)}
-                      isDisabled={deleting}
-                    >
-                      {t('detail_modal.delete_confirm_no')}
-                    </Button>
-                  </>
-                ) : (
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
+        <ModalContent>
+          <ModalHeader className="flex items-start justify-between gap-2">
+            <div className="flex flex-col gap-0.5">
+              <span>
+                {member.firstName} {member.lastName}
+              </span>
+              <span className="text-sm font-normal text-default-500">
+                {member.choirVoice?.name ?? '—'}{member.email ? ` · ${member.email}` : ''}
+              </span>
+            </div>
+            {!loading && (
+              <div className="mt-0.5 mr-2 flex shrink-0 items-center gap-1.5">
+                {editMode && onDelete && (
                   <Button
+                    isIconOnly
                     size="sm"
                     color="danger"
                     variant="flat"
-                    onPress={() => setConfirmingDelete(true)}
+                    aria-label={t('detail_modal.delete_member')}
+                    title={t('detail_modal.delete_member')}
+                    onPress={() => setIsDeleteConfirmOpen(true)}
                   >
-                    {t('detail_modal.delete_member')}
+                    <TrashIcon className="h-4 w-4" />
                   </Button>
-                )
-              )}
-              <Button
-                size="sm"
-                variant={editMode ? 'solid' : 'flat'}
-                color={editMode ? 'primary' : 'default'}
-                onPress={() => { setEditMode((v) => !v); setConfirmingDelete(false); }}
-              >
-                {editMode ? t('detail_modal.edit_mode_done') : t('detail_modal.edit_mode_toggle')}
-              </Button>
-            </div>
-          )}
-        </ModalHeader>
-        <ModalBody className="pb-6">
+                )}
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant={editMode ? 'solid' : 'flat'}
+                  color={editMode ? 'primary' : 'default'}
+                  aria-label={editMode ? t('detail_modal.edit_mode_done') : t('detail_modal.edit_mode_toggle')}
+                  title={editMode ? t('detail_modal.edit_mode_done') : t('detail_modal.edit_mode_toggle')}
+                  onPress={() => setEditMode((v) => !v)}
+                >
+                  {editMode ? <CheckIcon className="h-4 w-4" /> : <PencilSquareIcon className="h-4 w-4" />}
+                </Button>
+              </div>
+            )}
+          </ModalHeader>
+          <ModalBody className="pb-6">
           {loading ? (
             <div className="flex justify-center py-8">
               <Spinner />
@@ -202,15 +187,20 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                     {visibleUpcoming.map((r) => {
                       const isSaving = saving === r.id;
                       const isToggleable = editMode;
+                      const upcomingRowClassName = r.plan === 'CONFIRMED'
+                        ? 'bg-success-50 text-success-800'
+                        : r.plan === 'DECLINED'
+                        ? 'bg-danger-50 text-danger-800'
+                        : 'bg-default-50 text-default-500';
                       return (
                         <div
                           key={r.id}
                           onClick={isToggleable ? () => handleTogglePlan(r, false) : undefined}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-default-50 ${
+                          className={`flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-sm sm:flex-row sm:items-center sm:justify-between ${upcomingRowClassName} ${
                             isToggleable ? 'cursor-pointer hover:opacity-75 transition-opacity' : ''
                           }`}
                         >
-                          <span className="font-medium text-default-700">
+                          <span className="font-medium">
                             {formatDateMedium(r.date, dateLocale)} – {r.title}
                             {r.isOptional && (
                               <span className="ml-2 text-[11px] uppercase tracking-wide text-warning-700">
@@ -218,7 +208,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                               </span>
                             )}
                           </span>
-                          <span className="text-xs text-default-500 flex items-center gap-1">
+                          <span className="text-xs flex items-center gap-1 sm:shrink-0">
                             {isSaving ? (
                               <Spinner size="sm" />
                             ) : (
@@ -260,7 +250,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                         <div
                           key={r.id}
                           onClick={isToggleable ? () => handleTogglePlan(r, true) : undefined}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
+                          className={`flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-sm sm:flex-row sm:items-center sm:justify-between ${
                             r.isOptional
                               ? 'bg-default-50 text-default-500'
                               : r.attended
@@ -278,7 +268,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                               </span>
                             )}
                           </span>
-                          <span className="text-xs flex items-center gap-1">
+                          <span className="text-xs flex items-center gap-1 sm:shrink-0">
                             {isSaving ? (
                               <Spinner size="sm" />
                             ) : (
@@ -312,8 +302,26 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
               )}
             </>
           )}
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} size="sm">
+        <ModalContent>
+          <ModalHeader>{t('detail_modal.delete_member')}</ModalHeader>
+          <ModalBody>
+            <p className="text-sm text-default-600">{t('detail_modal.delete_confirm_prompt')}</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" onPress={() => setIsDeleteConfirmOpen(false)} isDisabled={deleting}>
+              {t('detail_modal.delete_confirm_no')}
+            </Button>
+            <Button color="danger" isLoading={deleting} onPress={handleDeleteConfirm}>
+              {t('detail_modal.delete_confirm_yes')}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
   );
 }

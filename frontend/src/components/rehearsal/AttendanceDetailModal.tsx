@@ -24,6 +24,8 @@ const NO_VOICE_KEY = '__no_voice__';
 
 export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemberClick }: Props) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [planFilter, setPlanFilter] = useState<'CONFIRMED' | 'DECLINED' | 'NONE' | null>(null);
+  const [attendanceFilter, setAttendanceFilter] = useState<'PRESENT' | 'UNEXCUSED' | 'EXCUSED' | null>(null);
   const [loading, setLoading] = useState(false);
   const { collapsedVoices, toggle: toggleVoice, collapseAll } = useCollapsedVoices();
   const { t } = useTranslation();
@@ -33,6 +35,8 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
+    setPlanFilter(null);
+    setAttendanceFilter(null);
     collapseAll([]);
     attendanceApi.getRecords(rehearsal.id)
       .then((res) => {
@@ -50,29 +54,49 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
       });
   }, [isOpen, rehearsal.id]);
 
-  const noVoiceRecords = records.filter((r) => !r.choirVoice);
-  const voiceNames = [...new Set(records.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
+  const filteredRecords = showPlanStatus
+    ? planFilter
+      ? records.filter((r) => {
+          if (planFilter === 'NONE') return !r.plan;
+          return r.plan === planFilter;
+        })
+      : records
+    : attendanceFilter
+    ? records.filter((r) => {
+        if (attendanceFilter === 'PRESENT') return r.attended;
+        if (attendanceFilter === 'UNEXCUSED') return isUnexpectedAbsence(r);
+        return !r.attended && r.plan === 'DECLINED';
+      })
+    : records;
+
+  const noVoiceRecords = filteredRecords.filter((r) => !r.choirVoice);
+  const voiceNames = [...new Set(filteredRecords.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
 
   const buildVoiceGroup = (voice: string, members: AttendanceRecord[], label?: string): VoiceGroupData => {
     const total = members.length;
     const confirmedCount = members.filter((m) => m.plan === 'CONFIRMED').length;
     const attendedCount = members.filter((m) => m.attended).length;
     const noChoiceCount = members.filter((m) => !m.plan).length;
+    const absentCount = members.filter((m) => !m.attended).length;
     const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
     const primaryCount = showPlanStatus ? confirmedCount : attendedCount;
     const primaryLabel = showPlanStatus
       ? t('attendance_detail.label_confirmed')
       : t('attendance_detail.label_present');
+    const secondaryCount = showPlanStatus ? noChoiceCount : absentCount;
+    const secondaryLabel = showPlanStatus
+      ? t('attendance_detail.label_no_response')
+      : t('attendance_detail.label_absent');
     return {
       voice,
       label,
       headerRight: (
-        <span className="flex items-center gap-3 text-xs font-normal">
+        <span className="flex flex-col items-start gap-0.5 text-xs font-normal sm:flex-row sm:items-center sm:gap-3">
           <span className="text-success-600">
             {primaryCount} {primaryLabel} ({pct(primaryCount)} %)
           </span>
           <span className="text-default-400">
-            {noChoiceCount} {t('attendance_detail.label_no_response')} ({pct(noChoiceCount)} %)
+            {secondaryCount} {secondaryLabel} ({pct(secondaryCount)} %)
           </span>
         </span>
       ),
@@ -91,7 +115,11 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                     : absent
                     ? 'bg-danger-50 text-danger-800'
                     : 'bg-content1 text-default-500'
-                  : 'bg-content1',
+                  : m.plan === 'CONFIRMED'
+                  ? 'bg-success-50 text-success-800'
+                  : m.plan === 'DECLINED'
+                  ? 'bg-danger-50 text-danger-800'
+                  : 'bg-content1 text-default-500',
                 onMemberClick ? 'cursor-pointer hover:opacity-75 transition-opacity' : '',
               ].filter(Boolean).join(' ')}
             >
@@ -105,7 +133,16 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                     : t('attendance_detail.row_absent')}
                 </span>
               ) : (
-                <span className="text-xs">
+                <span
+                  className={[
+                    'text-xs font-medium',
+                    m.plan === 'CONFIRMED'
+                      ? 'text-success-700'
+                      : m.plan === 'DECLINED'
+                      ? 'text-danger-700'
+                      : 'text-default-500',
+                  ].join(' ')}
+                >
                   {m.plan === 'CONFIRMED'
                     ? t('attendance_detail.row_plan_confirmed')
                     : m.plan === 'DECLINED'
@@ -122,7 +159,7 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
 
   const voiceGroupData: VoiceGroupData[] = [
     ...voiceNames.map((voice) =>
-      buildVoiceGroup(voice, records.filter((r) => r.choirVoice?.name === voice)),
+      buildVoiceGroup(voice, filteredRecords.filter((r) => r.choirVoice?.name === voice)),
     ),
     ...(noVoiceRecords.length > 0
       ? [buildVoiceGroup(NO_VOICE_KEY, noVoiceRecords, t('attendance.no_voice_group'))]
@@ -149,27 +186,39 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                 <div className="flex flex-wrap gap-2 mb-4">
                   {!showPlanStatus ? (
                     <>
-                      <Chip color="success" variant="flat">
-                        {t('attendance_detail.present_chip', { count: records.filter((r) => r.attended).length })}
-                      </Chip>
-                      <Chip color="danger" variant="flat">
-                        {t('attendance_detail.unexcused_chip', { count: records.filter((r) => isUnexpectedAbsence(r)).length })}
-                      </Chip>
-                      <Chip color="default" variant="flat">
-                        {t('attendance_detail.excused_chip', { count: records.filter((r) => !r.attended && r.plan === 'DECLINED').length })}
-                      </Chip>
+                      <button type="button" onClick={() => setAttendanceFilter((prev) => (prev === 'PRESENT' ? null : 'PRESENT'))}>
+                        <Chip color="success" variant={attendanceFilter === 'PRESENT' ? 'solid' : 'flat'} className="cursor-pointer">
+                          {t('attendance_detail.present_chip', { count: records.filter((r) => r.attended).length })}
+                        </Chip>
+                      </button>
+                      <button type="button" onClick={() => setAttendanceFilter((prev) => (prev === 'UNEXCUSED' ? null : 'UNEXCUSED'))}>
+                        <Chip color="danger" variant={attendanceFilter === 'UNEXCUSED' ? 'solid' : 'flat'} className="cursor-pointer">
+                          {t('attendance_detail.unexcused_chip', { count: records.filter((r) => isUnexpectedAbsence(r)).length })}
+                        </Chip>
+                      </button>
+                      <button type="button" onClick={() => setAttendanceFilter((prev) => (prev === 'EXCUSED' ? null : 'EXCUSED'))}>
+                        <Chip color="default" variant={attendanceFilter === 'EXCUSED' ? 'solid' : 'flat'} className="cursor-pointer">
+                          {t('attendance_detail.excused_chip', { count: records.filter((r) => !r.attended && r.plan === 'DECLINED').length })}
+                        </Chip>
+                      </button>
                     </>
                   ) : (
                     <>
-                      <Chip color="success" variant="flat">
-                        {t('attendance_detail.confirmed_chip', { count: records.filter((r) => r.plan === 'CONFIRMED').length })}
-                      </Chip>
-                      <Chip color="danger" variant="flat">
-                        {t('attendance_detail.declined_chip', { count: records.filter((r) => r.plan === 'DECLINED').length })}
-                      </Chip>
-                      <Chip color="default" variant="flat">
-                        {t('attendance_detail.no_response_chip', { count: records.filter((r) => !r.plan).length })}
-                      </Chip>
+                      <button type="button" onClick={() => setPlanFilter((prev) => (prev === 'CONFIRMED' ? null : 'CONFIRMED'))}>
+                        <Chip color="success" variant={planFilter === 'CONFIRMED' ? 'solid' : 'flat'} className="cursor-pointer">
+                          {t('attendance_detail.confirmed_chip', { count: records.filter((r) => r.plan === 'CONFIRMED').length })}
+                        </Chip>
+                      </button>
+                      <button type="button" onClick={() => setPlanFilter((prev) => (prev === 'DECLINED' ? null : 'DECLINED'))}>
+                        <Chip color="danger" variant={planFilter === 'DECLINED' ? 'solid' : 'flat'} className="cursor-pointer">
+                          {t('attendance_detail.declined_chip', { count: records.filter((r) => r.plan === 'DECLINED').length })}
+                        </Chip>
+                      </button>
+                      <button type="button" onClick={() => setPlanFilter((prev) => (prev === 'NONE' ? null : 'NONE'))}>
+                        <Chip color="default" variant={planFilter === 'NONE' ? 'solid' : 'flat'} className="cursor-pointer">
+                          {t('attendance_detail.no_response_chip', { count: records.filter((r) => !r.plan).length })}
+                        </Chip>
+                      </button>
                     </>
                   )}
                 </div>
