@@ -1,104 +1,128 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Agent-focused instructions for this repository. Keep changes small, accurate, and aligned with existing patterns.
 
-## Commands
+## Project overview
+- Monorepo with three Node projects.
+- `backend/`: NestJS + Prisma + PostgreSQL.
+- `frontend/`: React + Vite + Tailwind v4 + HeroUI.
+- Repo root `package.json`: Playwright E2E scripts.
 
-### Docker (full stack)
+## Setup commands
+
+### Local infra (DB + MailHog only)
 ```bash
-docker-compose up -d          # Start all services (db, backend, frontend, mailhog)
-docker-compose down           # Stop all services
+docker compose -f docker-compose.dev.yaml up -d
+docker compose -f docker-compose.dev.yaml down
 ```
-MailHog web UI (email preview) runs on http://localhost:8025.
+- MailHog UI: http://localhost:8025
 
-### Backend
+### Full docker stack
 ```bash
-cd backend
-npm run start:dev             # Dev server with hot reload (also runs prisma generate)
-npm run test                  # Run all unit tests
-npm run test -- --testPathPattern=auth.service   # Run a single test file
-npm run test -- --testNamePattern="magic link"   # Run tests matching a name
-npm run test:cov              # Coverage report
-npm run lint                  # ESLint + auto-fix
-npx tsc --noEmit              # Type-check without emitting
-```
-
-### Prisma (run from `backend/`)
-```bash
-npx prisma migrate dev --name <name>   # Create and apply a new migration
-npx prisma migrate deploy              # Apply pending migrations (used in Docker start)
-npx prisma generate                    # Regenerate the client after schema changes
-npx prisma studio                      # DB browser UI
-npx ts-node prisma/seed.ts             # Seed DB (admin user + sample data)
+docker compose up -d
+docker compose down
 ```
 
-### Frontend
+### Backend (`backend/`)
 ```bash
-cd frontend
-npm run dev                            # Vite dev server on port 5173
-npm run build                          # tsc -b + vite build
-npm run lint                           # ESLint check
-npx tsc -p tsconfig.app.json --noEmit  # Type-check (must use this, NOT bare tsc)
+npm run start:dev
+npm run lint
+npm run test
+npm run test:cov
+npx tsc --noEmit
+npm run admin -- <command>
 ```
 
-## Architecture
+### Prisma (`backend/`)
+```bash
+npx prisma migrate dev --name <name>
+npx prisma migrate deploy
+npx prisma generate
+npx prisma studio
+npm run seed
+```
 
-### Monorepo layout
-No shared root `package.json`. `backend/` and `frontend/` are fully independent Node projects with their own `node_modules`. Docker Compose wires them together at runtime.
+### Frontend (`frontend/`)
+```bash
+npm run dev
+npm run build
+npm run lint
+npm run preview
+npx tsc -p tsconfig.app.json --noEmit
+```
 
-### Auth — two independent flows
+### E2E (`repo root`)
+```bash
+npm run test:e2e
+npm run test:e2e:ui
+npm run test:e2e:report
+```
 
-**Member (magic link):**
-- A raw `crypto.randomBytes(32)` token is stored **hashed (SHA-256)** in `Member.loginToken`. The raw token is emailed and never expires.
-- The frontend stores the raw token in Zustand (persisted to `localStorage` under key `chorhub-auth`) and sends it as `X-Member-Token: <raw>` on every request.
-- `MemberTokenGuard` (`auth/guards/member-token.guard.ts`) hashes the incoming token and does a DB lookup. It populates `request.user = { id, role: 'member', ... }`.
+## Dev environment tips
+- Run `./setup-secrets.sh` before first local startup to generate required `.env*` files and symlinks.
+- `cd backend && npm run start:dev` runs `backend/scripts/start-dev-with-lan.cjs`, which auto-runs `prisma generate` and sets LAN-friendly `APP_URL`/`CORS_ORIGINS`.
+- Root `tsconfig.json` is for Playwright/E2E files. Frontend app type checks must use `frontend/tsconfig.app.json`.
 
-**Admin (password + optional passkey):**
-- bcrypt password → Passport local strategy → short-lived JWT returned to client.
-- JWT sent as `Authorization: Bearer <token>` header, validated by `JwtAdminGuard`.
-- Passkeys use `@simplewebauthn/server`; challenges are held in an in-memory `Map` keyed by `adminId` (not persistent across restarts).
-- The frontend `CurrentUser` decorator and `@Public()` decorator live in `auth/decorators/`.
+## Testing instructions
+- Backend changes: run `npm run test` in `backend/` (plus focused tests when possible).
+- Frontend changes: run `npm run lint` and `npx tsc -p tsconfig.app.json --noEmit` in `frontend/`.
+- Browser flow changes: run root Playwright E2E.
 
-### Attendance — Plans vs. Records
-Two separate Prisma models with different semantics:
-- `AttendancePlan` — member self-reports intent (CONFIRMED / DECLINED). Upserted via `PUT /attendance/plans/:rehearsalId`.
-- `AttendanceRecord` — admin confirms actual presence. Replaced wholesale for a rehearsal via `PUT /attendance/records/:rehearsalId` (bulk delete + create).
+## Code style and conventions
+- Follow existing TypeScript patterns and keep diffs focused.
+- Frontend type imports must respect `verbatimModuleSyntax`.
+- Use `import type { ... }` for type-only imports from `frontend/src/types/index.ts`.
+- Do not add `tailwind.config.js`; Tailwind v4 is configured in `frontend/src/index.css` (`@import "tailwindcss";`, `@plugin './hero.ts';`).
+
+## Architecture notes
+
+### Auth model
+- Member auth is token/code based.
+- `POST /auth/magic-link/request` creates:
+- `MemberLoginToken.hashedToken` (long-lived member token).
+- `MemberLoginCode.hashedCode` (6-digit code, expires after 15 minutes).
+- `POST /auth/magic-link/verify-code` consumes code and returns member token.
+- `GET /auth/magic-link/verify` validates magic-link token and returns member token.
+- Frontend persists member token in Zustand (`chorhub-auth`) and sends it via `X-Member-Token`.
+- `MemberTokenGuard` also accepts `Authorization: Bearer <token>`.
+
+- Admin auth is JWT-based.
+- Password via local strategy, JWT via `JwtAdminGuard`.
+- Optional passkeys via `@simplewebauthn/server`.
+- Passkey challenges are in-memory (not persistent across restart).
+
+### Attendance model
+- `AttendancePlan`: member intent (`CONFIRMED`/`DECLINED`), upserted by `PUT /attendance/plans/:rehearsalId`.
+- `AttendanceRecord`: admin-confirmed attendance, replaced by `PUT /attendance/records/:rehearsalId` (delete + create).
 
 ### Prisma v7 specifics
-`datasource db` in `schema.prisma` has **no `url` field**. The connection string is wired in `prisma.service.ts` using the `@prisma/adapter-pg` driver adapter:
-```ts
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-super({ adapter });
-```
-Always run `npx prisma generate` after schema changes; the `start:dev` script does this automatically.
+- `backend/prisma/schema.prisma` datasource has no `url`.
+- Connection uses `PrismaPg` adapter in `backend/src/prisma/prisma.service.ts` with `process.env.DATABASE_URL`.
 
-### Frontend — Tailwind v4 + HeroUI
-HeroUI v2 is integrated with Tailwind v4 via CSS plugin syntax in `src/index.css`:
-```css
-@import "tailwindcss";
-@plugin './hero.ts';
-@source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
-```
-There is **no** `tailwind.config.js`. Do not revert to a v3-style config.
+### API client behavior
+- `frontend/src/services/api.ts` sets auth headers via Axios interceptor:
+- `Authorization: Bearer <jwt>` when admin session exists.
+- `X-Member-Token: <raw>` when member session exists.
+- 401 responses clear session and redirect to login.
 
-### Frontend — `verbatimModuleSyntax` constraint
-`tsconfig.app.json` sets `"verbatimModuleSyntax": true`. All types exported from `src/types/index.ts` (e.g. `Rehearsal`, `AttendanceResponse`) are `export type` and **must** be imported with `import type { ... }` — a plain `import` will cause a runtime `SyntaxError` in the browser. Always type-check with `tsc -p tsconfig.app.json --noEmit`; the root `tsconfig.json` has `"files": []` and skips source files entirely.
+### Email templates
+- Mail templates are in `backend/src/mail/templates/`.
+- `backend/nest-cli.json` copies templates into `dist/src` during build.
 
-### API layer (`frontend/src/services/api.ts`)
-A single Axios instance handles both auth schemes via a request interceptor:
-- Admin session present → `Authorization: Bearer <jwt>`
-- Member session present → `X-Member-Token: <raw>`
+## Project structure hints
+- Backend auth: `backend/src/auth/**`
+- Backend attendance: `backend/src/attendance/**`
+- Backend Prisma service: `backend/src/prisma/prisma.service.ts`
+- Frontend API layer: `frontend/src/services/api.ts`
+- Frontend auth store: `frontend/src/store/authStore.ts`
+- Shared frontend types: `frontend/src/types/index.ts`
 
-A response interceptor catches 401s and redirects to the appropriate login page.
+## Safety and change scope
+- Prefer minimal, localized edits; avoid repo-wide rewrites unless requested.
+- Do not change generated output files unless the task explicitly requires regeneration.
+- If a requirement is uncertain, add a short `TODO` note instead of guessing behavior.
 
-### Backend unit test pattern
-All unit tests use `jest-mock-extended` and a shared helper:
-```ts
-import { createTestModule } from '../common/test-utils/create-test-module';
-
-const { module, prismaMock } = await createTestModule([MyService]);
-```
-`createTestModule` substitutes `PrismaService` with a deep mock of `PrismaClient`. Guards are bypassed in controller tests with `.overrideGuard(SomeGuard).useValue({ canActivate: () => true })`.
-
-### Email
-`MailService` wraps `@nestjs-modules/mailer` with Handlebars templates located in `src/mail/templates/`. The `nest-cli.json` `assets` config copies the `templates/` directory into `dist/` at build time. In development, all email goes to MailHog (SMTP on port 1025).
+## PR checklist
+- Keep commits scoped to the requested change.
+- Run relevant checks from this file before finishing.
+- Update this `AGENTS.md` when workflows or invariants change.
