@@ -98,6 +98,8 @@
     "recurrence_monthly": "Monthly",
     "recurrence_end_date": "Series end date",
     "recurrence_end_date_invalid": "End date must be on or after the start date.",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
     "ends_at": "until {{time}}",
     "location": "Location",
     "duration_minutes": "Duration (minutes)",

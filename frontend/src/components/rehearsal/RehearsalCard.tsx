@@ -4,7 +4,7 @@ import { attendanceApi } from '../../services/api';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDateLocale } from '../../hooks/useDateLocale';
-import { formatDateTimeLong, formatTime } from '../../utils/dateFormatting';
+import { formatDateTimeNoWeekday, formatDateTimeShort, formatTime } from '../../utils/dateFormatting';
 
 interface Props {
   rehearsal: Rehearsal;
@@ -26,9 +26,18 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
         dateLocale,
       )
     : null;
-  const metaParts = [
-    rehearsal.location?.trim() || null,
-  ].filter(Boolean) as string[];
+  const rehearsalDate = new Date(rehearsal.date);
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfRehearsalDay = new Date(rehearsalDate);
+  startOfRehearsalDay.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round((startOfRehearsalDay.getTime() - startOfToday.getTime()) / 86_400_000);
+  const dayLabel = dayDiff === 0 ? t('rehearsals.today') : dayDiff === 1 ? t('rehearsals.tomorrow') : null;
+  const dateLabel = dayLabel
+    ? `${dayLabel}, ${formatDateTimeNoWeekday(rehearsal.date, dateLocale)}`
+    : formatDateTimeShort(rehearsal.date, dateLocale);
+  const location = rehearsal.location?.trim();
 
   const setPlan = async (response: AttendanceResponse) => {
     if (buttonsDisabled) return;
@@ -73,11 +82,13 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
           )}
         </div>
         <p className="text-sm text-default-500">
-          {formatDateTimeLong(rehearsal.date, dateLocale)}
+          {dateLabel}
           {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}
         </p>
-        {metaParts.length > 0 && (
-          <p className="text-sm text-default-500">{metaParts.join(' · ')}</p>
+        {location && (
+          <p className="text-sm text-default-500">
+            {t('rehearsals.location')}: {location}
+          </p>
         )}
       </CardHeader>
       <CardBody className="flex flex-col gap-3">

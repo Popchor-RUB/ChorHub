@@ -98,6 +98,8 @@
     "recurrence_monthly": "Monatlich",
     "recurrence_end_date": "Enddatum der Serie",
     "recurrence_end_date_invalid": "Das Enddatum muss am oder nach dem Startdatum liegen.",
+    "today": "Heute",
+    "tomorrow": "Morgen",
     "ends_at": "bis {{time}} Uhr",
     "location": "Ort",
     "duration_minutes": "Dauer (Minuten)",

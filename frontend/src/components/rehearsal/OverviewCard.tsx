@@ -4,7 +4,7 @@ import { EditIcon } from '../icons/EditIcon';
 import { TrashIcon } from '../icons/TrashIcon';
 import { useTranslation } from 'react-i18next';
 import { useDateLocale } from '../../hooks/useDateLocale';
-import { formatDateTimeShort, formatTime } from '../../utils/dateFormatting';
+import { formatDateTimeNoWeekday, formatDateTimeShort, formatTime } from '../../utils/dateFormatting';
 
 interface Props {
   item: RehearsalOverview;
@@ -18,6 +18,17 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
   const total = type === 'future' ? item.totalConfirmed ?? 0 : item.totalAttended ?? 0;
+  const rehearsalDate = new Date(item.date);
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfRehearsalDay = new Date(rehearsalDate);
+  startOfRehearsalDay.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round((startOfRehearsalDay.getTime() - startOfToday.getTime()) / 86_400_000);
+  const dayLabel = dayDiff === 0 ? t('rehearsals.today') : dayDiff === 1 ? t('rehearsals.tomorrow') : null;
+  const dateLabel = dayLabel
+    ? `${dayLabel}, ${formatDateTimeNoWeekday(item.date, dateLocale)}`
+    : formatDateTimeShort(item.date, dateLocale);
   const endTime = item.durationMinutes
     ? formatTime(
         new Date(new Date(item.date).getTime() + item.durationMinutes * 60_000),
@@ -46,7 +57,7 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
               )}
             </div>
             <p className="text-sm text-default-500">
-              {formatDateTimeShort(item.date, dateLocale)}
+              {dateLabel}
               {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}
             </p>
             <div className="mt-1">
