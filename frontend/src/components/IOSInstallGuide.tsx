@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Button } from '@heroui/react';
+import { useEffect, useState } from 'react';
+import { Button, Modal, ModalBody, ModalContent } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 interface Props {
@@ -62,6 +62,32 @@ function Step({ icon, title, desc }: { icon: React.ReactNode; title: string; des
   );
 }
 
+function TutorialVideoModal({ open, src, onClose }: { open: boolean; src: string; onClose: () => void }) {
+  return (
+    <Modal
+      isOpen={open}
+      onClose={onClose}
+      size="full"
+      classNames={{ wrapper: 'z-[10010]' }}
+    >
+      <ModalContent>
+        <ModalBody className="pt-[calc(env(safe-area-inset-top)+3rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <div className="h-full flex items-center justify-center">
+            <video
+              className="w-full h-auto max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-5.5rem)] bg-black rounded-xl"
+              controls
+              autoPlay
+              playsInline
+              preload="metadata"
+              src={src}
+            />
+          </div>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
+  );
+}
+
 function StepList({ className }: { className?: string }) {
   const { t } = useTranslation();
   const ios26 = isIOS26OrAbove();
@@ -69,64 +95,72 @@ function StepList({ className }: { className?: string }) {
   const tutorialUrl = ios26
     ? `${import.meta.env.BASE_URL}videos/ios-pwa-setup.mp4`
     : `${import.meta.env.BASE_URL}videos/ios-pwa-setup-ios18.mp4`;
+  const [videoOpen, setVideoOpen] = useState(false);
 
   return (
-    <ol className={`space-y-4 ${className ?? ''}`}>
-      {ios26 && (
+    <>
+      <ol className={`space-y-4 ${className ?? ''}`}>
+        {ios26 && (
+          <Step
+            icon={
+              <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm6 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm6 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+              </svg>
+            }
+            title={t('ios_guide.step26_1_title')}
+            desc={t('ios_guide.step26_1_desc')}
+          />
+        )}
+        <Step
+          icon={<ShareIcon className="w-4 h-4 text-primary" />}
+          title={t(ios26 ? 'ios_guide.step26_2_title' : 'ios_guide.step1_title')}
+          desc={
+            <>
+              {step1Words.slice(0, -1).join(' ')}{' '}
+              <ShareIcon className="w-3.5 h-3.5 inline relative -top-px" />
+              {' '}{step1Words.slice(-1)[0]}
+            </>
+          }
+        />
         <Step
           icon={
             <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm6 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm6 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
           }
-          title={t('ios_guide.step26_1_title')}
-          desc={t('ios_guide.step26_1_desc')}
+          title={t('ios_guide.step2_title')}
+          desc={t('ios_guide.step2_desc')}
         />
-      )}
-      <Step
-        icon={<ShareIcon className="w-4 h-4 text-primary" />}
-        title={t(ios26 ? 'ios_guide.step26_2_title' : 'ios_guide.step1_title')}
-        desc={
-          <>
-            {step1Words.slice(0, -1).join(' ')}{' '}
-            <ShareIcon className="w-3.5 h-3.5 inline relative -top-px" />
-            {' '}{step1Words.slice(-1)[0]}
-          </>
-        }
-      />
-      <Step
-        icon={
-          <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-          </svg>
-        }
-        title={t('ios_guide.step2_title')}
-        desc={t('ios_guide.step2_desc')}
-      />
-      <Step
-        icon={
-          <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
-            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-          </svg>
-        }
-        title={t('ios_guide.step3_title')}
-        desc={t('ios_guide.step3_desc')}
-      />
-      <li aria-hidden className="border-t border-divider pt-1 mt-1" />
-      <Step
-        icon={
-          <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9a3.75 3.75 0 1 1 7.02 1.875c-.66 1.292-2.024 1.84-2.977 2.625-.575.473-1.043 1.05-1.043 2.25m.01 3h.008v.008h-.008v-.008Z" />
-          </svg>
-        }
-        title={t('ios_guide.step4_title')}
-        desc={(
-          <a href={tutorialUrl} target="_blank" rel="noreferrer" className="underline underline-offset-2 text-primary">
-            {t('ios_guide.step4_link')}
-          </a>
-        )}
-      />
-    </ol>
+        <Step
+          icon={
+            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+          }
+          title={t('ios_guide.step3_title')}
+          desc={t('ios_guide.step3_desc')}
+        />
+        <li aria-hidden className="border-t border-divider pt-1 mt-1" />
+        <Step
+          icon={
+            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9a3.75 3.75 0 1 1 7.02 1.875c-.66 1.292-2.024 1.84-2.977 2.625-.575.473-1.043 1.05-1.043 2.25m.01 3h.008v.008h-.008v-.008Z" />
+            </svg>
+          }
+          title={t('ios_guide.step4_title')}
+          desc={(
+            <button
+              type="button"
+              onClick={() => setVideoOpen(true)}
+              className="underline underline-offset-2 text-primary"
+            >
+              {t('ios_guide.step4_link')}
+            </button>
+          )}
+        />
+      </ol>
+      <TutorialVideoModal open={videoOpen} src={tutorialUrl} onClose={() => setVideoOpen(false)} />
+    </>
   );
 }
 
