@@ -73,13 +73,20 @@ describe('RehearsalReminderTask', () => {
     jest.useRealTimers();
   });
 
-  it('queries only mandatory rehearsals in the upcoming 3-day window', async () => {
+  it('queries only mandatory rehearsals for the UTC day two days ahead', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-03-30T09:00:00Z'));
     prismaMock.rehearsal.findMany.mockResolvedValue([]);
 
     await task.sendDailyReminders();
 
     expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith({
-      where: { date: { gte: expect.any(Date), lt: expect.any(Date) }, isOptional: false },
+      where: {
+        date: {
+          gte: new Date('2026-04-01T00:00:00.000Z'),
+          lt: new Date('2026-04-02T00:00:00.000Z'),
+        },
+        isOptional: false,
+      },
       orderBy: { date: 'asc' },
     });
   });
@@ -109,6 +116,26 @@ describe('RehearsalReminderTask', () => {
       'm-1',
       expect.objectContaining({
         body: expect.stringContaining('Probe B'),
+      }),
+    );
+  });
+
+  it('uses singular missing-plan push copy when only one rehearsal is missing', async () => {
+    prismaMock.rehearsal.findMany.mockResolvedValue([
+      { id: 'r1', date: new Date('2026-04-01T19:00:00Z'), title: 'Probe A' },
+    ] as any);
+    prismaMock.member.findMany.mockResolvedValue([
+      { ...baseMember, pushSubscriptions: [{ id: 'sub-1' }] },
+    ] as any);
+    prismaMock.attendancePlan.findMany.mockResolvedValue([]);
+
+    await task.sendDailyReminders();
+
+    expect(pushService.sendToMember).toHaveBeenCalledWith(
+      'm-1',
+      expect.objectContaining({
+        title: 'ChorHub – Anwesenheit eintragen',
+        body: 'Deine Anwesenheit für die Probe am Mittwoch fehlt noch!',
       }),
     );
   });

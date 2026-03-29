@@ -36,11 +36,13 @@ export class RehearsalReminderTask {
   async sendDailyReminders(): Promise<void> {
     const now = new Date();
     const startOfToday = this.getUtcStartOfDay(now);
-    const endExclusive = new Date(startOfToday.getTime() + 4 * 86_400_000);
-    const shouldSendStalePlanReminder = this.shouldSendStalePlanReminder(now);
+    const reminderDayStart = new Date(startOfToday.getTime() + 2 * 86_400_000);
+    const reminderDayEndExclusive = new Date(reminderDayStart.getTime() + 86_400_000);
+    // const shouldSendStalePlanReminder = this.shouldSendStalePlanReminder(now);
+    const shouldSendStalePlanReminder = false;
 
     const relevantRehearsals = await this.prisma.rehearsal.findMany({
-      where: { date: { gte: startOfToday, lt: endExclusive }, isOptional: false },
+      where: { date: { gte: reminderDayStart, lt: reminderDayEndExclusive }, isOptional: false },
       orderBy: { date: 'asc' },
     });
 
@@ -88,12 +90,20 @@ export class RehearsalReminderTask {
           label: this.formatRehearsalLine(r.date, r.title),
           rehearsalId: r.id,
         }));
+        const pushBody =
+          missingPlanRehearsals.length === 1
+            ? `Deine Anwesenheit für die Probe am ${this.formatWeekday(missingPlanRehearsals[0].date)} fehlt noch!`
+            : `Bitte trage deine Anwesenheit ein:\n${items.map((item) => item.label).join('\n')}`;
+        const mailIntro =
+          missingPlanRehearsals.length === 1
+            ? `Wir haben gesehen, dass du deine Anwesenheit für die unten aufgelistete Probe noch nicht eingetragen hast. Zur optimalen Planung wäre es für uns super hilfreich zu wissen, ob du dabei bist oder nicht. Ein Klick den entsprechenden Button reicht aus.`
+            : `Wir haben gesehen, dass du deine Anwesenheit für die unten aufgelisteten Proben noch nicht eingetragen hast. Zur optimalen Planung wäre es für uns super hilfreich zu wissen, ob du dabei bist oder nicht. Ein Klick den entsprechenden Button reicht aus.`;
         await this.dispatchReminder(member, {
           subject: 'ChorHub Erinnerung: Anwesenheit eintragen',
           pushTitle: 'ChorHub – Anwesenheit eintragen',
-          pushBody: `Bitte trage deine Anwesenheit ein:\n${items.map((item) => item.label).join('\n')}`,
+          pushBody,
           mailTitle: 'Bitte trage deine Anwesenheit ein',
-          mailIntro: 'Für die folgenden Proben fehlt noch deine Anwesenheitsangabe:',
+          mailIntro,
           mailItems: items,
         });
       }
@@ -128,12 +138,21 @@ export class RehearsalReminderTask {
 
   private formatRehearsalLine(date: Date, title: string): string {
     const dateLabel = date.toLocaleDateString('de-DE', {
-      weekday: 'short',
+      weekday: 'long',
       day: '2-digit',
       month: '2-digit',
       timeZone: 'UTC',
+      hour: "2-digit",
+      minute: "2-digit"
     });
-    return `${dateLabel} – ${title}`;
+    return `${dateLabel} Uhr – ${title}`;
+  }
+
+  private formatWeekday(date: Date): string {
+    return date.toLocaleDateString('de-DE', {
+      weekday: 'long',
+      timeZone: 'UTC',
+    });
   }
 
   private formatResponse(response: AttendanceResponse): string {
