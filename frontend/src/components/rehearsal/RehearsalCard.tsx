@@ -38,6 +38,13 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
     ? `${dayLabel}, ${formatDateTimeNoWeekday(rehearsal.date, dateLocale)}`
     : formatDateTimeShort(rehearsal.date, dateLocale);
   const location = rehearsal.location?.trim();
+  const statusTintClass = rehearsal.myAttended === true
+    ? 'bg-success-100/55 border-success-300/80 dark:border-success-300/80'
+    : rehearsal.myAttended === false && rehearsal.myPlan === 'DECLINED'
+      ? 'bg-warning-100/55 border-warning-300/80 dark:border-warning-400/80'
+      : rehearsal.myAttended === false
+        ? 'bg-danger-100/55 border-danger-200/80 dark:border-danger-400/80'
+        : '';
 
   const setPlan = async (response: AttendanceResponse) => {
     if (buttonsDisabled) return;
@@ -60,9 +67,9 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
 
   return (
     <Card
-      className={`w-full border border-default-200 ${readOnly ? 'opacity-80' : ''} ${
-        rehearsal.isOptional
-          ? 'bg-primary-100/55 border border-primary-200/80 dark:border-primary-400/80 opacity-80'
+      className={`w-full border border-default-200 ${readOnly ? 'opacity-80' : ''} ${statusTintClass} ${
+        rehearsal.isOptional && !statusTintClass
+          ? 'bg-primary-100/55 border border-primary-200/80 dark:border-primary-400/80'
           : ''
       }`}
       data-testid="rehearsal-card"
@@ -118,30 +125,32 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             )}
           </div>
         )}
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            color="success"
-            variant={rehearsal.myPlan === 'CONFIRMED' ? 'solid' : 'bordered'}
-            className={rehearsal.myPlan === 'CONFIRMED' ? '' : 'bg-content1'}
-            isLoading={loading === 'CONFIRMED'}
-            onPress={() => setPlan('CONFIRMED')}
-            isDisabled={buttonsDisabled}
-          >
-            {t('rehearsals.attending')}
-          </Button>
-          <Button
-            size="sm"
-            color="danger"
-            variant={rehearsal.myPlan === 'DECLINED' ? 'solid' : 'bordered'}
-            className={rehearsal.myPlan === 'DECLINED' ? '' : 'bg-content1'}
-            isLoading={loading === 'DECLINED'}
-            onPress={() => setPlan('DECLINED')}
-            isDisabled={buttonsDisabled}
-          >
-            {t('rehearsals.not_attending')}
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              color="success"
+              variant={rehearsal.myPlan === 'CONFIRMED' ? 'solid' : 'bordered'}
+              className={rehearsal.myPlan === 'CONFIRMED' ? '' : 'bg-content1'}
+              isLoading={loading === 'CONFIRMED'}
+              onPress={() => setPlan('CONFIRMED')}
+              isDisabled={buttonsDisabled}
+            >
+              {t('rehearsals.attending')}
+            </Button>
+            <Button
+              size="sm"
+              color="danger"
+              variant={rehearsal.myPlan === 'DECLINED' ? 'solid' : 'bordered'}
+              className={rehearsal.myPlan === 'DECLINED' ? '' : 'bg-content1'}
+              isLoading={loading === 'DECLINED'}
+              onPress={() => setPlan('DECLINED')}
+              isDisabled={buttonsDisabled}
+            >
+              {t('rehearsals.not_attending')}
+            </Button>
+          </div>
+        )}
         {error && <p className="text-sm text-danger">{error}</p>}
       </CardBody>
     </Card>

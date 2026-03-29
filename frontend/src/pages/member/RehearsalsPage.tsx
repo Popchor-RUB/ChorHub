@@ -83,10 +83,10 @@ export function RehearsalsPage() {
     return <div className="flex justify-center pt-16"><Spinner size="lg" /></div>;
   }
 
-  const recorded = past.filter((r) => !r.isOptional && r.myAttended != null);
-  const attended = recorded.filter((r) => r.myAttended === true).length;
-  const excused = recorded.filter((r) => r.myAttended === false && r.myPlan === 'DECLINED').length;
-  const unexcused = recorded.filter((r) => r.myAttended === false && r.myPlan !== 'DECLINED').length;
+  const recordedPast = past.filter((r) => !r.isOptional && r.myAttended != null);
+  const attended = rehearsals.filter((r) => !r.isOptional && r.myAttended === true).length;
+  const excused = recordedPast.filter((r) => r.myAttended === false && r.myPlan === 'DECLINED').length;
+  const unexcused = recordedPast.filter((r) => r.myAttended === false && r.myPlan !== 'DECLINED').length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -104,15 +104,15 @@ export function RehearsalsPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="flex flex-col items-center justify-center gap-1 bg-success-50 dark:bg-success-50/10 rounded-xl p-3 border border-success-200">
+        <div className="flex flex-col items-center justify-center gap-1 bg-success-50 dark:bg-success-50/10 rounded-xl p-3 border border-success-300/80">
           <span className="text-2xl font-bold text-success">{attended}</span>
           <span className="text-xs text-success-700 dark:text-success-400 text-center">{t('rehearsals.present')}</span>
         </div>
-        <div className="flex flex-col items-center justify-center gap-1 bg-warning-50 dark:bg-warning-50/10 rounded-xl p-3 border border-warning-200">
+        <div className="flex flex-col items-center justify-center gap-1 bg-warning-50 dark:bg-warning-50/10 rounded-xl p-3 border border-warning-300/80">
           <span className="text-2xl font-bold text-warning">{excused}</span>
           <span className="text-xs text-warning-700 dark:text-warning-400 text-center">{t('rehearsals.excused')}</span>
         </div>
-        <div className="flex flex-col items-center justify-center gap-1 bg-danger-50 dark:bg-danger-50/10 rounded-xl p-3 border border-danger-200">
+        <div className="flex flex-col items-center justify-center gap-1 bg-danger-50 dark:bg-danger-50/10 rounded-xl p-3 border border-danger-200/80 dark:border-danger-400/80">
           <span className="text-2xl font-bold text-danger">{unexcused}</span>
           <span className="text-xs text-danger-700 dark:text-danger-400 text-center leading-tight">{t('rehearsals.unexcused')}</span>
         </div>
