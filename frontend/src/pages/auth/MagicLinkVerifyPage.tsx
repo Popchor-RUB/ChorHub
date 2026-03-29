@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardBody, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
-import { memberAuthApi } from '../../services/api';
+import { attendanceApi, memberAuthApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+
+const isAttendanceResponse = (value: string | null): value is 'CONFIRMED' | 'DECLINED' =>
+  value === 'CONFIRMED' || value === 'DECLINED';
 
 export function MagicLinkVerifyPage() {
   const [searchParams] = useSearchParams();
@@ -19,9 +22,12 @@ export function MagicLinkVerifyPage() {
       return;
     }
 
-    memberAuthApi
-      .verifyMagicLink(token)
-      .then((res) => {
+    const rehearsalId = searchParams.get('rehearsalId');
+    const response = searchParams.get('response');
+
+    const run = async () => {
+      try {
+        const res = await memberAuthApi.verifyMagicLink(token);
         const { token: rawToken, member } = res.data;
         setMemberSession({
           token: rawToken,
@@ -29,12 +35,23 @@ export function MagicLinkVerifyPage() {
           firstName: member.firstName,
           lastName: member.lastName,
         });
-        navigate('/', { replace: true });
-      })
-      .catch(() => {
+
+        if (rehearsalId && isAttendanceResponse(response)) {
+          try {
+            await attendanceApi.setPlan(rehearsalId, response);
+          } catch {
+            // Keep login successful even when RSVP action can no longer be applied.
+          }
+        }
+
+        navigate('/proben', { replace: true });
+      } catch {
         setError(t('auth.error_invalid_link'));
-      });
-  }, []);
+      }
+    };
+
+    void run();
+  }, [navigate, searchParams, setMemberSession, t]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-default-50">
