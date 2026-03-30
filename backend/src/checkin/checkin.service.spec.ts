@@ -90,7 +90,7 @@ describe('CheckinService', () => {
     const qrModuleMock = {
       QRCodeJs: class {
         async serialize() {
-          return '<svg xmlns="http://www.w3.org/2000/svg"><defs><mask id="mask-dot-color-0-0" maskUnits="userSpaceOnUse" x="0" y="0" width="230" height="230"><g fill="#fff"><path d="M 10 100 v 10 h 5 a 5 5, 0, 0, 0, 0 -10 z" transform="rotate(180,15,105)"/><circle cx="45" cy="45" r="5"/></g></mask></defs><rect x="0" y="0" width="230" height="230" fill="#ffffff"/><rect x="10" y="10" width="210" height="210" style="mask:url(#mask-dot-color-0-0)" fill="#111111"/></svg>';
+          return '<svg xmlns="http://www.w3.org/2000/svg"><defs><mask id="mask-dot-color-0-0" maskUnits="userSpaceOnUse" x="0" y="0" width="230" height="230"><g fill="#fff"><rect x="40" y="40" width="10" height="10"/><rect x="50" y="40" width="10" height="10"/><rect x="60" y="40" width="10" height="10"/><rect x="70" y="40" width="10" height="10"/><rect x="70" y="50" width="10" height="10"/><rect x="70" y="60" width="10" height="10"/><rect x="60" y="60" width="10" height="10"/><rect x="50" y="60" width="10" height="10"/></g></mask></defs><rect x="0" y="0" width="230" height="230" fill="#ffffff"/><rect x="10" y="10" width="210" height="210" style="mask:url(#mask-dot-color-0-0)" fill="#111111"/></svg>';
         }
       },
       ErrorCorrectionLevel: { H: 'H' },
@@ -109,15 +109,18 @@ describe('CheckinService', () => {
     const encodedSvg = result.qrCodeDataUrl.replace('data:image/svg+xml;base64,', '');
     const svg = Buffer.from(encodedSvg, 'base64').toString('utf8');
 
-    expect(svg).toContain('@keyframes qr-blob-color');
-    expect(svg).toContain('.qr-animated-blob');
+    expect(svg).toContain('id="qr-animated-clusters"');
+    expect(svg).toContain('.qr-animated-cluster');
+    expect(svg).toContain('@keyframes qr-cluster-color');
+    expect(svg).toContain('--qr-cluster-delay:');
+    expect(svg).toContain('--qr-cluster-duration:');
+    expect(svg).toContain('--qr-cluster-highlight-a:');
+    expect(svg).not.toContain('--qr-cluster-highlight-b:');
+    expect(svg).not.toContain('--qr-cluster-highlight-c:');
+    expect(svg).toMatch(/--qr-cluster-highlight-a:hsl\(\d+\s+\d+%\s+\d+%\)/);
     expect(svg).toContain('fill: #111111;');
     expect(svg).toContain('#6f8fa3');
-    expect(svg).toContain('id="qr-animated-blobs"');
-    expect(svg).toContain('class="qr-animated-blob"');
-    expect(svg).toContain('<circle cx="45" cy="45" r="5" class="qr-animated-blob"');
-    expect(svg).toContain('--qr-blob-delay:');
-    expect(svg).toContain('--qr-blob-duration:');
+    expect(svg).toContain('id="qr-static-modules"');
     expect(svg).not.toContain('style="mask:url(#mask-dot-color-0-0)" fill="#111111"');
     expect(svg).toContain('<rect x="0" y="0" width="230" height="230" fill="#ffffff"/>');
   });
