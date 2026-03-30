@@ -141,7 +141,7 @@ export class RehearsalReminderTask {
       weekday: 'long',
       day: '2-digit',
       month: '2-digit',
-      timeZone: 'UTC',
+      timeZone: "Europe/Berlin",
       hour: "2-digit",
       minute: "2-digit"
     });
@@ -151,7 +151,7 @@ export class RehearsalReminderTask {
   private formatWeekday(date: Date): string {
     return date.toLocaleDateString('de-DE', {
       weekday: 'long',
-      timeZone: 'UTC',
+      timeZone: "Europe/Berlin",
     });
   }
 
