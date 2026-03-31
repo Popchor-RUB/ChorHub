@@ -156,9 +156,9 @@ test.describe('Member rehearsal page', () => {
       }
 
       await expect(rehearsalDialog.getByText(memberFullName, { exact: true })).toBeVisible();
-      // The status span is a sibling of the name span inside the same row div
+      // Assert status on the row container (not just the immediate parent span).
       const memberNameInRehearsal = rehearsalDialog.getByText(memberFullName, { exact: true });
-      await expect(memberNameInRehearsal.locator('..').getByText('✓ zugesagt')).toBeVisible();
+      await expect(memberNameInRehearsal.locator('xpath=ancestor::div[1]')).toContainText('zugesagt');
       await adminPage.keyboard.press('Escape');
 
       // Step 4: Verify rehearsal shows "✓ zugesagt" in /admin/mitglieder member modal
