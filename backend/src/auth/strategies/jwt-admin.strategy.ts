@@ -16,10 +16,21 @@ export class JwtAdminStrategy extends PassportStrategy(Strategy, 'jwt-admin') {
     config: ConfigService,
     private readonly prisma: PrismaService,
   ) {
+    const jwtSecret = config.get<string>('JWT_SECRET');
+    if (
+      !jwtSecret ||
+      jwtSecret.trim() === '' ||
+      jwtSecret === 'change_me_to_a_long_random_secret'
+    ) {
+      throw new Error(
+        'JWT_SECRET must be set to a non-default secure value. Refusing to start.',
+      );
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET', 'fallback-secret'),
+      secretOrKey: jwtSecret,
     });
   }
 
