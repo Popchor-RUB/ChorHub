@@ -8,7 +8,7 @@ import {
   Spinner,
   useDisclosure,
 } from '@heroui/react';
-import { QrCodeIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, QrCodeIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, attendanceApi, adminMembersApi } from '../../services/api';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
@@ -329,10 +329,11 @@ export function AttendancePage() {
         >
           <div className="min-w-0">
             <p
-              className="font-medium text-sm truncate cursor-pointer hover:text-primary transition-colors"
+              className="font-medium text-sm cursor-pointer transition-colors text-primary inline-flex items-center gap-1 max-w-full"
               onClick={(e) => { e.stopPropagation(); openMemberDetail(member); }}
             >
-              {member.firstName} {member.lastName}
+              <span className="truncate">{member.firstName} {member.lastName}</span>
+              <MagnifyingGlassIcon className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
             </p>
             {hasNoPlan && (
               <p className="text-xs text-danger mt-0.5">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import {
   Table,
   TableHeader,
@@ -148,7 +149,12 @@ export function MemberOverviewPage() {
           <TableBody emptyContent={t('members.no_members')}>
             {filteredMembers.map((m) => (
               <TableRow key={m.id}>
-                <TableCell>{m.firstName} {m.lastName}</TableCell>
+                <TableCell>
+                  <span className="inline-flex items-center gap-1 text-primary font-medium">
+                    <span>{m.firstName} {m.lastName}</span>
+                    <MagnifyingGlassIcon className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+                  </span>
+                </TableCell>
                 <TableCell className="text-sm text-default-500">{m.email}</TableCell>
                 <TableCell>
                   <Chip size="sm" variant="flat">

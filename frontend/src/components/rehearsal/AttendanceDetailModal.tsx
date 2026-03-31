@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Modal, ModalContent, ModalHeader, ModalBody, Chip, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { attendanceApi } from '../../services/api';
@@ -123,7 +124,15 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                 onMemberClick ? 'cursor-pointer hover:opacity-75 transition-opacity' : '',
               ].filter(Boolean).join(' ')}
             >
-              <span className="font-medium">{m.firstName} {m.lastName}</span>
+              <span
+                className={[
+                  'font-medium inline-flex items-center gap-1',
+                  onMemberClick ? 'text-primary' : '',
+                ].filter(Boolean).join(' ')}
+              >
+                <span>{m.firstName} {m.lastName}</span>
+                {onMemberClick && <MagnifyingGlassIcon className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />}
+              </span>
               {!showPlanStatus ? (
                 <span className="text-xs">
                   {m.attended
