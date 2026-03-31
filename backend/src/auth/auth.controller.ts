@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  Ip,
+  Logger,
   Post,
   Query,
   UseGuards,
@@ -10,10 +12,8 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { MagicLinkRequestDto } from './dto/magic-link-request.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
-import { PasskeyChallengeDto, PasskeyVerifyDto, PasskeyRegisterVerifyDto } from './dto/passkey.dto';
-import { LocalAdminGuard } from './guards/local-admin.guard';
-import { JwtAdminGuard } from './guards/jwt-admin.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { LocalAdminGuard } from './guards/local-admin.guard';
 import { Public } from './decorators/public.decorator';
 import type { AdminUser } from './types/auth-user.types';
 
@@ -22,42 +22,21 @@ import type { AdminUser } from './types/auth-user.types';
 @Throttle({ default: { limit: 50, ttl: process.env.NODE_ENV === 'production' ? 900_000 : 0 } })
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
   @Public()
   @UseGuards(LocalAdminGuard)
   @Post('admin/login')
-  adminLogin(@CurrentUser() user: AdminUser) {
-    const token = this.authService.signAdminJwt(user);
-    return { token };
-  }
-
-  @Public()
-  @Post('admin/passkey/challenge')
-  async passkeyChallenge(@Body() dto: PasskeyChallengeDto) {
-    return this.authService.getPasskeyAuthChallenge(dto.username);
-  }
-
-  @Public()
-  @Post('admin/passkey/verify')
-  async passkeyVerify(@Body() dto: PasskeyVerifyDto) {
-    const token = await this.authService.verifyPasskeyAuth(dto.sessionId, dto.assertion);
-    return { token };
-  }
-
-  @UseGuards(JwtAdminGuard)
-  @Post('admin/passkey/register/challenge')
-  async passkeyRegisterChallenge(@CurrentUser() user: AdminUser) {
-    return this.authService.getPasskeyRegisterChallenge(user.id);
-  }
-
-  @UseGuards(JwtAdminGuard)
-  @Post('admin/passkey/register/verify')
-  async passkeyRegisterVerify(
+  async adminLogin(
     @CurrentUser() user: AdminUser,
-    @Body() dto: PasskeyRegisterVerifyDto,
+    @Ip() ipAddress: string,
   ) {
-    return this.authService.verifyPasskeyRegister(user.id, dto.attestation);
+    const token = this.authService.signAdminJwt(user);
+    await this.authService.recordAdminAuthenticationSuccess(user, ipAddress);
+    this.logger.log(`Admin authenticated successfully (username=${user.username}, ip=${ipAddress})`);
+    return { token };
   }
 
   @Public()

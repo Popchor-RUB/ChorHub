@@ -88,8 +88,7 @@ npm run test:e2e:report
 
 - Admin auth is JWT-based.
 - Password via local strategy, JWT via `JwtAdminGuard`.
-- Optional passkeys via `@simplewebauthn/server`.
-- Passkey challenges are in-memory (not persistent across restart).
+- Successful admin logins are written to `AdminAuditLog` (append-only audit trail with username + IP).
 
 ### Attendance model
 - `AttendancePlan`: member intent (`CONFIRMED`/`DECLINED`), upserted by `PUT /attendance/plans/:rehearsalId`.

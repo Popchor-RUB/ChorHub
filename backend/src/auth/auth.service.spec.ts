@@ -116,6 +116,27 @@ describe('AuthService', () => {
     });
   });
 
+  describe('recordAdminAuthenticationSuccess', () => {
+    it('writes an admin audit log entry with username and ip', async () => {
+      (prismaMock as any).adminAuditLog.create.mockResolvedValue({} as any);
+
+      await service.recordAdminAuthenticationSuccess(
+        { id: 'a1', username: 'admin' },
+        '203.0.113.10',
+      );
+
+      expect((prismaMock as any).adminAuditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          adminUserId: 'a1',
+          username: 'admin',
+          action: 'ADMIN_LOGIN_SUCCESS',
+          ipAddress: '203.0.113.10',
+          message: expect.stringContaining('Admin authenticated successfully'),
+        }),
+      });
+    });
+  });
+
   describe('requestMagicLink', () => {
     it('throws UnauthorizedException when member not found', async () => {
       prismaMock.member.findFirst.mockResolvedValue(null);

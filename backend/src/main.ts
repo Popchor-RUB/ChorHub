@@ -3,7 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
-import type { Request, Response, NextFunction } from 'express';
+import type { Application, Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaService } from './prisma/prisma.service';
@@ -17,6 +17,19 @@ const DEV_LOG_LEVELS: ('log' | 'error' | 'warn' | 'debug' | 'verbose')[] = [
 ];
 
 const MAX_LOG_BODY_LENGTH = 10_000;
+const DEFAULT_TRUST_PROXY = 'loopback,linklocal,uniquelocal';
+
+function parseTrustProxy(value: string | undefined): boolean | number | string | string[] {
+  if (!value || value.trim() === '') return DEFAULT_TRUST_PROXY.split(',');
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1') return true;
+  if (normalized === 'false' || normalized === '0') return false;
+  if (/^\d+$/.test(normalized)) return Number.parseInt(normalized, 10);
+  if (value.includes(',')) return value.split(',').map((segment) => segment.trim()).filter(Boolean);
+
+  return value.trim();
+}
 
 function normalizeOrigin(value: string): string | null {
   const trimmed = value.trim();
@@ -92,6 +105,8 @@ async function bootstrap() {
   }
 
   app.use(cookieParser());
+  const expressApp = app.getHttpAdapter().getInstance() as Application;
+  expressApp.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
 
   app.useGlobalPipes(
     new ValidationPipe({

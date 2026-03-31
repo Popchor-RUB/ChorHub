@@ -66,6 +66,7 @@ echo ""
 # ── deployment config ─────────────────────────────────────────────────────────
 
 APP_URL=$(prompt APP_URL "App URL (used in magic links)" "https://example.com/chorhub/")
+TRUST_PROXY=$(prompt TRUST_PROXY "Express trust proxy value (false, true, 1, or subnet list)" "loopback,linklocal,uniquelocal")
 VITE_API_URL_PROD=$(prompt VITE_API_URL_PROD "Frontend API URL (production)" "https://example.com/chorhub/api")
 VITE_BASE_PATH_PROD=$(prompt VITE_BASE_PATH_PROD "Frontend base path (production)" "/chorhub/")
 MAIL_FROM=$(prompt MAIL_FROM "Mail from address" "noreply@chorhub.de")
@@ -134,6 +135,7 @@ SMTP_USER=${SMTP_USER}
 SMTP_PASS=${SMTP_PASS}
 MAIL_FROM=${MAIL_FROM}
 APP_URL=${APP_URL}
+TRUST_PROXY=${TRUST_PROXY}
 IS_STAGING=${IS_STAGING}
 NODE_ENV=production
 VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}

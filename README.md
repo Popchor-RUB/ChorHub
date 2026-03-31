@@ -21,7 +21,7 @@ Chororganisations-Webanwendung für die Verwaltung von Probenterminen, Mitgliede
 | Schicht | Technologie |
 |---------|-------------|
 | Frontend | React 18, TypeScript, Vite, HeroUI, Tailwind CSS |
-| Backend | NestJS, TypeScript, Passport (JWT + Passkey) |
+| Backend | NestJS, TypeScript, Passport (JWT) |
 | Datenbank | PostgreSQL 16 + Prisma ORM |
 | E-Mail | Nodemailer + Handlebars Templates |
 | Container | Docker + docker-compose |
@@ -188,6 +188,7 @@ Secrets und Konfiguration sind auf mehrere `.env`-Dateien aufgeteilt, die von `s
 | `SMTP_USER` / `SMTP_PASS` | SMTP-Zugangsdaten |
 | `MAIL_FROM` | Absender-Adresse |
 | `APP_URL` | URL der Frontend-App (für Magic Links) |
+| `TRUST_PROXY` | Wert für Express `trust proxy` (z. B. `false`, `true`, `1` oder Proxy-Subnetzliste; Standard: `loopback,linklocal,uniquelocal`) |
 | `IS_STAGING` | Aktiviert Staging-Modus (OTP `111111` gültig und Reminder-Mail-Throttling deaktiviert) |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web-Push-Schlüssel |
 | `VAPID_EMAIL` | Kontakt-E-Mail für Web Push |
@@ -206,8 +207,6 @@ Secrets und Konfiguration sind auf mehrere `.env`-Dateien aufgeteilt, die von `s
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
 | `POST` | `/auth/admin/login` | Admin-Login (Benutzername/Passwort) |
-| `POST` | `/auth/admin/passkey/challenge` | Passkey-Challenge anfordern |
-| `POST` | `/auth/admin/passkey/verify` | Passkey verifizieren |
 | `POST` | `/auth/magic-link/request` | Magic Link per E-Mail anfordern |
 | `GET` | `/auth/magic-link/verify?token=` | Magic Link einlösen |
 

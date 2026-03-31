@@ -97,18 +97,6 @@ api.interceptors.response.use(
 export const adminApi = {
   login: (username: string, password: string) =>
     api.post<{ token: string }>('/auth/admin/login', { username, password }),
-
-  passkeyChallenge: (username: string) =>
-    api.post('/auth/admin/passkey/challenge', { username }),
-
-  passkeyVerify: (adminId: string, assertion: unknown) =>
-    api.post<{ token: string }>('/auth/admin/passkey/verify', { adminId, assertion }),
-
-  passkeyRegisterChallenge: () =>
-    api.post('/auth/admin/passkey/register/challenge'),
-
-  passkeyRegisterVerify: (attestation: unknown) =>
-    api.post('/auth/admin/passkey/register/verify', { attestation }),
 };
 
 type MemberAuthResponse = { token: string; member: { id: string; firstName: string; lastName: string } };

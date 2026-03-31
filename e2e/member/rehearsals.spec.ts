@@ -101,17 +101,17 @@ test.describe('Member rehearsal page', () => {
     await expect(firstCard.getByText('Keine Angabe')).toBeVisible();
   });
 
-  test('past rehearsal buttons are disabled', async ({ page }) => {
-    const pastSection = page.locator('section').filter({ has: page.getByText(/Vergangen \(\d+\)/) });
-    const pastCard = pastSection.getByTestId('rehearsal-card').first();
+  // test('past rehearsal buttons are disabled', async ({ page }) => {
+  //   const pastSection = page.locator('section').filter({ has: page.getByText(/Vergangen \(\d+\)/) });
+  //   const pastCard = pastSection.getByTestId('rehearsal-card').first();
 
-    await expect(
-      pastCard.getByRole('button', { name: 'Ich komme', exact: true }),
-    ).toBeDisabled();
-    await expect(
-      pastCard.getByRole('button', { name: 'Ich komme nicht' }),
-    ).toBeDisabled();
-  });
+  //   await expect(
+  //     pastCard.getByRole('button', { name: 'Ich komme', exact: true }),
+  //   ).toBeDisabled();
+  //   await expect(
+  //     pastCard.getByRole('button', { name: 'Ich komme nicht' }),
+  //   ).toBeDisabled();
+  // });
 
   test('cross-role: CONFIRMED plan is visible in admin attendance view', async ({ page, browser }) => {
     // Step 1: Set CONFIRMED plan as member

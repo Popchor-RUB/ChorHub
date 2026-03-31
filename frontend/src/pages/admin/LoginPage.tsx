@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardBody, CardHeader, Input, Button, Divider } from '@heroui/react';
+import { Card, CardBody, CardHeader, Input, Button } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
@@ -10,7 +10,6 @@ export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [error, setError] = useState('');
   const { setAdminSession } = useAuthStore();
   const navigate = useNavigate();
@@ -28,32 +27,6 @@ export function LoginPage() {
       setError(t('auth.error_invalid_credentials'));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handlePasskey = async () => {
-    if (!username) {
-      setError(t('auth.error_enter_username'));
-      return;
-    }
-    setPasskeyLoading(true);
-    setError('');
-    try {
-      const { startAuthentication } = await import('@simplewebauthn/browser');
-      const challengeRes = await adminApi.passkeyChallenge(username);
-      const { options, adminId } = challengeRes.data;
-      const assertion = await startAuthentication({ optionsJSON: options });
-      const verifyRes = await adminApi.passkeyVerify(adminId, assertion);
-      setAdminSession({ token: verifyRes.data.token, username });
-      navigate('/admin/mitglieder', { replace: true });
-    } catch (e: any) {
-      setError(
-        e.message?.includes('options')
-          ? t('auth.error_passkey_not_found')
-          : t('auth.error_passkey_failed'),
-      );
-    } finally {
-      setPasskeyLoading(false);
     }
   };
 
@@ -87,18 +60,6 @@ export function LoginPage() {
               {t('auth.login')}
             </Button>
           </form>
-
-          <Divider className="my-4" />
-
-          <Button
-            variant="bordered"
-            onPress={handlePasskey}
-            isLoading={passkeyLoading}
-            fullWidth
-            startContent={<span>🔑</span>}
-          >
-            {t('auth.login_with_passkey')}
-          </Button>
         </CardBody>
       </Card>
     </div>

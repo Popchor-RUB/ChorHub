@@ -148,7 +148,6 @@ async function main() {
   await prisma.attendancePlan.deleteMany();
   await prisma.rehearsal.deleteMany();
   await prisma.member.deleteMany();
-  await prisma.passkeyCredential.deleteMany();
   await prisma.adminUser.deleteMany();
   await prisma.generalInfo.deleteMany();
   await prisma.choirVoice.deleteMany();

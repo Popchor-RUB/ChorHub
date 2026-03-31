@@ -119,26 +119,24 @@ model AdminUser {
   passwordHash String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
-  passkeyCredentials PasskeyCredential[]
+  auditLogs    AdminAuditLog[]
 
   @@map("admin_users")
 }
 
-model PasskeyCredential {
-  id           String   @id @default(uuid())
-  adminUserId  String
-  credentialId String   @unique
-  publicKey    Bytes
-  counter      BigInt   @default(0)
-  deviceType   String?
-  backedUp     Boolean  @default(false)
-  transports   String[]
-  createdAt    DateTime @default(now())
+model AdminAuditLog {
+  id          String    @id @default(uuid())
+  adminUserId String?   @map("admin_user_id")
+  username    String
+  action      String
+  message     String
+  ipAddress   String    @map("ip_address")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
 
-  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
-
-  @@map("passkey_credentials")
+  @@index([createdAt])
+  @@index([action])
+  @@map("admin_audit_logs")
 }
 
 model GeneralInfo {
