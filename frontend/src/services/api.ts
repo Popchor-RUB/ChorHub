@@ -159,8 +159,8 @@ export const attendanceApi = {
   deletePlan: (rehearsalId: string) =>
     api.delete(`/attendance/plans/${rehearsalId}`),
   getRecords: (rehearsalId: string) => api.get(`/attendance/records/${rehearsalId}`),
-  bulkSetRecords: (rehearsalId: string, memberIds: string[]) =>
-    api.put(`/attendance/records/${rehearsalId}`, { memberIds }),
+  setRecord: (rehearsalId: string, memberId: string, attended: boolean) =>
+    api.put(`/attendance/records/${rehearsalId}`, { memberId, attended }),
   getFutureOverview: () => api.get('/attendance/overview/future'),
   getPastOverview: () => api.get('/attendance/overview/past'),
 };

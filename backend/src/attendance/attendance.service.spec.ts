@@ -155,46 +155,41 @@ describe('AttendanceService', () => {
     });
   });
 
-  describe('bulkSetAttendanceRecords', () => {
+  describe('setAttendanceRecord', () => {
     it('throws NotFoundException when rehearsal does not exist', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue(null);
       await expect(
-        service.bulkSetAttendanceRecords('bad-id', ['m1']),
+        service.setAttendanceRecord('bad-id', 'm1', true),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('deletes existing records and creates new ones', async () => {
+    it('upserts one attendance record when attended=true', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue(mockRehearsal);
-      prismaMock.attendanceRecord.deleteMany.mockResolvedValue({ count: 2 });
-      prismaMock.attendanceRecord.createMany.mockResolvedValue({ count: 2 });
+      prismaMock.attendanceRecord.upsert.mockResolvedValue({} as any);
 
-      await service.bulkSetAttendanceRecords('rehearsal-1', ['m1', 'm2']);
+      await service.setAttendanceRecord('rehearsal-1', 'm1', true);
 
-      expect(prismaMock.attendanceRecord.deleteMany).toHaveBeenCalledWith({
-        where: { rehearsalId: 'rehearsal-1' },
+      expect(prismaMock.attendanceRecord.upsert).toHaveBeenCalledWith({
+        where: { memberId_rehearsalId: { memberId: 'm1', rehearsalId: 'rehearsal-1' } },
+        create: { memberId: 'm1', rehearsalId: 'rehearsal-1' },
+        update: {},
       });
-      expect(prismaMock.attendanceRecord.createMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: [
-            { memberId: 'm1', rehearsalId: 'rehearsal-1' },
-            { memberId: 'm2', rehearsalId: 'rehearsal-1' },
-          ],
-        }),
-      );
     });
 
-    it('does not call createMany when memberIds is empty', async () => {
+    it('deletes one attendance record when attended=false', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue(mockRehearsal);
       prismaMock.attendanceRecord.deleteMany.mockResolvedValue({ count: 0 });
 
-      await service.bulkSetAttendanceRecords('rehearsal-1', []);
+      await service.setAttendanceRecord('rehearsal-1', 'm1', false);
 
-      expect(prismaMock.attendanceRecord.createMany).not.toHaveBeenCalled();
+      expect(prismaMock.attendanceRecord.deleteMany).toHaveBeenCalledWith({
+        where: { memberId: 'm1', rehearsalId: 'rehearsal-1' },
+      });
     });
 
-    it('rejects bulk records for optional rehearsal', async () => {
+    it('rejects records for optional rehearsal', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue({ ...mockRehearsal, isOptional: true } as any);
-      await expect(service.bulkSetAttendanceRecords('rehearsal-1', ['m1'])).rejects.toThrow(
+      await expect(service.setAttendanceRecord('rehearsal-1', 'm1', true)).rejects.toThrow(
         ForbiddenException,
       );
     });

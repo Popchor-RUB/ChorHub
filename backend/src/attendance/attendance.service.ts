@@ -89,22 +89,25 @@ export class AttendanceService {
     }));
   }
 
-  async bulkSetAttendanceRecords(rehearsalId: string, memberIds: string[]) {
+  async setAttendanceRecord(rehearsalId: string, memberId: string, attended: boolean) {
     const rehearsal = await this.ensureRehearsalExists(rehearsalId);
     if (rehearsal.isOptional) {
       throw new ForbiddenException('Für optionale Proben wird keine Anwesenheit erfasst');
     }
 
-    await this.prisma.attendanceRecord.deleteMany({ where: { rehearsalId } });
-
-    if (memberIds.length > 0) {
-      await this.prisma.attendanceRecord.createMany({
-        data: memberIds.map((memberId) => ({ memberId, rehearsalId })),
-        skipDuplicates: true,
+    if (attended) {
+      await this.prisma.attendanceRecord.upsert({
+        where: { memberId_rehearsalId: { memberId, rehearsalId } },
+        create: { memberId, rehearsalId },
+        update: {},
+      });
+    } else {
+      await this.prisma.attendanceRecord.deleteMany({
+        where: { memberId, rehearsalId },
       });
     }
 
-    return { rehearsalId, recorded: memberIds.length };
+    return { rehearsalId, memberId, attended };
   }
 
   async getFutureOverview() {

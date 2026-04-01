@@ -1,4 +1,4 @@
-import { IsEnum, IsArray, IsString } from 'class-validator';
+import { IsEnum, IsBoolean, IsString } from 'class-validator';
 import { AttendanceResponse } from '../../generated/prisma/client';
 
 export class SetAttendancePlanDto {
@@ -6,8 +6,10 @@ export class SetAttendancePlanDto {
   response: AttendanceResponse;
 }
 
-export class BulkAttendanceRecordDto {
-  @IsArray()
-  @IsString({ each: true })
-  memberIds: string[];
+export class SetAttendanceRecordDto {
+  @IsString()
+  memberId: string;
+
+  @IsBoolean()
+  attended: boolean;
 }

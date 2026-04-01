@@ -173,16 +173,12 @@ export function AttendancePage() {
     setSaving(memberId);
     setSaveError(null);
 
-    const newAttendedIds = currentlyAttended
-      ? recordsRef.current.filter((r) => r.attended && r.id !== memberId).map((r) => r.id)
-      : [...recordsRef.current.filter((r) => r.attended).map((r) => r.id), memberId];
-
     setRecords((prev) =>
       prev.map((r) => (r.id === memberId ? { ...r, attended: !currentlyAttended } : r)),
     );
 
     try {
-      await attendanceApi.bulkSetRecords(selectedRehearsalIdRef.current, newAttendedIds);
+      await attendanceApi.setRecord(selectedRehearsalIdRef.current, memberId, !currentlyAttended);
     } catch {
       setRecords((prev) =>
         prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),
@@ -197,8 +193,7 @@ export function AttendancePage() {
   toggleAttendanceRef.current = toggleAttendance;
 
   const handleMemberCreatedWithId = async (memberId: string) => {
-    const currentAttendedIds = recordsRef.current.filter((r) => r.attended).map((r) => r.id);
-    await attendanceApi.bulkSetRecords(selectedRehearsalIdRef.current, [...currentAttendedIds, memberId]);
+    await attendanceApi.setRecord(selectedRehearsalIdRef.current, memberId, true);
     const res = await attendanceApi.getRecords(selectedRehearsalIdRef.current);
     setRecords(res.data as AttendanceRecord[]);
   };
@@ -274,16 +269,13 @@ export function AttendancePage() {
 
     const memberId = scanResult.payload.memberId;
     const currentlyAttended = recordsRef.current.some((r) => r.id === memberId && r.attended);
-    const newAttendedIds = currentlyAttended
-      ? recordsRef.current.filter((r) => r.attended && r.id !== memberId).map((r) => r.id)
-      : [...recordsRef.current.filter((r) => r.attended).map((r) => r.id), memberId];
 
     setRecords((prev) =>
       prev.map((r) => (r.id === memberId ? { ...r, attended: !currentlyAttended } : r)),
     );
 
     try {
-      await attendanceApi.bulkSetRecords(selectedRehearsalIdRef.current, newAttendedIds);
+      await attendanceApi.setRecord(selectedRehearsalIdRef.current, memberId, !currentlyAttended);
     } catch {
       setRecords((prev) =>
         prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),

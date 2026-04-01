@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Put, UseGuards } from '@nestjs/common';
 import { AttendanceService } from './attendance.service';
-import { SetAttendancePlanDto, BulkAttendanceRecordDto } from './dto/attendance.dto';
+import { SetAttendancePlanDto, SetAttendanceRecordDto } from './dto/attendance.dto';
 import { MemberTokenGuard } from '../auth/guards/member-token.guard';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -41,11 +41,11 @@ export class AttendanceController {
 
   @Put('records/:rehearsalId')
   @UseGuards(JwtAdminGuard)
-  bulkSetRecords(
+  setRecord(
     @Param('rehearsalId') rehearsalId: string,
-    @Body() dto: BulkAttendanceRecordDto,
+    @Body() dto: SetAttendanceRecordDto,
   ) {
-    return this.attendanceService.bulkSetAttendanceRecords(rehearsalId, dto.memberIds);
+    return this.attendanceService.setAttendanceRecord(rehearsalId, dto.memberId, dto.attended);
   }
 
   @Get('overview/future')
