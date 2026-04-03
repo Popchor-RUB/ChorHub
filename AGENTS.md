@@ -8,6 +8,30 @@ Agent-focused instructions for this repository. Keep changes small, accurate, an
 - `frontend/`: React + Vite + Tailwind v4 + HeroUI.
 - Repo root `package.json`: Playwright E2E scripts.
 
+## Workflow
+- When changes in `backend/` are made, ensure that unittests still pass (`npm run test`)
+- When changes in `frontend/` are made, ensure that e2e tests (in `e2e/`) still pass (`npm run test:e2e` in root directory)
+- Check if changes either affect e2e tests or unittests
+
+## Coding Guidelines
+- Follow best practice TypeScript patterns and keep diffs focused.
+- Write typesafe TypeScript code.
+    - Avoid casts to `unknown` or `any` where possible
+- Prefer the usage of hero-ui components in the frontend
+- Use i18n in the frontend interface
+- Write readable modularized code
+    - Avoid code repetitions
+    - Do not put multiple classes or react components into a single file
+- Prefer readable and maintainable code instead of shorter code, especially in security relevant parts
+- When the `prisma.schema` file is changed always do the following
+    1. `npx prisma generate`
+    2. Write a migration
+    3. `npx prisma migrate deploy`
+    4. Check if the `seed.ts` file needs to be updated
+- Frontend type imports must respect `verbatimModuleSyntax`.
+- Use `import type { ... }` for type-only imports from `frontend/src/types/index.ts`.
+- Do not add `tailwind.config.js`; Tailwind v4 is configured in `frontend/src/index.css` (`@import "tailwindcss";`, `@plugin './hero.ts';`).
+
 ## Setup commands
 
 ### Local infra (DB + MailHog only)
@@ -65,14 +89,7 @@ npm run test:e2e:report
 
 ## Testing instructions
 - Backend changes: run `npm run test` in `backend/` (plus focused tests when possible).
-- Frontend changes: run `npm run lint` and `npx tsc -p tsconfig.app.json --noEmit` in `frontend/`.
-- Browser flow changes: run root Playwright E2E.
-
-## Code style and conventions
-- Follow existing TypeScript patterns and keep diffs focused.
-- Frontend type imports must respect `verbatimModuleSyntax`.
-- Use `import type { ... }` for type-only imports from `frontend/src/types/index.ts`.
-- Do not add `tailwind.config.js`; Tailwind v4 is configured in `frontend/src/index.css` (`@import "tailwindcss";`, `@plugin './hero.ts';`).
+- Frontend changes: run `npm run lint` and `npx tsc -p tsconfig.app.json --noEmit` in `frontend/` and run root Playwright E2E.
 
 ## Architecture notes
 
