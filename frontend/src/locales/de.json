@@ -218,6 +218,7 @@
     "admin_close_result": "Schließen",
     "admin_reset": "Zurücksetzen",
     "admin_reload_key": "Public Key neu laden",
+    "admin_switch_camera": "Kamera wechseln",
     "admin_camera_error": "Kamera konnte nicht gestartet werden.",
     "admin_parse_error": "QR-Code ist ungültig oder beschädigt.",
     "admin_key_error": "Public Key konnte nicht geladen werden."

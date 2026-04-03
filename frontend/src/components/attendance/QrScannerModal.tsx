@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import type { CheckinPayload } from '../../types';
@@ -17,6 +18,8 @@ type Props = {
   onScanSuccess: (result: QrScanResult) => void;
 };
 
+const CAMERA_DEVICE_STORAGE_KEY = 'chorhub:qr-scanner-camera-device-id';
+
 export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -27,6 +30,8 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [keyLoading, setKeyLoading] = useState(false);
   const [keyError, setKeyError] = useState<string | null>(null);
+  const [availableCameraIds, setAvailableCameraIds] = useState<string[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const onCloseRef = useRef(onClose);
   const onScanSuccessRef = useRef(onScanSuccess);
 
@@ -66,10 +71,12 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
       setScannerError(null);
       setKeyError(null);
       setKeyLoading(false);
+      setAvailableCameraIds([]);
       return;
     }
 
     let closed = false;
+    let refreshTimeout: ReturnType<typeof window.setTimeout> | null = null;
 
     const describeError = (error: unknown): string => {
       if (error instanceof Error && error.message) return error.message;
@@ -105,7 +112,18 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
           delayBetweenScanSuccess: 1000,
         });
 
-        const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
+        const refreshAvailableCameras = async () => {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          if (!closed) {
+            setAvailableCameraIds(
+              devices
+                .filter((device) => device.kind === 'videoinput')
+                .map((device) => device.deviceId),
+            );
+          }
+        };
+
+        const onDecode = (result: Parameters<Parameters<typeof reader.decodeFromVideoDevice>[2]>[0]) => {
           if (!result) return;
           if (hasRecognizedRef.current) return;
           const text = result.getText();
@@ -134,9 +152,21 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
               }
             }
           })();
-        });
+        };
+
+        let controls: { stop: () => void };
+        try {
+          controls = await reader.decodeFromVideoDevice(selectedCameraId ?? undefined, videoRef.current, onDecode);
+        } catch (error) {
+          if (!selectedCameraId) throw error;
+          controls = await reader.decodeFromVideoDevice(undefined, videoRef.current, onDecode);
+        }
 
         controlsRef.current = controls;
+        await refreshAvailableCameras();
+        refreshTimeout = window.setTimeout(() => {
+          void refreshAvailableCameras();
+        }, 500);
       } catch (error) {
         if (!closed) setScannerError(`${t('checkin.admin_camera_error')} (${describeError(error)})`);
       }
@@ -146,11 +176,32 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
 
     return () => {
       closed = true;
+      if (refreshTimeout) window.clearTimeout(refreshTimeout);
       hasRecognizedRef.current = false;
       controlsRef.current?.stop();
       controlsRef.current = null;
     };
-  }, [isOpen, t]);
+  }, [isOpen, selectedCameraId, t]);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const storedCameraId = window.localStorage.getItem(CAMERA_DEVICE_STORAGE_KEY);
+    setSelectedCameraId(storedCameraId || null);
+  }, [isOpen]);
+
+  const onSwitchCamera = () => {
+    if (availableCameraIds.length === 0) return;
+
+    setSelectedCameraId((currentId) => {
+      const currentIndex = currentId ? availableCameraIds.indexOf(currentId) : -1;
+      const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % availableCameraIds.length : 0;
+      const nextCameraId = availableCameraIds[nextIndex] ?? null;
+      if (nextCameraId && typeof window !== 'undefined') {
+        window.localStorage.setItem(CAMERA_DEVICE_STORAGE_KEY, nextCameraId);
+      }
+      return nextCameraId;
+    });
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
@@ -159,6 +210,18 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
         <ModalBody>
           <div className="bg-black rounded-xl overflow-hidden relative min-h-[260px]">
             <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+            {availableCameraIds.length > 1 && (
+              <Button
+                variant="flat"
+                isIconOnly
+                size="sm"
+                className="absolute bottom-3 right-3 z-10 bg-black/65 text-white"
+                aria-label={t('checkin.admin_switch_camera')}
+                onPress={onSwitchCamera}
+              >
+                <ArrowsRightLeftIcon className="w-4 h-4" />
+              </Button>
+            )}
             {keyLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                 <Spinner color="white" />
