@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardBody, CardHeader, Input, Button } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { memberAuthApi } from '../../services/api';
+import { memberAuthApi, validateStoredSessionToken } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { IOSInstallGuide } from '../../components/IOSInstallGuide';
 import { useIOSInstallGuide } from '../../hooks/useIOSInstallGuide';
@@ -20,9 +20,54 @@ export function MagicLinkRequestPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { setMemberSession } = useAuthStore();
+  const { setMemberSession, memberSession, adminSession, logoutMember, logoutAdmin } = useAuthStore();
+  const [hasHydrated, setHasHydrated] = useState(() => useAuthStore.persist.hasHydrated());
+  const [checkingStoredSession, setCheckingStoredSession] = useState(true);
   const { visible: showGuide, forced: guideForced, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-login');
   const { t } = useTranslation();
+
+  useEffect(() => {
+    const unsubscribe = useAuthStore.persist.onFinishHydration(() => setHasHydrated(true));
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+
+    let active = true;
+
+    const validateAndRedirect = async () => {
+      if (adminSession?.token) {
+        const isValid = await validateStoredSessionToken('admin', adminSession.token);
+        if (!active) return;
+        if (isValid) {
+          navigate('/admin/mitglieder', { replace: true });
+          return;
+        }
+        logoutAdmin();
+      }
+
+      if (memberSession?.token) {
+        const isValid = await validateStoredSessionToken('member', memberSession.token);
+        if (!active) return;
+        if (isValid) {
+          navigate('/', { replace: true });
+          return;
+        }
+        logoutMember();
+      }
+
+      setCheckingStoredSession(false);
+    };
+
+    validateAndRedirect().catch(() => {
+      if (active) setCheckingStoredSession(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [adminSession, hasHydrated, logoutAdmin, logoutMember, memberSession, navigate]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -33,6 +78,10 @@ export function MagicLinkRequestPage() {
 
     return () => window.clearInterval(timer);
   }, [resendCooldown]);
+
+  if (!hasHydrated || checkingStoredSession) {
+    return <div className="min-h-[30vh] flex items-center justify-center text-default-500 text-sm">Lädt...</div>;
+  }
 
   const handleSession = (token: string, member: { id: string; firstName: string; lastName: string }) => {
     setMemberSession({

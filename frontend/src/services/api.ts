@@ -34,6 +34,10 @@ export const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
+const authValidationApi = axios.create({
+  baseURL: BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
 
 api.interceptors.request.use((config) => {
   const state = useAuthStore.getState();
@@ -223,3 +227,22 @@ export const checkinApi = {
   getMemberQr: () => api.get<MemberCheckinQr>('/members/me/checkin-qr'),
   getPublicKey: () => api.get<{ publicKey: string }>('/attendance/checkin/public-key'),
 };
+
+export async function validateStoredSessionToken(
+  role: 'admin' | 'member',
+  token: string,
+): Promise<boolean> {
+  const headers = role === 'admin'
+    ? { Authorization: `Bearer ${token}` }
+    : { 'X-Member-Token': token };
+
+  try {
+    await authValidationApi.get('/general-info', { headers });
+    return true;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      return false;
+    }
+    throw error;
+  }
+}
