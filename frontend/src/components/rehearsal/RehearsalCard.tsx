@@ -3,6 +3,8 @@ import type { Rehearsal, AttendanceResponse } from '../../types';
 import { attendanceApi } from '../../services/api';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateTimeNoWeekday, formatDateTimeShort, formatTime } from '../../utils/dateFormatting';
 
@@ -88,19 +90,31 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             </Chip>
           )}
         </div>
-        <p className="text-sm text-default-500">
+        <p className="text-sm text-default-400">
           {dateLabel}
           {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}
         </p>
         {location && (
-          <p className="text-sm text-default-500">
+          <p className="text-sm text-default-400">
             {t('rehearsals.location')}: {location}
           </p>
         )}
       </CardHeader>
-      <CardBody className="flex flex-col gap-3">
+      <CardBody className="flex flex-col gap-2 pt-0">
         {rehearsal.description && (
-          <p className="text-sm text-default-600">{rehearsal.description}</p>
+          <div className="prose max-w-none text-sm text-default-700 leading-relaxed pb-1">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <p className="!my-0">{children}</p>,
+                ul: ({ children }) => <ul className="my-0 pl-5">{children}</ul>,
+                ol: ({ children }) => <ol className="my-0 pl-5">{children}</ol>,
+                li: ({ children }) => <li className="my-0">{children}</li>,
+              }}
+            >
+              {rehearsal.description}
+            </ReactMarkdown>
+          </div>
         )}
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{t('rehearsals.my_rsvp')}</span>
