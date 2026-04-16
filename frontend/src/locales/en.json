@@ -106,6 +106,12 @@
     "calendar_title": "Subscribe to rehearsal calendar",
     "calendar_hint": "Add all rehearsals to your calendar app. Changes from admin are updated automatically.",
     "calendar_button": "Rehearsal calendar",
+    "calendar_add_google": "Add to Google Calendar",
+    "calendar_recommended_google": "Recommended for Android and Google Calendar.",
+    "calendar_recommended_apple": "Recommended for Apple Calendar on iPhone, iPad, and Mac.",
+    "calendar_more_options_show": "Other calendar options",
+    "calendar_more_options_hide": "Hide other calendar options",
+    "calendar_more_options_hint": "If this option is not the right fit, use the alternative or copy the direct calendar URL.",
     "calendar_subscribe": "Subscribe",
     "calendar_copy": "Copy link",
     "calendar_copied": "Copied ✓"

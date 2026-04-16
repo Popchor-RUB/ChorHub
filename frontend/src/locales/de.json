@@ -106,6 +106,12 @@
     "calendar_title": "Probenkalender abonnieren",
     "calendar_hint": "Füge alle Proben in deiner Kalender-App hinzu. Änderungen durchs Orga-Team werden automatisch aktualisiert.",
     "calendar_button": "Probenkalender",
+    "calendar_add_google": "Zu Google Kalender hinzufügen",
+    "calendar_recommended_google": "Empfohlen für Android und Google Kalender.",
+    "calendar_recommended_apple": "Empfohlen für Apple Kalender auf iPhone, iPad und Mac.",
+    "calendar_more_options_show": "Andere Kalender-Optionen",
+    "calendar_more_options_hide": "Andere Kalender-Optionen ausblenden",
+    "calendar_more_options_hint": "Wenn diese Option nicht passt, nutze die Alternative oder kopiere den direkten Kalender-Link.",
     "calendar_subscribe": "Abonnieren",
     "calendar_copy": "Link kopieren",
     "calendar_copied": "Kopiert ✓"

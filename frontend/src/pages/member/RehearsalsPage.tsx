@@ -20,6 +20,7 @@ export function RehearsalsPage() {
   const [loading, setLoading] = useState(true);
   const [showAllRehearsals, setShowAllRehearsals] = useState(false);
   const [calendarCopied, setCalendarCopied] = useState(false);
+  const [showCalendarAdvanced, setShowCalendarAdvanced] = useState(false);
 
   const [availableVoices, setAvailableVoices] = useState<ChoirVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
@@ -30,6 +31,11 @@ export function RehearsalsPage() {
 
   const calendarIcsUrl = memberCalendarApi.getIcsUrl();
   const calendarWebcalUrl = memberCalendarApi.getWebcalUrl();
+  const calendarGoogleUrl = memberCalendarApi.getGoogleCalendarSubscribeUrl();
+  const userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+  const isAppleDevice = /iphone|ipad|ipod|macintosh/i.test(userAgent);
+  const primaryCalendarUrl = isAppleDevice ? calendarWebcalUrl : calendarGoogleUrl;
+  const secondaryCalendarUrl = isAppleDevice ? calendarGoogleUrl : calendarWebcalUrl;
 
   const loadData = async () => {
     const [rehearsalRes, memberRes] = await Promise.all([
@@ -70,6 +76,11 @@ export function RehearsalsPage() {
     } catch {
       setCalendarCopied(false);
     }
+  };
+
+  const closeCalendarModal = () => {
+    setShowCalendarAdvanced(false);
+    calendarModal.onClose();
   };
 
   const startOfToday = new Date();
@@ -219,31 +230,66 @@ export function RehearsalsPage() {
       </Modal>
 
       {/* Calendar subscribe modal */}
-      <Modal isOpen={calendarModal.isOpen} onClose={calendarModal.onClose}>
+      <Modal isOpen={calendarModal.isOpen} onClose={closeCalendarModal}>
         <ModalContent>
           <ModalHeader>{t('rehearsals.calendar_title')}</ModalHeader>
-          <ModalBody>
+          <ModalBody className="gap-3">
             <p className="text-sm text-default-500">{t('rehearsals.calendar_hint')}</p>
-          </ModalBody>
-          <ModalFooter>
             <Button
               color="primary"
-              isDisabled={!calendarWebcalUrl}
+              fullWidth
+              isDisabled={!primaryCalendarUrl}
               onPress={() => {
-                if (!calendarWebcalUrl) return;
-                window.open(calendarWebcalUrl, '_blank', 'noopener,noreferrer');
+                if (!primaryCalendarUrl) return;
+                window.open(primaryCalendarUrl, '_blank', 'noopener,noreferrer');
               }}
             >
-              {t('rehearsals.calendar_subscribe')}
+              {isAppleDevice
+                ? t('rehearsals.calendar_subscribe')
+                : t('rehearsals.calendar_add_google')}
             </Button>
+            <p className="text-xs text-default-400">
+              {isAppleDevice
+                ? t('rehearsals.calendar_recommended_apple')
+                : t('rehearsals.calendar_recommended_google')}
+            </p>
             <Button
               variant="flat"
-              isDisabled={!calendarIcsUrl}
-              onPress={handleCopyCalendarLink}
+              size="sm"
+              className="self-start font-medium"
+              onPress={() => setShowCalendarAdvanced((prev) => !prev)}
             >
-              {calendarCopied ? t('rehearsals.calendar_copied') : t('rehearsals.calendar_copy')}
+              {showCalendarAdvanced
+                ? t('rehearsals.calendar_more_options_hide')
+                : t('rehearsals.calendar_more_options_show')}
             </Button>
-            <Button variant="flat" onPress={calendarModal.onClose}>
+            {showCalendarAdvanced && (
+              <div className="flex flex-col gap-2 border-t border-divider pt-3">
+                <p className="text-xs text-default-400">{t('rehearsals.calendar_more_options_hint')}</p>
+                <Button
+                  variant="flat"
+                  isDisabled={!secondaryCalendarUrl}
+                  onPress={() => {
+                    if (!secondaryCalendarUrl) return;
+                    window.open(secondaryCalendarUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  {isAppleDevice
+                    ? t('rehearsals.calendar_add_google')
+                    : t('rehearsals.calendar_subscribe')}
+                </Button>
+                <Button
+                  variant="flat"
+                  isDisabled={!calendarIcsUrl}
+                  onPress={handleCopyCalendarLink}
+                >
+                  {calendarCopied ? t('rehearsals.calendar_copied') : t('rehearsals.calendar_copy')}
+                </Button>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" onPress={closeCalendarModal}>
               {t('common.close')}
             </Button>
           </ModalFooter>

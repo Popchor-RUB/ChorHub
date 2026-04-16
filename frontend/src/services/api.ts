@@ -155,6 +155,11 @@ export const memberCalendarApi = {
     if (icsUrl.startsWith('http://')) return `webcal://${icsUrl.substring('http://'.length)}`;
     return icsUrl;
   },
+  getGoogleCalendarSubscribeUrl: () => {
+    const icsUrl = memberCalendarApi.getWebcalUrl();
+    const absoluteIcsUrl = new URL(icsUrl, window.location.origin).toString();
+    return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(absoluteIcsUrl)}`;
+  },
 };
 
 export const attendanceApi = {
