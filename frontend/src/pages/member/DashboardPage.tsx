@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Spinner } from '@heroui/react';
-import { generalInfoApi } from '../../services/api';
+import { Spinner, Tabs, Tab } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
+import { generalInfoApi, personalInfoApi } from '../../services/api';
 import { MarkdownRenderer } from '../../components/info/MarkdownRenderer';
-import type { GeneralInfo } from '../../types';
+import type { GeneralInfo, PersonalInfo } from '../../types';
 
 export function InformationenPage() {
-  const [info, setInfo] = useState<GeneralInfo | null>(null);
+  const [generalInfo, setGeneralInfo] = useState<GeneralInfo | null>(null);
+  const [personalInfo, setPersonalInfo] = useState<PersonalInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
-    generalInfoApi.get()
-      .then((res) => setInfo(res.data))
+    Promise.all([
+      generalInfoApi.get().then((res) => setGeneralInfo(res.data)),
+      personalInfoApi.getMe().then((res) => setPersonalInfo(res.data)),
+    ])
       .catch(() => null)
       .finally(() => setLoading(false));
   }, []);
@@ -21,7 +26,21 @@ export function InformationenPage() {
 
   return (
     <div className="bg-background rounded-xl p-4 border border-divider">
-      <MarkdownRenderer content={info?.markdownContent ?? ''} />
+      <Tabs
+        aria-label={t('info.member_segment_aria')}
+        variant="bordered"
+        classNames={{ panel: 'pt-4' }}
+      >
+        <Tab key="general" title={t('info.member_general_tab')}>
+          <MarkdownRenderer content={generalInfo?.markdownContent ?? ''} />
+        </Tab>
+        <Tab key="personal" title={t('info.member_personal_tab')}>
+          <MarkdownRenderer
+            content={personalInfo?.markdownContent ?? ''}
+            emptyMessage={t('info.personal_empty')}
+          />
+        </Tab>
+      </Tabs>
     </div>
   );
 }

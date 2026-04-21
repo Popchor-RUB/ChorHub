@@ -97,6 +97,42 @@ export interface GeneralInfo {
   updatedAt: string;
 }
 
+export interface PersonalInfo {
+  id: string | null;
+  memberId: string | null;
+  markdownContent: string;
+  updatedAt: string | null;
+}
+
+export interface PersonalInfoConfig {
+  id: string;
+  markdownTemplate: string;
+  emailSubject: string;
+  updatedAt: string;
+}
+
+export interface PersonalInfoMemberRow {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  hasPersonalInfo: boolean;
+  updatedAt: string | null;
+}
+
+export type PersonalInfoSendStatusState = 'IDLE' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export interface PersonalInfoSendStatus {
+  status: PersonalInfoSendStatusState;
+  total: number;
+  sent: number;
+  failed: number;
+  remaining: number;
+  startedAt: string | null;
+  finishedAt: string | null;
+  lastError: string | null;
+}
+
 export interface CheckinPayload {
   memberId: string;
   name: string;

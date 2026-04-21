@@ -4,11 +4,12 @@ import remarkGfm from 'remark-gfm';
 
 interface Props {
   content: string;
+  emptyMessage?: string;
 }
 
-export function MarkdownRenderer({ content }: Props) {
+export function MarkdownRenderer({ content, emptyMessage = 'Noch keine Informationen vorhanden.' }: Props) {
   if (!content) {
-    return <p className="text-default-400 italic">Noch keine Informationen vorhanden.</p>;
+    return <p className="text-default-400 italic">{emptyMessage}</p>;
   }
 
   const withLinkBreaks = (text: string) => {

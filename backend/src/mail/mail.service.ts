@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import MarkdownIt from 'markdown-it';
 import { Member } from '../generated/prisma/client';
 
 export interface PushFallbackReminderItem {
@@ -10,7 +11,15 @@ export interface PushFallbackReminderItem {
 
 @Injectable()
 export class MailService {
-  constructor(private readonly mailerService: MailerService) {}
+  private readonly markdownRenderer: MarkdownIt;
+
+  constructor(private readonly mailerService: MailerService) {
+    this.markdownRenderer = new MarkdownIt({
+      breaks: true,
+      html: false,
+      linkify: true,
+    });
+  }
 
   async sendMagicLink(member: Member, magicUrl: string, rawToken: string, loginCode: string): Promise<void> {
     await this.mailerService.sendMail({
@@ -63,5 +72,25 @@ export class MailService {
         showGenericLogin: params.showGenericLogin,
       },
     });
+  }
+
+  async sendPersonalInfo(member: Member, subject: string, markdownContent: string): Promise<void> {
+    const htmlContent = this.renderMarkdownToHtml(markdownContent);
+
+    await this.mailerService.sendMail({
+      to: member.email,
+      subject,
+      template: 'personal-info',
+      context: {
+        firstName: member.firstName,
+        subject,
+        htmlContent,
+        markdownContent,
+      },
+    });
+  }
+
+  private renderMarkdownToHtml(markdownContent: string): string {
+    return this.markdownRenderer.render(markdownContent);
   }
 }

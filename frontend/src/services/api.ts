@@ -1,6 +1,12 @@
 import axios from 'axios';
 import type { InternalAxiosRequestConfig } from 'axios';
-import type { MemberCheckinQr } from '../types';
+import type {
+  MemberCheckinQr,
+  PersonalInfo,
+  PersonalInfoConfig,
+  PersonalInfoMemberRow,
+  PersonalInfoSendStatus,
+} from '../types';
 import { useAuthStore } from '../store/authStore';
 import { withBasePath } from '../utils/basePath';
 
@@ -199,6 +205,55 @@ export const generalInfoApi = {
   get: () => api.get('/general-info'),
   update: (markdownContent: string, sendPushNotification = false) =>
     api.patch('/general-info', { markdownContent, sendPushNotification }),
+};
+
+export const personalInfoApi = {
+  getMe: () => api.get<PersonalInfo>('/personal-info/me'),
+};
+
+export const adminPersonalInfoApi = {
+  getConfig: () => api.get<PersonalInfoConfig>('/admin/personal-info/config'),
+  getSendStatus: () => api.get<PersonalInfoSendStatus>('/admin/personal-info/send-status'),
+  publishConfig: (input: {
+    markdownTemplate: string;
+    emailSubject: string;
+    sendEmail: boolean;
+    deleteNonTargetedEntries: boolean;
+    recipientMode: 'all' | 'file';
+    recipientsFile?: File;
+    placeholders: { name: string; file: File }[];
+  }) => {
+    const fd = new FormData();
+    fd.append('markdownTemplate', input.markdownTemplate);
+    fd.append('emailSubject', input.emailSubject);
+    fd.append('sendEmail', String(input.sendEmail));
+    fd.append('deleteNonTargetedEntries', String(input.deleteNonTargetedEntries));
+    fd.append('recipientMode', input.recipientMode);
+    fd.append('placeholderNames', JSON.stringify(input.placeholders.map((placeholder) => placeholder.name)));
+    if (input.recipientMode === 'file' && input.recipientsFile) {
+      fd.append('recipients', input.recipientsFile);
+    }
+    for (const placeholder of input.placeholders) {
+      fd.append('placeholderValues', placeholder.file);
+    }
+    return api.patch('/admin/personal-info/config', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  listMembers: () => api.get<PersonalInfoMemberRow[]>('/admin/personal-info/members'),
+  getMember: (memberId: string) => api.get<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    personalInfo: {
+      id: string | null;
+      markdownContent: string;
+      updatedAt: string | null;
+    };
+  }>(`/admin/personal-info/members/${memberId}`),
+  updateMember: (memberId: string, markdownContent: string) =>
+    api.patch<PersonalInfo>(`/admin/personal-info/members/${memberId}`, { markdownContent }),
 };
 
 export const adminPushApi = {

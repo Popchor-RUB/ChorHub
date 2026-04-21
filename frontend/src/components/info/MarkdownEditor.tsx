@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useDeferredValue, useState } from 'react';
 import { Tabs, Tab, Textarea, Button } from '@heroui/react';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { adminTextareaClassNames } from '../../styles/adminFormStyles';
@@ -8,19 +8,12 @@ interface Props {
   onChange: (value: string) => void;
   onSave: () => void;
   saving?: boolean;
+  hideSaveButton?: boolean;
 }
 
-export function MarkdownEditor({ value, onChange, onSave, saving }: Props) {
+export function MarkdownEditor({ value, onChange, onSave, saving, hideSaveButton = false }: Props) {
   const [selected, setSelected] = useState<string>('edit');
-  const previewRef = useRef<HTMLDivElement>(null);
-  const [textareaHeight, setTextareaHeight] = useState<number | undefined>(undefined);
-
-  useEffect(() => {
-    if (previewRef.current) {
-      const height = previewRef.current.offsetHeight;
-      setTextareaHeight(height);
-    }
-  }, [value]);
+  const deferredPreviewValue = useDeferredValue(value);
 
   return (
     <div className="flex flex-col gap-4">
@@ -46,7 +39,7 @@ export function MarkdownEditor({ value, onChange, onSave, saving }: Props) {
           </Tab>
           <Tab key="preview" title="Vorschau">
             <div className="p-4 border border-default-200 rounded-lg min-h-40">
-              <MarkdownRenderer content={value} />
+              <MarkdownRenderer content={deferredPreviewValue} />
             </div>
           </Tab>
         </Tabs>
@@ -60,28 +53,28 @@ export function MarkdownEditor({ value, onChange, onSave, saving }: Props) {
             placeholder="Markdown eingeben..."
             value={value}
             onValueChange={onChange}
-            style={{ height: textareaHeight ? `${textareaHeight}px` : undefined }}
             classNames={{
               ...adminTextareaClassNames,
               input: `${adminTextareaClassNames.input} font-mono text-sm resize-y`,
             }}
+            minRows={12}
+            maxRows={40}
           />
         </div>
         <div className="w-px bg-default-200 flex-shrink-0 self-stretch" />
         <div className="flex-1 flex flex-col min-w-0">
           <div className="text-sm font-medium text-default-600 mb-2">Vorschau</div>
-          <div
-            ref={previewRef}
-            className="p-4 border border-default-200 rounded-lg overflow-auto bg-content1"
-          >
-            <MarkdownRenderer content={value} />
+          <div className="p-4 border border-default-200 rounded-lg overflow-auto bg-content1 min-h-[22rem]">
+            <MarkdownRenderer content={deferredPreviewValue} />
           </div>
         </div>
       </div>
 
-      <Button color="primary" onPress={onSave} isLoading={saving}>
-        Speichern
-      </Button>
+      {!hideSaveButton && (
+        <Button color="primary" onPress={onSave} isLoading={saving}>
+          Speichern
+        </Button>
+      )}
     </div>
   );
 }

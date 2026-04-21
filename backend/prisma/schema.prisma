@@ -29,6 +29,7 @@ model Member {
   attendancePlans   AttendancePlan[]
   attendanceRecords AttendanceRecord[]
   pushSubscriptions PushSubscription[]
+  personalInfo      PersonalInfoEntry?
 
   @@map("members")
 }
@@ -145,6 +146,25 @@ model GeneralInfo {
   updatedAt       DateTime @updatedAt
 
   @@map("general_info")
+}
+
+model PersonalInfoConfig {
+  id               String   @id @default(cuid())
+  markdownTemplate String
+  emailSubject     String
+  updatedAt        DateTime @updatedAt
+
+  @@map("personal_info_config")
+}
+
+model PersonalInfoEntry {
+  id              String   @id @default(cuid())
+  memberId        String   @unique @map("member_id")
+  markdownContent String
+  updatedAt       DateTime @updatedAt
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@map("personal_info_entries")
 }
 
 model ChoirVoice {

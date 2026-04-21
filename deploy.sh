@@ -11,6 +11,7 @@ rsync -av \
   --exclude "node_modules" \
   --exclude ".git" \
   --exclude "pgdata" \
+  --exclude "pgadmin-data" \
   --exclude "dist" \
   --exclude '.env*' \
   --exclude 'docker-compose.override.yml' \

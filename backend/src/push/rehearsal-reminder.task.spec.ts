@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { AuthService } from '../auth/auth.service';
+import { MailQueueService } from '../mail/mail-queue.service';
 import { PrismaClient } from '../generated/prisma/client';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -52,6 +53,7 @@ describe('RehearsalReminderTask', () => {
         { provide: PushService, useValue: pushService },
         { provide: AuthService, useValue: authService },
         { provide: MailService, useValue: mailService },
+        MailQueueService,
         {
           provide: ConfigService,
           useValue: {

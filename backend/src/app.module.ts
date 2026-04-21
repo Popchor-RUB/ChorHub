@@ -10,6 +10,7 @@ import { RehearsalsModule } from './rehearsals/rehearsals.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AdminModule } from './admin/admin.module';
 import { GeneralInfoModule } from './general-info/general-info.module';
+import { PersonalInfoModule } from './personal-info/personal-info.module';
 import { MailModule } from './mail/mail.module';
 import { PushModule } from './push/push.module';
 import { ChoirVoicesModule } from './choir-voices/choir-voices.module';
@@ -29,6 +30,7 @@ import { CheckinModule } from './checkin/checkin.module';
     AttendanceModule,
     AdminModule,
     GeneralInfoModule,
+    PersonalInfoModule,
     PushModule,
     ChoirVoicesModule,
     CheckinModule,

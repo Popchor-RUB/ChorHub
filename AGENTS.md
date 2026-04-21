@@ -10,8 +10,8 @@ Agent-focused instructions for this repository. Keep changes small, accurate, an
 
 ## Workflow
 - When changes in `backend/` are made, ensure that unittests still pass (`npm run test`)
-- When changes in `frontend/` are made, ensure that e2e tests (in `e2e/`) still pass (`npm run test:e2e` in root directory)
-- Check if changes either affect e2e tests or unittests
+- When changes in `frontend/` are made, ensure that `npm run lint` succeeds
+- When you are asked to commit something check before if e2e tests from the root directory and unittests from the backend succeed.
 
 ## Coding Guidelines
 - Follow best practice TypeScript patterns and keep diffs focused.
@@ -89,7 +89,7 @@ npm run test:e2e:report
 
 ## Testing instructions
 - Backend changes: run `npm run test` in `backend/` (plus focused tests when possible).
-- Frontend changes: run `npm run lint` and `npx tsc -p tsconfig.app.json --noEmit` in `frontend/` and run root Playwright E2E.
+- Frontend changes: run `npm run lint` and `npx tsc -p tsconfig.app.json --noEmit` in `frontend/`.
 
 ## Architecture notes
 

@@ -4,6 +4,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { MailService } from './mail.service';
+import { MailQueueService } from './mail-queue.service';
 
 function parseBooleanEnv(value: string | undefined, fallback = false): boolean {
   if (value === undefined) {
@@ -55,7 +56,7 @@ function parseBooleanEnv(value: string | undefined, fallback = false): boolean {
       inject: [ConfigService],
     }),
   ],
-  providers: [MailService],
-  exports: [MailService],
+  providers: [MailService, MailQueueService],
+  exports: [MailService, MailQueueService],
 })
 export class MailModule {}

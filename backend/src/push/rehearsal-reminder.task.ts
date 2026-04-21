@@ -4,6 +4,7 @@ import { Cron } from '@nestjs/schedule';
 import { AttendanceResponse } from '../generated/prisma/client';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
+import { MailQueueService } from '../mail/mail-queue.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from './push.service';
 
@@ -19,16 +20,15 @@ interface FallbackMailJob {
 @Injectable()
 export class RehearsalReminderTask {
   private readonly logger = new Logger(RehearsalReminderTask.name);
-  private readonly mailQueue: FallbackMailJob[] = [];
-  private isProcessingMailQueue = false;
-  private lastFallbackMailSentAt = 0;
   private static readonly FALLBACK_MAIL_INTERVAL_MS = 60_000;
+  private static readonly FALLBACK_MAIL_QUEUE = 'push-fallback-reminder';
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly pushService: PushService,
     private readonly authService: AuthService,
     private readonly mailService: MailService,
+    private readonly mailQueueService: MailQueueService,
     private readonly config: ConfigService,
   ) {}
 
@@ -200,44 +200,28 @@ export class RehearsalReminderTask {
       return;
     }
 
-    this.mailQueue.push({
+    const fallbackMailJob: FallbackMailJob = {
       memberId: member.id,
       subject: payload.subject,
       title: payload.mailTitle,
       intro: payload.mailIntro,
       items: payload.mailItems,
       question: payload.mailQuestion,
-    });
-    void this.processMailQueue();
-  }
-
-  private async processMailQueue(): Promise<void> {
-    if (this.isProcessingMailQueue) return;
-    this.isProcessingMailQueue = true;
-
-    try {
-      while (this.mailQueue.length > 0) {
-        const fallbackMailIntervalMs = this.getFallbackMailIntervalMs();
-        const waitMs = Math.max(
-          0,
-          this.lastFallbackMailSentAt + fallbackMailIntervalMs - Date.now(),
-        );
-        if (waitMs > 0) {
-          await this.sleep(waitMs);
-        }
-
-        const next = this.mailQueue.shift();
-        if (!next) continue;
-
+    };
+    this.mailQueueService.enqueue(
+      RehearsalReminderTask.FALLBACK_MAIL_QUEUE,
+      async () => {
         try {
-          const member = await this.prisma.member.findUnique({ where: { id: next.memberId } });
-          if (!member) {
-            this.logger.warn(`Skipping fallback reminder mail: member ${next.memberId} not found`);
-            continue;
+          const queuedMember = await this.prisma.member.findUnique({
+            where: { id: fallbackMailJob.memberId },
+          });
+          if (!queuedMember) {
+            this.logger.warn(`Skipping fallback reminder mail: member ${fallbackMailJob.memberId} not found`);
+            return;
           }
 
-          const { magicUrl } = await this.authService.issueMemberMagicLink(member.id);
-          const items = next.items.map((item) => {
+          const { magicUrl } = await this.authService.issueMemberMagicLink(queuedMember.id);
+          const items = fallbackMailJob.items.map((item) => {
             if (!item.rehearsalId) return { label: item.label };
             return {
               label: item.label,
@@ -248,32 +232,23 @@ export class RehearsalReminderTask {
           const showGenericLogin = !items.some((item) => item.confirmUrl && item.declineUrl);
 
           await this.mailService.sendPushFallbackReminderMail({
-            member,
-            subject: next.subject,
-            title: next.title,
-            intro: next.intro,
+            member: queuedMember,
+            subject: fallbackMailJob.subject,
+            title: fallbackMailJob.title,
+            intro: fallbackMailJob.intro,
             items,
-            question: next.question,
+            question: fallbackMailJob.question,
             magicUrl,
             showGenericLogin,
           });
-          this.lastFallbackMailSentAt = Date.now();
         } catch (error: unknown) {
           this.logger.warn(
-            `Failed to send fallback reminder mail for member ${next.memberId}: ${String(error)}`,
+            `Failed to send fallback reminder mail for member ${fallbackMailJob.memberId}: ${String(error)}`,
           );
         }
-      }
-    } finally {
-      this.isProcessingMailQueue = false;
-      if (this.mailQueue.length > 0) {
-        void this.processMailQueue();
-      }
-    }
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+      },
+      this.getFallbackMailIntervalMs(),
+    );
   }
 
   private getFallbackMailIntervalMs(): number {
