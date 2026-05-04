@@ -306,6 +306,7 @@ export class AdminService {
           firstName: true,
           lastName: true,
           email: true,
+          lastLoginAt: true,
           choirVoice: { select: { name: true } },
           attendanceRecords: {
             where: { rehearsal: { date: { lt: startOfToday }, isOptional: false } },
@@ -336,6 +337,7 @@ export class AdminService {
       'Name',
       'E-Mail',
       'Stimme',
+      'Letzter Login',
       'Proben besucht',
       'Unentschuldigt',
       ...rehearsals.map((r) => `${formatDate(r.date)} – ${r.title}`),
@@ -366,6 +368,7 @@ export class AdminService {
         `${m.lastName}, ${m.firstName}`,
         m.email,
         m.choirVoice?.name ?? '',
+        m.lastLoginAt ? formatDate(m.lastLoginAt) : 'nie',
         attendanceCount,
         unexcusedCount,
         ...rehearsalStatuses,
