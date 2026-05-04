@@ -32,12 +32,12 @@ export class RehearsalReminderTask {
     private readonly config: ConfigService,
   ) {}
 
-  @Cron('0 9 * * *')
+  @Cron('0 9 * * 1')
   async sendDailyReminders(): Promise<void> {
     const now = new Date();
     const startOfToday = this.getUtcStartOfDay(now);
-    const reminderDayStart = new Date(startOfToday.getTime() + 2 * 86_400_000);
-    const reminderDayEndExclusive = new Date(reminderDayStart.getTime() + 86_400_000);
+    const reminderDayStart = new Date(startOfToday.getTime());
+    const reminderDayEndExclusive = new Date(reminderDayStart.getTime() + 7 * 86_400_000);
     // const shouldSendStalePlanReminder = this.shouldSendStalePlanReminder(now);
     const shouldSendStalePlanReminder = false;
 

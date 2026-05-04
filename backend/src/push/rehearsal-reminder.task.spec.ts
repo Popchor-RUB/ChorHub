@@ -84,8 +84,8 @@ describe('RehearsalReminderTask', () => {
     expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith({
       where: {
         date: {
-          gte: new Date('2026-04-01T00:00:00.000Z'),
-          lt: new Date('2026-04-02T00:00:00.000Z'),
+          gte: new Date('2026-03-30T00:00:00.000Z'),
+          lt: new Date('2026-04-06T00:00:00.000Z'),
         },
         isOptional: false,
       },
@@ -98,6 +98,7 @@ describe('RehearsalReminderTask', () => {
     prismaMock.rehearsal.findMany.mockResolvedValue([
       { id: 'r1', date: new Date(now + 86_400_000), title: 'Probe A' },
       { id: 'r2', date: new Date(now + 2 * 86_400_000), title: 'Probe B' },
+      { id: 'r2', date: new Date(now + 5 * 86_400_000), title: 'Probe C' },
     ] as any);
     prismaMock.member.findMany.mockResolvedValue([
       { ...baseMember, pushSubscriptions: [{ id: 'sub-1' }] },
@@ -118,6 +119,12 @@ describe('RehearsalReminderTask', () => {
       'm-1',
       expect.objectContaining({
         body: expect.stringContaining('Probe B'),
+      }),
+    );
+    expect(pushService.sendToMember).toHaveBeenCalledWith(
+      'm-1',
+      expect.objectContaining({
+        body: expect.stringContaining('Probe C'),
       }),
     );
   });
