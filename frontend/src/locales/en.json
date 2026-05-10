@@ -169,7 +169,12 @@
     "create_email": "Email",
     "create_voice": "Voice (optional)",
     "create_btn": "Create & send email",
-    "create_error_email_taken": "This email address is already in use."
+    "create_error_email_taken": "This email address is already in use.",
+    "detail_title": "Edit member",
+    "detail_rehearsals_title": "Rehearsal status & planning",
+    "detail_mail_actions": "Send email",
+    "detail_send_invite": "Send invitation",
+    "detail_send_login": "Send new login"
   },
   "attendance": {
     "record_title": "Record Attendance",
@@ -340,6 +345,7 @@
     "no_member_data": "No member data.",
     "edit_mode_toggle": "Edit",
     "edit_mode_done": "Done",
+    "open_member_page": "Detail page",
     "delete_member": "Delete Member",
     "delete_confirm_prompt": "Really delete?",
     "delete_confirm_yes": "Yes, delete",

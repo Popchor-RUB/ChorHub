@@ -37,6 +37,7 @@ describe('AdminService', () => {
         loginCode: '123456',
         magicUrl: 'http://localhost:5173/auth/verify?token=raw-token',
       }),
+      requestMagicLink: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<AuthService>;
 
     const module = await Test.createTestingModule({
@@ -510,6 +511,91 @@ describe('AdminService', () => {
           take: 10,
         }),
       );
+    });
+  });
+
+  describe('getMemberById', () => {
+    it('returns member detail with counters', async () => {
+      prismaMock.rehearsal.count.mockResolvedValue(5);
+      prismaMock.member.findUnique.mockResolvedValue({
+        id: 'member-1',
+        firstName: 'Anna',
+        lastName: 'Müller',
+        email: 'anna@choir.de',
+        choirVoice: { id: 'v1', name: 'Sopran', sortOrder: 1 },
+        createdAt: new Date('2025-01-01'),
+        attendanceRecords: [{ rehearsalId: 'r-1' }, { rehearsalId: 'r-2' }],
+        attendancePlans: [{ rehearsalId: 'r-3' }],
+      } as any);
+
+      const result = await service.getMemberById('member-1');
+      expect(result).toMatchObject({
+        id: 'member-1',
+        firstName: 'Anna',
+        attendanceCount: 2,
+        unexcusedAbsenceCount: 2,
+      });
+    });
+
+    it('throws NotFoundException when member does not exist', async () => {
+      prismaMock.rehearsal.count.mockResolvedValue(0);
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      await expect(service.getMemberById('missing')).rejects.toThrow('Mitglied nicht gefunden');
+    });
+  });
+
+  describe('updateMember', () => {
+    const dto = { firstName: 'Neu', lastName: 'Name', email: 'new@choir.de' };
+
+    it('updates member and returns refreshed detail', async () => {
+      prismaMock.member.findUnique
+        .mockResolvedValueOnce(mockMember({ id: 'member-1' }) as any)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'member-1',
+          firstName: 'Neu',
+          lastName: 'Name',
+          email: 'new@choir.de',
+          choirVoice: null,
+          createdAt: new Date('2025-01-01'),
+          attendanceRecords: [],
+          attendancePlans: [],
+        } as any);
+      prismaMock.rehearsal.count.mockResolvedValue(0);
+      prismaMock.member.update.mockResolvedValue({} as any);
+
+      const result = await service.updateMember('member-1', dto);
+
+      expect(prismaMock.member.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'member-1' },
+          data: expect.objectContaining({ firstName: 'Neu', email: 'new@choir.de' }),
+        }),
+      );
+      expect(result.firstName).toBe('Neu');
+    });
+
+    it('throws conflict on duplicate email', async () => {
+      prismaMock.member.findUnique
+        .mockResolvedValueOnce(mockMember({ id: 'member-1' }) as any)
+        .mockResolvedValueOnce(mockMember({ id: 'member-2', email: 'new@choir.de' }) as any);
+
+      await expect(service.updateMember('member-1', dto)).rejects.toThrow('E-Mail-Adresse bereits vergeben');
+    });
+  });
+
+  describe('member mail actions', () => {
+    it('sends invite mail', async () => {
+      prismaMock.member.findUnique.mockResolvedValue(mockMember({ id: 'member-1' }) as any);
+      await service.sendMemberInvite('member-1');
+      expect(authService.issueMemberMagicLink).toHaveBeenCalledWith('member-1');
+      expect(mailService.sendMemberInvite).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends login mail via auth service', async () => {
+      prismaMock.member.findUnique.mockResolvedValue(mockMember({ id: 'member-1', email: 'a@b.c' }) as any);
+      await service.sendMemberLoginEmail('member-1');
+      expect(authService.requestMagicLink).toHaveBeenCalledWith('a@b.c');
     });
   });
 });

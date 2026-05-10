@@ -183,6 +183,9 @@ export const attendanceApi = {
 export const adminMembersApi = {
   create: (data: { firstName: string; lastName: string; email: string; voiceId?: string }) =>
     api.post('/admin/members', data),
+  get: (id: string) => api.get(`/admin/members/${id}`),
+  update: (id: string, data: { firstName: string; lastName: string; email: string; voiceId?: string | null }) =>
+    api.patch(`/admin/members/${id}`, data),
   import: (file: File, sendEmails: boolean) => {
     const fd = new FormData();
     fd.append('file', file);
@@ -196,6 +199,8 @@ export const adminMembersApi = {
   search: (q: string) => api.get(`/admin/members/search?q=${encodeURIComponent(q)}`),
   history: (id: string) => api.get(`/admin/members/${id}/history`),
   rehearsals: (id: string) => api.get(`/admin/members/${id}/rehearsals`),
+  sendInvite: (id: string) => api.post(`/admin/members/${id}/send-invite`),
+  sendLogin: (id: string) => api.post(`/admin/members/${id}/send-login`),
   delete: (id: string) => api.delete(`/admin/members/${id}`),
   setAttendancePlan: (memberId: string, rehearsalId: string, response: 'CONFIRMED' | 'DECLINED' | null) =>
     api.put(`/admin/members/${memberId}/attendance-plans/${rehearsalId}`, { response }),

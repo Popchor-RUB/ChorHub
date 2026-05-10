@@ -9,6 +9,7 @@ const AUTH_DIR = path.join(__dirname, '.auth');
 const ADMIN_STATE_PATH = path.join(AUTH_DIR, 'admin.json');
 const MEMBER_STATE_PATH = path.join(AUTH_DIR, 'member.json');
 const FRONTEND_URL = 'https://localhost:5173';
+const BACKEND_URL = 'http://localhost:3000';
 const BACKEND_DIR = path.join(__dirname, '..', 'backend');
 
 export default async function globalSetup() {
@@ -60,6 +61,16 @@ export default async function globalSetup() {
   const member = await getFirstMember(adminToken);
   const memberEmail = member.email;
 
+  // Guard against occasional seed/list mismatches by ensuring chosen email can request a code.
+  const probe = await fetch(`${BACKEND_URL}/auth/magic-link/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: memberEmail }),
+  });
+  if (!probe.ok) {
+    throw new Error(`Global setup member cannot request magic link (${memberEmail}): ${probe.status}`);
+  }
+
   await clearMailHog();
 
   const memberContext = await browser.newContext({
@@ -74,7 +85,7 @@ export default async function globalSetup() {
   await memberPage.getByLabel('E-Mail-Adresse').fill(memberEmail);
   await memberPage.getByRole('button', { name: 'Weiter' }).click();
 
-  await memberPage.waitForSelector('text=6-stelliger Code', { timeout: 10_000 });
+  await memberPage.getByLabel('6-stelliger Code').waitFor({ timeout: 15_000 });
 
   const code = await getLatestMagicLinkCode(memberEmail, {
     timeoutMs: 15_000,

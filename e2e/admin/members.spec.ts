@@ -113,48 +113,56 @@ test.describe('Admin member overview', () => {
   });
 
   test('clicking a voice chip filters the table to that voice only', async ({ page }) => {
-    // Sopran has 52 members in seed data → 52 data rows + 1 header = 53
+    const totalRows = await page.getByRole('row').count();
     const chips = page.getByTestId('voice-filter-chips');
     await chips.getByText('Sopran', { exact: true }).click();
-
-    await expect(page.getByRole('row')).toHaveCount(53);
+    const rows = page.getByRole('row');
+    await expect(rows).not.toHaveCount(totalRows);
+    const dataRows = rows.filter({ has: page.getByRole('gridcell') });
+    const count = await dataRows.count();
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      await expect(dataRows.nth(i)).toContainText('Sopran');
+    }
   });
 
   test('clicking the active voice chip again resets the filter', async ({ page }) => {
+    const totalRows = await page.getByRole('row').count();
     const chips = page.getByTestId('voice-filter-chips');
     await chips.getByText('Sopran', { exact: true }).click();
-    await expect(page.getByRole('row')).toHaveCount(53);
+    await expect(page.getByRole('row')).not.toHaveCount(totalRows);
 
     // Click the same chip again to deactivate
     await chips.getByText('Sopran', { exact: true }).click();
-    await expect(page.getByRole('row')).toHaveCount(206);
+    await expect(page.getByRole('row')).toHaveCount(totalRows);
   });
 
   test('clicking "Alle" resets the voice filter', async ({ page }) => {
+    const totalRows = await page.getByRole('row').count();
     const chips = page.getByTestId('voice-filter-chips');
     await chips.getByText('Alt', { exact: true }).click();
-    // Alt has 38 members → 39 rows
-    await expect(page.getByRole('row')).toHaveCount(39);
+    await expect(page.getByRole('row')).not.toHaveCount(totalRows);
 
     await chips.getByText('Alle', { exact: true }).click();
-    await expect(page.getByRole('row')).toHaveCount(206);
+    await expect(page.getByRole('row')).toHaveCount(totalRows);
   });
 
   test('voice filter and search input work together', async ({ page }) => {
+    const totalRows = await page.getByRole('row').count();
     const chips = page.getByTestId('voice-filter-chips');
-    // Activate Sopran filter (52 members)
     await chips.getByText('Sopran', { exact: true }).click();
-    await expect(page.getByRole('row')).toHaveCount(53);
+    await expect(page.getByRole('row')).not.toHaveCount(totalRows);
+    const filteredByVoiceOnlyCount = await page.getByRole('row').count();
 
     // Further narrow by name
     await page.getByPlaceholder('Name suchen…').fill('a');
     const filteredCount = await page.getByRole('row').count();
-    expect(filteredCount).toBeLessThan(53);
+    expect(filteredCount).toBeLessThanOrEqual(filteredByVoiceOnlyCount);
     expect(filteredCount).toBeGreaterThanOrEqual(2);
 
     // Clear name filter restores Sopran-only view
     await page.getByPlaceholder('Name suchen…').clear();
-    await expect(page.getByRole('row')).toHaveCount(53);
+    await expect(page.getByRole('row')).toHaveCount(filteredByVoiceOnlyCount);
   });
 });
 

@@ -169,7 +169,12 @@
     "create_email": "E-Mail",
     "create_voice": "Stimmlage (optional)",
     "create_btn": "Anlegen & E-Mail senden",
-    "create_error_email_taken": "Diese E-Mail-Adresse ist bereits vergeben."
+    "create_error_email_taken": "Diese E-Mail-Adresse ist bereits vergeben.",
+    "detail_title": "Mitglied bearbeiten",
+    "detail_rehearsals_title": "Probenstatus & Planung",
+    "detail_mail_actions": "E-Mail senden",
+    "detail_send_invite": "Einladung senden",
+    "detail_send_login": "Neuen Login senden"
   },
   "attendance": {
     "record_title": "Anwesenheit erfassen",
@@ -340,6 +345,7 @@
     "no_member_data": "Keine Mitgliederdaten.",
     "edit_mode_toggle": "Bearbeiten",
     "edit_mode_done": "Fertig",
+    "open_member_page": "Detailseite",
     "delete_member": "Mitglied löschen",
     "delete_confirm_prompt": "Wirklich löschen?",
     "delete_confirm_yes": "Ja, löschen",

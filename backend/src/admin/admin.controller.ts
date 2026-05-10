@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Patch,
   Post,
   Put,
   Query,
@@ -19,6 +20,7 @@ import { AdminService } from './admin.service';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { AdminSetAttendancePlanDto } from './dto/admin-set-attendance-plan.dto';
+import { UpdateMemberDto } from './dto/update-member.dto';
 
 @Controller('admin')
 @UseGuards(JwtAdminGuard)
@@ -63,6 +65,28 @@ export class AdminController {
   @HttpCode(204)
   deleteMember(@Param('id') id: string) {
     return this.adminService.deleteMember(id);
+  }
+
+  @Get('members/:id')
+  getMember(@Param('id') id: string) {
+    return this.adminService.getMemberById(id);
+  }
+
+  @Patch('members/:id')
+  updateMember(@Param('id') id: string, @Body() dto: UpdateMemberDto) {
+    return this.adminService.updateMember(id, dto);
+  }
+
+  @Post('members/:id/send-invite')
+  @HttpCode(204)
+  sendMemberInvite(@Param('id') id: string) {
+    return this.adminService.sendMemberInvite(id);
+  }
+
+  @Post('members/:id/send-login')
+  @HttpCode(204)
+  sendMemberLogin(@Param('id') id: string) {
+    return this.adminService.sendMemberLoginEmail(id);
   }
 
   @Get('members/:id/rehearsals')

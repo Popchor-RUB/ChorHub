@@ -40,6 +40,8 @@ export interface MemberOverview extends Member {
   unexcusedAbsenceCount: number;
 }
 
+export type AdminMemberDetail = MemberOverview;
+
 export interface MemberRehearsalEntry {
   id: string;
   date: string;

@@ -6,6 +6,7 @@ import { AuthService } from '../auth/auth.service';
 import { parse } from 'csv-parse/sync';
 import * as ExcelJS from 'exceljs';
 import type { CreateMemberDto } from './dto/create-member.dto';
+import type { UpdateMemberDto } from './dto/update-member.dto';
 
 interface CsvRow {
   firstName: string;
@@ -257,6 +258,96 @@ export class AdminService {
       attended: r.attendanceRecords.length > 0,
       plan: r.attendancePlans[0]?.response ?? null,
     }));
+  }
+
+  async getMemberById(memberId: string) {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const [totalPastRehearsals, member] = await Promise.all([
+      this.prisma.rehearsal.count({ where: { date: { lt: startOfToday }, isOptional: false } }),
+      this.prisma.member.findUnique({
+        where: { id: memberId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          choirVoice: { select: { id: true, name: true, sortOrder: true } },
+          createdAt: true,
+          attendanceRecords: {
+            where: { rehearsal: { date: { lt: startOfToday }, isOptional: false } },
+            select: { rehearsalId: true },
+          },
+          attendancePlans: {
+            where: {
+              response: 'DECLINED',
+              rehearsal: { date: { lt: startOfToday }, isOptional: false },
+            },
+            select: { rehearsalId: true },
+          },
+        },
+      }),
+    ]);
+
+    if (!member) throw new NotFoundException('Mitglied nicht gefunden');
+
+    const attendedPastIds = new Set(member.attendanceRecords.map((r) => r.rehearsalId));
+    const declinedPastIds = new Set(member.attendancePlans.map((p) => p.rehearsalId));
+    const declinedNotAttended = [...declinedPastIds].filter((id) => !attendedPastIds.has(id)).length;
+    const unexcusedAbsenceCount = Math.max(0, totalPastRehearsals - attendedPastIds.size - declinedNotAttended);
+
+    return {
+      id: member.id,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      email: member.email,
+      choirVoice: member.choirVoice,
+      createdAt: member.createdAt,
+      attendanceCount: attendedPastIds.size,
+      unexcusedAbsenceCount,
+    };
+  }
+
+  async updateMember(memberId: string, dto: UpdateMemberDto) {
+    const member = await this.prisma.member.findUnique({ where: { id: memberId } });
+    if (!member) throw new NotFoundException('Mitglied nicht gefunden');
+
+    const normalizedEmail = dto.email.trim().toLowerCase();
+    const existingByEmail = await this.prisma.member.findUnique({ where: { email: normalizedEmail } });
+    if (existingByEmail && existingByEmail.id !== memberId) {
+      throw new ConflictException('E-Mail-Adresse bereits vergeben');
+    }
+
+    if (dto.voiceId) {
+      const voice = await this.prisma.choirVoice.findUnique({ where: { id: dto.voiceId } });
+      if (!voice) throw new NotFoundException('Stimmlage nicht gefunden');
+    }
+
+    await this.prisma.member.update({
+      where: { id: memberId },
+      data: {
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        email: normalizedEmail,
+        choirVoiceId: dto.voiceId ?? null,
+      },
+    });
+
+    return this.getMemberById(memberId);
+  }
+
+  async sendMemberInvite(memberId: string) {
+    const member = await this.prisma.member.findUnique({ where: { id: memberId } });
+    if (!member) throw new NotFoundException('Mitglied nicht gefunden');
+    const { magicUrl } = await this.authService.issueMemberMagicLink(member.id);
+    await this.mailService.sendMemberInvite(member, magicUrl);
+  }
+
+  async sendMemberLoginEmail(memberId: string) {
+    const member = await this.prisma.member.findUnique({ where: { id: memberId } });
+    if (!member) throw new NotFoundException('Mitglied nicht gefunden');
+    await this.authService.requestMagicLink(member.email);
   }
 
   async adminSetMemberAttendancePlan(

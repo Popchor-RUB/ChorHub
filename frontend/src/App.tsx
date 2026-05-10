@@ -19,6 +19,7 @@ const MagicLinkVerifyPage = lazy(() => import('./pages/auth/MagicLinkVerifyPage'
 const LoginPage = lazy(() => import('./pages/admin/LoginPage').then((module) => ({ default: module.LoginPage })));
 
 const MemberOverviewPage = lazy(() => import('./pages/admin/MemberOverviewPage').then((module) => ({ default: module.MemberOverviewPage })));
+const AdminMemberDetailPage = lazy(() => import('./pages/admin/AdminMemberDetailPage').then((module) => ({ default: module.AdminMemberDetailPage })));
 const ImportMembersPage = lazy(() => import('./pages/admin/ImportMembersPage').then((module) => ({ default: module.ImportMembersPage })));
 const GeneralInfoPage = lazy(() => import('./pages/admin/GeneralInfoPage').then((module) => ({ default: module.GeneralInfoPage })));
 const AttendancePage = lazy(() => import('./pages/admin/AttendancePage').then((module) => ({ default: module.AttendancePage })));
@@ -70,6 +71,7 @@ const router = createBrowserRouter(
       children: [
         { index: true, element: <Navigate to="/admin/mitglieder" replace /> },
         { path: 'mitglieder', element: <LazyPage><MemberOverviewPage /></LazyPage> },
+        { path: 'mitglieder/:memberId', element: <LazyPage><AdminMemberDetailPage /></LazyPage> },
         { path: 'mitglieder/importieren', element: <LazyPage><ImportMembersPage /></LazyPage> },
         { path: 'proben', element: <LazyPage><RehearsalOverviewPage /></LazyPage> },
         { path: 'anwesenheit', element: <LazyPage><AttendancePage /></LazyPage> },
