@@ -3,7 +3,7 @@ import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Spinner, Butt
 import { CheckIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { adminMembersApi, attendanceApi } from '../../services/api';
+import { adminMembersApi } from '../../services/api';
 import type { ChoirVoice, MemberRehearsalEntry } from '../../types';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { MemberRehearsalOverview } from './MemberRehearsalOverview';
@@ -49,54 +49,6 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
       setLoading(false);
     });
   }, [isOpen, member.id]);
-
-  const cycleUpcomingPlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | 'DECLINED' | null => {
-    if (current === 'CONFIRMED') return 'DECLINED';
-    if (current === 'DECLINED') return null;
-    return 'CONFIRMED';
-  };
-
-  const cycleOptionalPlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | 'DECLINED' | null => {
-    if (current === 'CONFIRMED') return 'DECLINED';
-    if (current === 'DECLINED') return null;
-    return 'CONFIRMED';
-  };
-
-  const handleToggleUpcomingPlan = async (r: MemberRehearsalEntry) => {
-    if (saving) return;
-    const newResponse = r.isOptional ? cycleOptionalPlan(r.plan) : cycleUpcomingPlan(r.plan);
-    setRehearsals((prev) =>
-      prev.map((x) => (x.id === r.id ? { ...x, plan: newResponse } : x)),
-    );
-    setSaving(r.id);
-    try {
-      await adminMembersApi.setAttendancePlan(member.id, r.id, newResponse);
-    } catch {
-      setRehearsals((prev) =>
-        prev.map((x) => (x.id === r.id ? { ...x, plan: r.plan } : x)),
-      );
-    } finally {
-      setSaving(null);
-    }
-  };
-
-  const handleToggleAttendanceRecord = async (r: MemberRehearsalEntry) => {
-    if (saving) return;
-    const nextAttended = !r.attended;
-    setRehearsals((prev) =>
-      prev.map((x) => (x.id === r.id ? { ...x, attended: nextAttended } : x)),
-    );
-    setSaving(r.id);
-    try {
-      await attendanceApi.setRecord(r.id, member.id, nextAttended);
-    } catch {
-      setRehearsals((prev) =>
-        prev.map((x) => (x.id === r.id ? { ...x, attended: r.attended } : x)),
-      );
-    } finally {
-      setSaving(null);
-    }
-  };
 
   const handleDeleteConfirm = async () => {
     setDeleting(true);
@@ -174,11 +126,12 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                 dateLocale={dateLocale}
                 editMode={editMode}
                 setEditMode={setEditMode}
+                memberId={member.id}
+                setRehearsals={setRehearsals}
                 savingId={saving}
+                setSavingId={setSaving}
                 showAllUpcoming={showAllUpcoming}
                 setShowAllUpcoming={setShowAllUpcoming}
-                onToggleUpcomingPlan={handleToggleUpcomingPlan}
-                onTogglePastAttendance={handleToggleAttendanceRecord}
                 showEditToggle={false}
               />
             )}

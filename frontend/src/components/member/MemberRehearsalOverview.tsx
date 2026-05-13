@@ -1,6 +1,8 @@
+import type { Dispatch, SetStateAction } from 'react';
 import { CheckIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { Button, Chip, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
+import { adminMembersApi, attendanceApi } from '../../services/api';
 import type { MemberRehearsalEntry } from '../../types';
 import { formatDateMedium } from '../../utils/dateFormatting';
 
@@ -9,11 +11,13 @@ type Props = {
   dateLocale: string;
   editMode: boolean;
   setEditMode: (next: boolean | ((prev: boolean) => boolean)) => void;
+  memberId: string;
+  setRehearsals: Dispatch<SetStateAction<MemberRehearsalEntry[]>>;
   savingId: string | null;
+  setSavingId: Dispatch<SetStateAction<string | null>>;
   showAllUpcoming: boolean;
   setShowAllUpcoming: (next: boolean) => void;
-  onToggleUpcomingPlan: (rehearsal: MemberRehearsalEntry) => void;
-  onTogglePastAttendance: (rehearsal: MemberRehearsalEntry) => void;
+  onSaveError?: () => void;
   title?: string;
   className?: string;
   testIdPrefix?: string;
@@ -25,17 +29,69 @@ export function MemberRehearsalOverview({
   dateLocale,
   editMode,
   setEditMode,
+  memberId,
+  setRehearsals,
   savingId,
+  setSavingId,
   showAllUpcoming,
   setShowAllUpcoming,
-  onToggleUpcomingPlan,
-  onTogglePastAttendance,
+  onSaveError,
   title,
   className,
   testIdPrefix,
   showEditToggle = true,
 }: Props) {
   const { t } = useTranslation();
+  const cyclePlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | 'DECLINED' | null => {
+    if (current === 'CONFIRMED') return 'DECLINED';
+    if (current === 'DECLINED') return null;
+    return 'CONFIRMED';
+  };
+
+  const handleToggleUpcomingPlan = async (rehearsal: MemberRehearsalEntry) => {
+    if (savingId) return;
+    const nextPlan = cyclePlan(rehearsal.plan);
+
+    setRehearsals((prev) => prev.map((x) => (x.id === rehearsal.id ? { ...x, plan: nextPlan } : x)));
+    setSavingId(rehearsal.id);
+    try {
+      await adminMembersApi.setAttendancePlan(memberId, rehearsal.id, nextPlan);
+    } catch {
+      setRehearsals((prev) => prev.map((x) => (x.id === rehearsal.id ? { ...x, plan: rehearsal.plan } : x)));
+      onSaveError?.();
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const getNextPastState = (rehearsal: MemberRehearsalEntry): Pick<MemberRehearsalEntry, 'attended' | 'plan'> => {
+    if (rehearsal.attended) return { attended: false, plan: 'DECLINED' };
+    if (rehearsal.plan === 'DECLINED') return { attended: false, plan: 'CONFIRMED' };
+    return { attended: true, plan: null };
+  };
+
+  const handleTogglePastAttendance = async (rehearsal: MemberRehearsalEntry) => {
+    if (savingId) return;
+    const nextState = getNextPastState(rehearsal);
+
+    setRehearsals((prev) =>
+      prev.map((x) => (x.id === rehearsal.id ? { ...x, attended: nextState.attended, plan: nextState.plan } : x)),
+    );
+    setSavingId(rehearsal.id);
+    try {
+      await Promise.all([
+        attendanceApi.setRecord(rehearsal.id, memberId, nextState.attended),
+        adminMembersApi.setAttendancePlan(memberId, rehearsal.id, nextState.plan),
+      ]);
+    } catch {
+      setRehearsals((prev) =>
+        prev.map((x) => (x.id === rehearsal.id ? { ...x, attended: rehearsal.attended, plan: rehearsal.plan } : x)),
+      );
+      onSaveError?.();
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
@@ -107,7 +163,7 @@ export function MemberRehearsalOverview({
                 <div
                   key={r.id}
                   data-testid={testIdPrefix ? `${testIdPrefix}-upcoming-row-${r.id}` : undefined}
-                  onClick={editMode ? () => onToggleUpcomingPlan(r) : undefined}
+                  onClick={editMode ? () => void handleToggleUpcomingPlan(r) : undefined}
                   className={`flex flex-col items-start gap-1 rounded-lg px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between ${rowClassName} ${editMode ? 'cursor-pointer transition-opacity hover:opacity-75' : ''}`}
                 >
                   <span className="font-medium">
@@ -167,7 +223,7 @@ export function MemberRehearsalOverview({
                 <div
                   key={r.id}
                   data-testid={testIdPrefix ? `${testIdPrefix}-past-row-${r.id}` : undefined}
-                  onClick={editMode ? () => onTogglePastAttendance(r) : undefined}
+                  onClick={editMode ? () => void handleTogglePastAttendance(r) : undefined}
                   className={`flex flex-col items-start gap-1 rounded-lg px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between ${rowClassName} ${editMode ? 'cursor-pointer transition-opacity hover:opacity-75' : ''}`}
                 >
                   <span className="font-medium">

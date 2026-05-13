@@ -17,7 +17,7 @@ import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { MemberRehearsalOverview } from '../../components/member/MemberRehearsalOverview';
-import { adminMembersApi, attendanceApi, choirVoicesApi } from '../../services/api';
+import { adminMembersApi, choirVoicesApi } from '../../services/api';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { adminInputClassNames, adminSelectClassNames } from '../../styles/adminFormStyles';
 import type { AdminMemberDetail, ChoirVoice, MemberRehearsalEntry } from '../../types';
@@ -107,18 +107,6 @@ export function AdminMemberDetailPage() {
     );
   }, [form, initialForm]);
 
-  const cycleUpcomingPlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | 'DECLINED' | null => {
-    if (current === 'CONFIRMED') return 'DECLINED';
-    if (current === 'DECLINED') return null;
-    return 'CONFIRMED';
-  };
-
-  const cycleOptionalPlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | 'DECLINED' | null => {
-    if (current === 'CONFIRMED') return 'DECLINED';
-    if (current === 'DECLINED') return null;
-    return 'CONFIRMED';
-  };
-
   const handleSave = async () => {
     if (!member || !dirty || saving) return;
     setSaving(true);
@@ -167,38 +155,6 @@ export function AdminMemberDetailPage() {
       setError(getErrorMessage(e, t('common.error_generic')));
     } finally {
       setMailSending(null);
-    }
-  };
-
-  const handleToggleUpcomingPlan = async (r: MemberRehearsalEntry) => {
-    if (!member || rehearsalSaving) return;
-    const newResponse = r.isOptional ? cycleOptionalPlan(r.plan) : cycleUpcomingPlan(r.plan);
-
-    setRehearsals((prev) => prev.map((x) => (x.id === r.id ? { ...x, plan: newResponse } : x)));
-    setRehearsalSaving(r.id);
-    try {
-      await adminMembersApi.setAttendancePlan(member.id, r.id, newResponse);
-    } catch {
-      setRehearsals((prev) => prev.map((x) => (x.id === r.id ? { ...x, plan: r.plan } : x)));
-      setError(t('attendance.save_failed'));
-    } finally {
-      setRehearsalSaving(null);
-    }
-  };
-
-  const handleTogglePastAttendance = async (r: MemberRehearsalEntry) => {
-    if (!member || rehearsalSaving) return;
-    const nextAttended = !r.attended;
-
-    setRehearsals((prev) => prev.map((x) => (x.id === r.id ? { ...x, attended: nextAttended } : x)));
-    setRehearsalSaving(r.id);
-    try {
-      await attendanceApi.setRecord(r.id, member.id, nextAttended);
-    } catch {
-      setRehearsals((prev) => prev.map((x) => (x.id === r.id ? { ...x, attended: r.attended } : x)));
-      setError(t('attendance.save_failed'));
-    } finally {
-      setRehearsalSaving(null);
     }
   };
 
@@ -308,11 +264,13 @@ export function AdminMemberDetailPage() {
             dateLocale={dateLocale}
             editMode={editMode}
             setEditMode={setEditMode}
+            memberId={member.id}
+            setRehearsals={setRehearsals}
             savingId={rehearsalSaving}
+            setSavingId={setRehearsalSaving}
             showAllUpcoming={showAllUpcoming}
             setShowAllUpcoming={setShowAllUpcoming}
-            onToggleUpcomingPlan={handleToggleUpcomingPlan}
-            onTogglePastAttendance={handleTogglePastAttendance}
+            onSaveError={() => setError(t('attendance.save_failed'))}
             title={t('members.detail_rehearsals_title')}
             className="gap-4"
             testIdPrefix="member-detail"
