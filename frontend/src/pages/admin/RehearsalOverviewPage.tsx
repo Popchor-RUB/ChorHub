@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Tabs, Tab, Spinner, Button, useDisclosure } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { attendanceApi, rehearsalsApi } from '../../services/api';
-import type { RehearsalOverview, Rehearsal, AttendanceRecord } from '../../types';
+import type { AdminRehearsalListOverview, RehearsalOverview, Rehearsal, AttendanceRecord } from '../../types';
 import { AttendanceDetailModal } from '../../components/rehearsal/AttendanceDetailModal';
 import { RehearsalFormModal } from '../../components/rehearsal/RehearsalFormModal';
 import { DeleteConfirmModal } from '../../components/rehearsal/DeleteConfirmModal';
@@ -31,12 +31,12 @@ export function RehearsalOverviewPage() {
 
   const loadData = () =>
     Promise.all([
-      attendanceApi.getFutureOverview(),
-      attendanceApi.getPastOverview(),
+      attendanceApi.getRehearsalListOverview(),
       rehearsalsApi.getAll(),
-    ]).then(([f, p, r]) => {
-      setFuture(f.data as RehearsalOverview[]);
-      setPast(p.data as RehearsalOverview[]);
+    ]).then(([overviewResponse, r]) => {
+      const overview = overviewResponse.data as AdminRehearsalListOverview;
+      setFuture(overview.future);
+      setPast(overview.past);
       setRehearsals(r.data as Rehearsal[]);
       setLoading(false);
     });

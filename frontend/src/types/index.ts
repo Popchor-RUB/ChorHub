@@ -40,6 +40,31 @@ export interface MemberOverview extends Member {
   unexcusedAbsenceCount: number;
 }
 
+export interface MemberActivityRehearsal {
+  id: string;
+  date: string;
+  title: string;
+}
+
+export interface MemberActivityVoiceStats {
+  voiceId: string | null;
+  voiceName: string | null;
+  totalMembers: number;
+  activeMembers: number;
+  activeRate: number;
+}
+
+export interface MemberActivityStats {
+  selectedRehearsals: MemberActivityRehearsal[];
+  memberCountTotal: number;
+  activeMemberCount: number;
+  activeRate: number;
+  totalAttendances: number;
+  averageAttendancePerRehearsal: number;
+  inactiveMemberCount: number;
+  byVoice: MemberActivityVoiceStats[];
+}
+
 export type AdminMemberDetail = MemberOverview;
 
 export interface MemberRehearsalEntry {
@@ -91,6 +116,11 @@ export interface RehearsalOverview {
   totalConfirmed?: number;
   totalAttended?: number;
   byVoice: VoiceBreakdown;
+}
+
+export interface AdminRehearsalListOverview {
+  future: RehearsalOverview[];
+  past: RehearsalOverview[];
 }
 
 export interface GeneralInfo {

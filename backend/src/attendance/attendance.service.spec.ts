@@ -43,6 +43,10 @@ describe('AttendanceService', () => {
     service = module.get(AttendanceService);
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   describe('setAttendancePlan', () => {
     it('throws NotFoundException when rehearsal does not exist', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue(null);
@@ -197,6 +201,10 @@ describe('AttendanceService', () => {
 
   describe('getFutureOverview', () => {
     it('groups confirmed attendances by choir voice', async () => {
+      const now = new Date('2030-01-01T12:00:00.000Z');
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
+      jest.useFakeTimers().setSystemTime(now);
       prismaMock.rehearsal.findMany.mockResolvedValue([
         {
           ...mockRehearsal,
@@ -211,6 +219,11 @@ describe('AttendanceService', () => {
 
       const result = await service.getFutureOverview();
 
+      expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { date: { gte: startOfToday } },
+        }),
+      );
       expect(result[0].totalConfirmed).toBe(3);
       expect(result[0].byVoice['Sopran']).toBe(2);
       expect(result[0].byVoice['Bass']).toBe(1);
@@ -219,6 +232,10 @@ describe('AttendanceService', () => {
 
   describe('getPastOverview', () => {
     it('groups actual attendance records by choir voice', async () => {
+      const now = new Date('2030-01-01T12:00:00.000Z');
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
+      jest.useFakeTimers().setSystemTime(now);
       prismaMock.rehearsal.findMany.mockResolvedValue([
         {
           ...mockRehearsal,
@@ -233,9 +250,62 @@ describe('AttendanceService', () => {
 
       const result = await service.getPastOverview();
 
+      expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { date: { lt: startOfToday } },
+        }),
+      );
       expect(result[0].totalAttended).toBe(3);
       expect(result[0].byVoice['Alt']).toBe(2);
       expect(result[0].byVoice['Tenor']).toBe(1);
+    });
+  });
+
+  describe('getRehearsalListOverview', () => {
+    it('splits rehearsals by start time and keeps count semantics', async () => {
+      const now = new Date('2030-01-01T12:00:00.000Z');
+      jest.useFakeTimers().setSystemTime(now);
+      prismaMock.rehearsal.findMany
+        .mockResolvedValueOnce([
+          {
+            ...mockRehearsal,
+            id: 'future-rehearsal',
+            date: new Date('2030-01-01T13:00:00.000Z'),
+            attendancePlans: [
+              { response: 'CONFIRMED', member: { choirVoice: { name: 'Sopran' } } },
+            ],
+          },
+        ] as any)
+        .mockResolvedValueOnce([
+          {
+            ...mockRehearsal,
+            id: 'started-rehearsal',
+            date: new Date('2030-01-01T11:00:00.000Z'),
+            attendanceRecords: [
+              { member: { choirVoice: { name: 'Alt' } } },
+              { member: { choirVoice: { name: 'Alt' } } },
+            ],
+          },
+        ] as any);
+
+      const result = await service.getRehearsalListOverview();
+
+      expect(prismaMock.rehearsal.findMany).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: { date: { gt: now } },
+        }),
+      );
+      expect(prismaMock.rehearsal.findMany).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: { date: { lte: now } },
+        }),
+      );
+      expect(result.future[0].id).toBe('future-rehearsal');
+      expect(result.future[0].totalConfirmed).toBe(1);
+      expect(result.past[0].id).toBe('started-rehearsal');
+      expect(result.past[0].totalAttended).toBe(2);
     });
   });
 });

@@ -347,6 +347,140 @@ describe('AdminService', () => {
     });
   });
 
+  describe('getMemberActivityStats', () => {
+    const mockActivityMember = (overrides: {
+      id?: string;
+      choirVoice?: { id: string; name: string; sortOrder: number } | null;
+      attendanceRecords?: { rehearsalId: string }[];
+    } = {}) => ({
+      id: overrides.id ?? 'member-1',
+      choirVoice: overrides.choirVoice ?? null,
+      attendanceRecords: overrides.attendanceRecords ?? [],
+    });
+
+    beforeEach(() => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        { id: 'r-1', title: 'Probe 1', date: new Date('2026-01-01') },
+        { id: 'r-2', title: 'Probe 2', date: new Date('2026-01-08') },
+      ] as any);
+    });
+
+    it('counts unique active members once across selected rehearsals', async () => {
+      prismaMock.member.findMany.mockResolvedValue([
+        mockActivityMember({
+          id: 'm-1',
+          attendanceRecords: [{ rehearsalId: 'r-1' }, { rehearsalId: 'r-2' }],
+        }),
+        mockActivityMember({
+          id: 'm-2',
+          attendanceRecords: [{ rehearsalId: 'r-2' }],
+        }),
+      ] as any);
+
+      const result = await service.getMemberActivityStats(['r-1', 'r-2']);
+
+      expect(result.activeMemberCount).toBe(2);
+      expect(result.totalAttendances).toBe(3);
+      expect(result.averageAttendancePerRehearsal).toBe(1.5);
+    });
+
+    it('computes inactive count and active rate from total members', async () => {
+      prismaMock.member.findMany.mockResolvedValue([
+        mockActivityMember({ id: 'm-1', attendanceRecords: [{ rehearsalId: 'r-1' }] }),
+        mockActivityMember({ id: 'm-2' }),
+        mockActivityMember({ id: 'm-3' }),
+      ] as any);
+
+      const result = await service.getMemberActivityStats(['r-1', 'r-2']);
+
+      expect(result.memberCountTotal).toBe(3);
+      expect(result.activeMemberCount).toBe(1);
+      expect(result.inactiveMemberCount).toBe(2);
+      expect(result.activeRate).toBeCloseTo(1 / 3);
+    });
+
+    it('groups active totals by voice including members without voice', async () => {
+      prismaMock.member.findMany.mockResolvedValue([
+        mockActivityMember({
+          id: 'm-1',
+          choirVoice: { id: 'v-1', name: 'Sopran', sortOrder: 1 },
+          attendanceRecords: [{ rehearsalId: 'r-1' }],
+        }),
+        mockActivityMember({
+          id: 'm-2',
+          choirVoice: { id: 'v-1', name: 'Sopran', sortOrder: 1 },
+        }),
+        mockActivityMember({
+          id: 'm-3',
+          attendanceRecords: [{ rehearsalId: 'r-2' }],
+        }),
+      ] as any);
+
+      const result = await service.getMemberActivityStats(['r-1', 'r-2']);
+
+      expect(result.byVoice).toEqual([
+        {
+          voiceId: 'v-1',
+          voiceName: 'Sopran',
+          totalMembers: 2,
+          activeMembers: 1,
+          activeRate: 0.5,
+        },
+        {
+          voiceId: null,
+          voiceName: null,
+          totalMembers: 1,
+          activeMembers: 1,
+          activeRate: 1,
+        },
+      ]);
+    });
+
+    it('ignores optional rehearsal ids', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([
+        { id: 'r-required', title: 'Pflichtprobe', date: new Date('2026-01-08') },
+      ] as any);
+      prismaMock.member.findMany.mockResolvedValue([
+        mockActivityMember({ id: 'm-1', attendanceRecords: [{ rehearsalId: 'r-required' }] }),
+      ] as any);
+
+      const result = await service.getMemberActivityStats(['r-required', 'r-optional']);
+
+      expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ isOptional: false }),
+        }),
+      );
+      expect(prismaMock.member.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            attendanceRecords: expect.objectContaining({
+              where: { rehearsalId: { in: ['r-required'] } },
+            }),
+          }),
+        }),
+      );
+      expect(result.selectedRehearsals).toHaveLength(1);
+      expect(result.activeMemberCount).toBe(1);
+    });
+
+    it('returns zero-safe values when no valid rehearsals are selected', async () => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([]);
+      prismaMock.member.findMany.mockResolvedValue([
+        mockActivityMember({ id: 'm-1' }),
+        mockActivityMember({ id: 'm-2' }),
+      ] as any);
+
+      const result = await service.getMemberActivityStats(['r-optional']);
+
+      expect(result.selectedRehearsals).toEqual([]);
+      expect(result.activeMemberCount).toBe(0);
+      expect(result.inactiveMemberCount).toBe(2);
+      expect(result.activeRate).toBe(0);
+      expect(result.averageAttendancePerRehearsal).toBe(0);
+    });
+  });
+
   describe('getMemberRehearsals', () => {
     const mockRehearsalRow = (overrides: {
       attendanceRecords?: { id: string }[];

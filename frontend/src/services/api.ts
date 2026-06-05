@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { InternalAxiosRequestConfig } from 'axios';
 import type {
+  MemberActivityStats,
   MemberCheckinQr,
   PersonalInfo,
   PersonalInfoConfig,
@@ -178,6 +179,7 @@ export const attendanceApi = {
     api.put(`/attendance/records/${rehearsalId}`, { memberId, attended }),
   getFutureOverview: () => api.get('/attendance/overview/future'),
   getPastOverview: () => api.get('/attendance/overview/past'),
+  getRehearsalListOverview: () => api.get('/attendance/overview/rehearsal-list'),
 };
 
 export const adminMembersApi = {
@@ -195,6 +197,8 @@ export const adminMembersApi = {
     });
   },
   list: () => api.get('/admin/members'),
+  activityStats: (rehearsalIds: string[]) =>
+    api.post<MemberActivityStats>('/admin/members/activity-stats', { rehearsalIds }),
   export: () => api.get('/admin/members/export', { responseType: 'blob' }),
   search: (q: string) => api.get(`/admin/members/search?q=${encodeURIComponent(q)}`),
   history: (id: string) => api.get(`/admin/members/${id}/history`),

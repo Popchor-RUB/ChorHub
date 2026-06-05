@@ -60,6 +60,12 @@ export class AttendanceController {
     return this.attendanceService.getPastOverview();
   }
 
+  @Get('overview/rehearsal-list')
+  @UseGuards(JwtAdminGuard)
+  getRehearsalListOverview() {
+    return this.attendanceService.getRehearsalListOverview();
+  }
+
   @Get('checkin/public-key')
   @UseGuards(JwtAdminGuard)
   getCheckinPublicKey() {

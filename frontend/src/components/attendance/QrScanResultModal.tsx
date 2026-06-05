@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@heroui/react';
 import { QrCodeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
@@ -45,8 +46,16 @@ export function QrScanResultModal({
   onOpenMemberDetail,
 }: Props) {
   const { t } = useTranslation();
-  const isOlderThanFiveMinutes = scanResult
-    ? Date.now() - new Date(scanResult.payload.issuedAt).getTime() > 5 * 60 * 1000
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!scanResult) return;
+    const timer = window.setTimeout(() => setCurrentTime(Date.now()), 0);
+    return () => window.clearTimeout(timer);
+  }, [scanResult]);
+
+  const isOlderThanFiveMinutes = scanResult && currentTime !== null
+    ? currentTime - new Date(scanResult.payload.issuedAt).getTime() > 5 * 60 * 1000
     : false;
   const lastAttendedClassName = lastAttendedRehearsalsAgo === null || lastAttendedRehearsalsAgo >= 4
     ? 'font-medium text-danger'

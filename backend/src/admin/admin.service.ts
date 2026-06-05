@@ -193,6 +193,91 @@ export class AdminService {
     });
   }
 
+  async getMemberActivityStats(rehearsalIds: string[]) {
+    const uniqueRehearsalIds = Array.from(new Set(rehearsalIds));
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const selectedRehearsals = uniqueRehearsalIds.length > 0
+      ? await this.prisma.rehearsal.findMany({
+          where: {
+            id: { in: uniqueRehearsalIds },
+            date: { lt: startOfToday },
+            isOptional: false,
+          },
+          orderBy: { date: 'desc' },
+          select: { id: true, title: true, date: true },
+        })
+      : [];
+    const selectedRehearsalIds = selectedRehearsals.map((r) => r.id);
+
+    const members = await this.prisma.member.findMany({
+      select: {
+        id: true,
+        choirVoice: { select: { id: true, name: true, sortOrder: true } },
+        attendanceRecords: {
+          where: { rehearsalId: { in: selectedRehearsalIds } },
+          select: { rehearsalId: true },
+        },
+      },
+    });
+
+    const memberCountTotal = members.length;
+    const activeMemberIds = new Set<string>();
+    let totalAttendances = 0;
+
+    const voiceStats = new Map<string, {
+      voiceId: string | null;
+      voiceName: string | null;
+      sortOrder: number;
+      totalMembers: number;
+      activeMembers: number;
+    }>();
+
+    for (const member of members) {
+      const attendanceCount = member.attendanceRecords.length;
+      const isActive = attendanceCount > 0;
+      if (isActive) activeMemberIds.add(member.id);
+      totalAttendances += attendanceCount;
+
+      const voiceKey = member.choirVoice?.id ?? '__no_voice__';
+      const entry = voiceStats.get(voiceKey) ?? {
+        voiceId: member.choirVoice?.id ?? null,
+        voiceName: member.choirVoice?.name ?? null,
+        sortOrder: member.choirVoice?.sortOrder ?? Number.MAX_SAFE_INTEGER,
+        totalMembers: 0,
+        activeMembers: 0,
+      };
+      entry.totalMembers += 1;
+      if (isActive) entry.activeMembers += 1;
+      voiceStats.set(voiceKey, entry);
+    }
+
+    const activeMemberCount = activeMemberIds.size;
+    const inactiveMemberCount = Math.max(0, memberCountTotal - activeMemberCount);
+
+    return {
+      selectedRehearsals,
+      memberCountTotal,
+      activeMemberCount,
+      activeRate: memberCountTotal > 0 ? activeMemberCount / memberCountTotal : 0,
+      totalAttendances,
+      averageAttendancePerRehearsal: selectedRehearsalIds.length > 0
+        ? totalAttendances / selectedRehearsalIds.length
+        : 0,
+      inactiveMemberCount,
+      byVoice: Array.from(voiceStats.values())
+        .sort((a, b) => a.sortOrder - b.sortOrder || (a.voiceName ?? '').localeCompare(b.voiceName ?? ''))
+        .map(({ voiceId, voiceName, totalMembers, activeMembers }) => ({
+          voiceId,
+          voiceName,
+          totalMembers,
+          activeMembers,
+          activeRate: totalMembers > 0 ? activeMembers / totalMembers : 0,
+        })),
+    };
+  }
+
   async searchMembers(query: string) {
     const q = query.trim();
     if (!q) return [];

@@ -19,6 +19,7 @@ import { adminMembersApi } from '../../services/api';
 import type { MemberOverview } from '../../types';
 import { MemberDetailModal } from '../../components/member/MemberDetailModal';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
+import { MemberActivityStatsPanel } from '../../components/member/MemberActivityStatsPanel';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
 import { adminInputClassNames } from '../../styles/adminFormStyles';
 
@@ -110,6 +111,7 @@ export function MemberOverviewPage() {
           </Button>
         </div>
       </div>
+      <MemberActivityStatsPanel />
       <Input
         size="sm"
         placeholder={t('members.search_placeholder')}

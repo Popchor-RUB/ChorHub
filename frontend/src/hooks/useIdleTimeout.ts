@@ -3,7 +3,10 @@ import { useEffect, useRef } from 'react';
 export function useIdleTimeout(onIdle: () => void, timeoutMs: number) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onIdleRef = useRef(onIdle);
-  onIdleRef.current = onIdle;
+
+  useEffect(() => {
+    onIdleRef.current = onIdle;
+  }, [onIdle]);
 
   useEffect(() => {
     const reset = () => {

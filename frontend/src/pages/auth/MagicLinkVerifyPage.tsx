@@ -16,16 +16,16 @@ export function MagicLinkVerifyPage() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    if (!token) {
-      setError(t('auth.error_no_token'));
-      return;
-    }
+    void Promise.resolve().then(async () => {
+      const token = searchParams.get('token');
+      if (!token) {
+        setError(t('auth.error_no_token'));
+        return;
+      }
 
-    const rehearsalId = searchParams.get('rehearsalId');
-    const response = searchParams.get('response');
+      const rehearsalId = searchParams.get('rehearsalId');
+      const response = searchParams.get('response');
 
-    const run = async () => {
       try {
         const res = await memberAuthApi.verifyMagicLink(token);
         const { token: rawToken, member } = res.data;
@@ -48,9 +48,7 @@ export function MagicLinkVerifyPage() {
       } catch {
         setError(t('auth.error_invalid_link'));
       }
-    };
-
-    void run();
+    });
   }, [navigate, searchParams, setMemberSession, t]);
 
   return (

@@ -16,8 +16,9 @@ import { MemberDetailModal } from '../../components/member/MemberDetailModal';
 import { QrScannerModal, type QrScanResult } from '../../components/attendance/QrScannerModal';
 import { QrScanResultModal } from '../../components/attendance/QrScanResultModal';
 import type { Rehearsal, AttendanceRecord, MemberOverview } from '../../types';
-import { VoiceGroupList, useCollapsedVoices } from '../../components/common/VoiceGroupList';
+import { VoiceGroupList } from '../../components/common/VoiceGroupList';
 import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
+import { useCollapsedVoices } from '../../hooks/useCollapsedVoices';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
 import { useAttendanceKeyboard } from '../../hooks/useAttendanceKeyboard';
 import { useDateLocale } from '../../hooks/useDateLocale';
@@ -105,7 +106,7 @@ export function AttendancePage() {
       setRecords(res.data as AttendanceRecord[]);
       setLoadingRecords(false);
     });
-  }, [selectedRehearsalId]);
+  }, [collapseAll, selectedRehearsalId]);
 
   // Poll for remote changes every 5 s so multiple admins stay in sync
   useEffect(() => {

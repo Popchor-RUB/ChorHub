@@ -4,8 +4,9 @@ import { Modal, ModalContent, ModalHeader, ModalBody, Chip, Spinner } from '@her
 import { useTranslation } from 'react-i18next';
 import { attendanceApi } from '../../services/api';
 import type { RehearsalOverview, AttendanceRecord } from '../../types';
-import { VoiceGroupList, useCollapsedVoices } from '../common/VoiceGroupList';
+import { VoiceGroupList } from '../common/VoiceGroupList';
 import type { VoiceGroupData } from '../common/VoiceGroupList';
+import { useCollapsedVoices } from '../../hooks/useCollapsedVoices';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateLong } from '../../utils/dateFormatting';
 
@@ -35,12 +36,18 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
 
   useEffect(() => {
     if (!isOpen) return;
-    setLoading(true);
-    setPlanFilter(null);
-    setAttendanceFilter(null);
-    collapseAll([]);
-    attendanceApi.getRecords(rehearsal.id)
+    let isMounted = true;
+    void Promise.resolve()
+      .then(() => {
+        if (!isMounted) return undefined;
+        setLoading(true);
+        setPlanFilter(null);
+        setAttendanceFilter(null);
+        collapseAll([]);
+        return attendanceApi.getRecords(rehearsal.id);
+      })
       .then((res) => {
+        if (!isMounted || !res) return;
         const data = res.data as AttendanceRecord[];
         setRecords(data);
         const voices = [...new Set(data.map((r) => r.choirVoice?.name).filter(Boolean) as string[])];
@@ -48,12 +55,16 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
         collapseAll(collapseKeys);
       })
       .catch(() => {
-        setRecords([]);
+        if (isMounted) setRecords([]);
       })
       .finally(() => {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       });
-  }, [isOpen, rehearsal.id]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [collapseAll, isOpen, rehearsal.id]);
 
   const filteredRecords = showPlanStatus
     ? planFilter

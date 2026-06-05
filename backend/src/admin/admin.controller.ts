@@ -21,6 +21,7 @@ import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { AdminSetAttendancePlanDto } from './dto/admin-set-attendance-plan.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { MemberActivityStatsDto } from './dto/member-activity-stats.dto';
 
 @Controller('admin')
 @UseGuards(JwtAdminGuard)
@@ -45,6 +46,11 @@ export class AdminController {
   @Get('members')
   getMemberOverview() {
     return this.adminService.getMemberOverview();
+  }
+
+  @Post('members/activity-stats')
+  getMemberActivityStats(@Body() dto: MemberActivityStatsDto) {
+    return this.adminService.getMemberActivityStats(dto.rehearsalIds);
   }
 
   @Get('members/search')

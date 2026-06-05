@@ -113,8 +113,28 @@ export class AttendanceService {
   async getFutureOverview() {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
+    return this.getFutureOverviewFrom(startOfToday, true);
+  }
+
+  async getPastOverview() {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return this.getPastOverviewFrom(startOfToday, false);
+  }
+
+  async getRehearsalListOverview() {
+    const now = new Date();
+    const [future, past] = await Promise.all([
+      this.getFutureOverviewFrom(now, false),
+      this.getPastOverviewFrom(now, true),
+    ]);
+
+    return { future, past };
+  }
+
+  private async getFutureOverviewFrom(boundary: Date, includeBoundary: boolean) {
     const rehearsals = await this.prisma.rehearsal.findMany({
-      where: { date: { gte: startOfToday } },
+      where: { date: includeBoundary ? { gte: boundary } : { gt: boundary } },
       orderBy: { date: 'asc' },
       include: {
         attendancePlans: {
@@ -137,11 +157,9 @@ export class AttendanceService {
     }));
   }
 
-  async getPastOverview() {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+  private async getPastOverviewFrom(boundary: Date, includeBoundary: boolean) {
     const rehearsals = await this.prisma.rehearsal.findMany({
-      where: { date: { lt: startOfToday } },
+      where: { date: includeBoundary ? { lte: boundary } : { lt: boundary } },
       orderBy: { date: 'desc' },
       include: {
         attendanceRecords: {

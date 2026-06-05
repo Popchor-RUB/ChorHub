@@ -3,6 +3,7 @@ import { Card, CardBody, Button, Checkbox, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminMembersApi, choirVoicesApi } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import type { ChoirVoice } from '../../types';
 
 interface ImportResult {
@@ -43,8 +44,11 @@ export function ImportMembersPage() {
     try {
       const res = await adminMembersApi.import(file, sendEmails);
       setResult(res.data as ImportResult);
-    } catch (e: any) {
-      setError(e.response?.data?.error?.message ?? t('members.import_failed'));
+    } catch (e: unknown) {
+      const errorMessage = axios.isAxiosError<{ error?: { message?: string } }>(e)
+        ? e.response?.data?.error?.message
+        : undefined;
+      setError(errorMessage ?? t('members.import_failed'));
     } finally {
       setLoading(false);
     }
