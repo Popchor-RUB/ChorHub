@@ -113,10 +113,8 @@ export function MemberRehearsalOverview({
           <Button
             isIconOnly
             size="sm"
-            variant={editMode ? 'solid' : 'flat'}
-            color={editMode ? 'primary' : 'default'}
+            variant={editMode ? 'primary' : 'tertiary'}
             aria-label={editMode ? t('detail_modal.edit_mode_done') : t('detail_modal.edit_mode_toggle')}
-            title={editMode ? t('detail_modal.edit_mode_done') : t('detail_modal.edit_mode_toggle')}
             onPress={() => setEditMode((v) => !v)}
             data-testid={testIdPrefix ? `${testIdPrefix}-edit-mode-toggle` : undefined}
           >
@@ -126,17 +124,17 @@ export function MemberRehearsalOverview({
       </div>
 
       <div className="mb-4 mt-4 flex flex-wrap gap-2">
-        <Chip color="success" variant="flat">
+        <Chip color="success" variant="tertiary">
           {t('detail_modal.present_count', { count: countablePast.filter((r) => r.attended).length })}
         </Chip>
-        <Chip color="danger" variant="flat">
+        <Chip color="danger" variant="tertiary">
           {t('detail_modal.unexcused_count', { count: unexcusedCount })}
         </Chip>
-        <Chip color="default" variant="flat">
+        <Chip color="default" variant="tertiary">
           {t('detail_modal.excused_count', { count: excusedCount })}
         </Chip>
         {countableUpcoming.length > 0 && (
-          <Chip color="primary" variant="flat">
+          <Chip color="accent" variant="tertiary">
             {t('detail_modal.confirmed_upcoming', {
               confirmed: countableUpcoming.filter((r) => r.plan === 'CONFIRMED').length,
               total: countableUpcoming.length,
@@ -147,17 +145,17 @@ export function MemberRehearsalOverview({
 
       {upcoming.length > 0 && (
         <div className="mb-5" data-testid={testIdPrefix ? `${testIdPrefix}-upcoming-section` : undefined}>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-default-400">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
             {t('detail_modal.upcoming_rehearsals')}
           </p>
           <div className="flex flex-col gap-1">
             {visibleUpcoming.map((r) => {
               const isSaving = savingId === r.id;
               const rowClassName = r.plan === 'CONFIRMED'
-                ? 'bg-success-50 text-success-800'
+                ? 'bg-success-soft text-success-soft-foreground'
                 : r.plan === 'DECLINED'
-                ? 'bg-danger-50 text-danger-800'
-                : 'bg-default-50 text-default-500';
+                ? 'bg-danger-soft text-danger-soft-foreground'
+                : 'bg-surface-secondary text-muted';
 
               return (
                 <div
@@ -169,7 +167,7 @@ export function MemberRehearsalOverview({
                   <span className="font-medium">
                     {formatDateMedium(r.date, dateLocale)} - {r.title}
                     {r.isOptional && (
-                      <span className="ml-2 text-[11px] uppercase tracking-wide text-warning-700">
+                      <span className="ml-2 text-[11px] uppercase tracking-wide text-warning-soft-foreground">
                         {t('rehearsals.optional_badge')}
                       </span>
                     )}
@@ -194,7 +192,7 @@ export function MemberRehearsalOverview({
           </div>
           {!showAllUpcoming && hasHiddenUpcoming && (
             <div className="mt-3 flex justify-center">
-              <Button color="primary" onPress={() => setShowAllUpcoming(true)}>
+              <Button onPress={() => setShowAllUpcoming(true)}>
                 {t('rehearsals.show_all')}
               </Button>
             </div>
@@ -204,7 +202,7 @@ export function MemberRehearsalOverview({
 
       {past.length > 0 && (
         <div data-testid={testIdPrefix ? `${testIdPrefix}-past-section` : undefined}>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-default-400">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
             {t('detail_modal.past_rehearsals')}
           </p>
           <div className="flex flex-col gap-1">
@@ -212,12 +210,12 @@ export function MemberRehearsalOverview({
               const unexcused = !r.isOptional && !r.attended && r.plan !== 'DECLINED';
               const isSaving = savingId === r.id;
               const rowClassName = r.isOptional
-                ? 'bg-default-50 text-default-500'
+                ? 'bg-surface-secondary text-muted'
                 : r.attended
-                ? 'bg-success-50 text-success-800'
+                ? 'bg-success-soft text-success-soft-foreground'
                 : unexcused
-                ? 'bg-danger-50 text-danger-800'
-                : 'bg-default-50 text-default-500';
+                ? 'bg-danger-soft text-danger-soft-foreground'
+                : 'bg-surface-secondary text-muted';
 
               return (
                 <div
@@ -229,7 +227,7 @@ export function MemberRehearsalOverview({
                   <span className="font-medium">
                     {formatDateMedium(r.date, dateLocale)} - {r.title}
                     {r.isOptional && (
-                      <span className="ml-2 text-[11px] uppercase tracking-wide text-warning-700">
+                      <span className="ml-2 text-[11px] uppercase tracking-wide text-warning-soft-foreground">
                         {t('rehearsals.optional_badge')}
                       </span>
                     )}
@@ -262,7 +260,7 @@ export function MemberRehearsalOverview({
       )}
 
       {rehearsals.length === 0 && (
-        <p className="py-4 text-center text-default-400">{t('detail_modal.no_rehearsals')}</p>
+        <p className="py-4 text-center text-muted">{t('detail_modal.no_rehearsals')}</p>
       )}
     </div>
   );

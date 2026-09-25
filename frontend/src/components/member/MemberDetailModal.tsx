@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Spinner, Button } from '@heroui/react';
+import { Modal, Spinner, Button } from '@heroui/react';
 import { CheckIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -64,27 +64,27 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
-        <ModalContent>
-          <ModalHeader className="flex items-start justify-between gap-2">
-            <div className="flex flex-col gap-0.5">
+      <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <Modal.Container size="lg" scroll="inside">
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header className="flex items-start justify-between gap-2">
+              <Modal.Heading className="flex flex-col gap-0.5">
               <span>
                 {member.firstName} {member.lastName}
               </span>
-              <span className="text-sm font-normal text-default-500">
+              <span className="text-sm font-normal text-muted">
                 {member.choirVoice?.name ?? '—'}{member.email ? ` · ${member.email}` : ''}
               </span>
-            </div>
+              </Modal.Heading>
             {!loading && (
               <div className="mt-0.5 mr-2 flex shrink-0 items-center gap-1.5">
                 {editMode && onDelete && (
                   <Button
                     isIconOnly
                     size="sm"
-                    color="danger"
-                    variant="flat"
+                    variant="danger-soft"
                     aria-label={t('detail_modal.delete_member')}
-                    title={t('detail_modal.delete_member')}
                     onPress={() => setIsDeleteConfirmOpen(true)}
                   >
                     <TrashIcon className="h-4 w-4" />
@@ -92,7 +92,7 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                 )}
                 <Button
                   size="sm"
-                  variant="flat"
+                  variant="tertiary"
                   data-testid="member-detail-open-page"
                   onPress={() => {
                     onClose();
@@ -104,18 +104,16 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                 <Button
                   isIconOnly
                   size="sm"
-                  variant={editMode ? 'solid' : 'flat'}
-                  color={editMode ? 'primary' : 'default'}
+                  variant={editMode ? 'primary' : 'tertiary'}
                   aria-label={editMode ? t('detail_modal.edit_mode_done') : t('detail_modal.edit_mode_toggle')}
-                  title={editMode ? t('detail_modal.edit_mode_done') : t('detail_modal.edit_mode_toggle')}
                   onPress={() => setEditMode((v) => !v)}
                 >
                   {editMode ? <CheckIcon className="h-4 w-4" /> : <PencilSquareIcon className="h-4 w-4" />}
                 </Button>
               </div>
             )}
-          </ModalHeader>
-          <ModalBody className="pb-6">
+            </Modal.Header>
+            <Modal.Body className="pb-6">
             {loading ? (
               <div className="flex justify-center py-8">
                 <Spinner />
@@ -135,26 +133,30 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
                 showEditToggle={false}
               />
             )}
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+            </Modal.Body>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
 
-      <Modal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} size="sm">
-        <ModalContent>
-          <ModalHeader>{t('detail_modal.delete_member')}</ModalHeader>
-          <ModalBody>
-            <p className="text-sm text-default-600">{t('detail_modal.delete_confirm_prompt')}</p>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="flat" onPress={() => setIsDeleteConfirmOpen(false)} isDisabled={deleting}>
+      <Modal.Backdrop isOpen={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <Modal.Container size="sm">
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header><Modal.Heading>{t('detail_modal.delete_member')}</Modal.Heading></Modal.Header>
+            <Modal.Body>
+            <p className="text-sm text-muted">{t('detail_modal.delete_confirm_prompt')}</p>
+            </Modal.Body>
+            <Modal.Footer>
+            <Button variant="tertiary" onPress={() => setIsDeleteConfirmOpen(false)} isDisabled={deleting}>
               {t('detail_modal.delete_confirm_no')}
             </Button>
-            <Button color="danger" isLoading={deleting} onPress={handleDeleteConfirm}>
-              {t('detail_modal.delete_confirm_yes')}
+            <Button variant="danger" isPending={deleting} onPress={handleDeleteConfirm}>
+              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('detail_modal.delete_confirm_yes')}</>}
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </>
   );
 }

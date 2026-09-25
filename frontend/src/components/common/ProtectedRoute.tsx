@@ -17,7 +17,7 @@ export function ProtectedRoute({ role, children }: Props) {
   }, []);
 
   if (!hasHydrated) {
-    return <div className="min-h-[30vh] flex items-center justify-center text-default-500 text-sm">Lädt...</div>;
+    return <div className="min-h-[30vh] flex items-center justify-center text-muted text-sm">Lädt...</div>;
   }
 
   if (role === 'admin' && !adminSession) {

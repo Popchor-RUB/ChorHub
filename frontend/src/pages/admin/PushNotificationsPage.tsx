@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Button, Input, Spinner, Textarea } from '@heroui/react';
+import { Button, Input, Label, Spinner, TextArea, TextField } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminPushApi } from '../../services/api';
-import { adminInputClassNames, adminTextareaClassNames } from '../../styles/adminFormStyles';
 
 export function PushNotificationsPage() {
   const [subscriberCount, setSubscriberCount] = useState<number | null>(null);
@@ -40,11 +39,11 @@ export function PushNotificationsPage() {
         {sent && <span className="text-success text-sm font-medium">{t('common.sent')}</span>}
       </div>
 
-      <div className="bg-default-100 rounded-xl p-5 flex items-center gap-4">
-        <div className="text-4xl font-bold text-primary min-w-8 text-center">
+      <div className="bg-surface-secondary rounded-xl p-5 flex items-center gap-4">
+        <div className="text-4xl font-bold text-accent min-w-8 text-center">
           {subscriberCount === null ? <Spinner size="sm" /> : subscriberCount}
         </div>
-        <div className="text-sm text-default-600">
+        <div className="text-sm text-muted">
           {subscriberCount === 1
             ? t('push.subscribers_one')
             : t('push.subscribers_other')}
@@ -53,36 +52,39 @@ export function PushNotificationsPage() {
 
       <div className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold">{t('push.send_section')}</h2>
-        <Input
-          label={t('push.label_title')}
+        <TextField
+          className="w-full"
           value={title}
-          onValueChange={setTitle}
+          onChange={setTitle}
           isRequired
-          classNames={adminInputClassNames}
-        />
-        <Textarea
-          label={t('push.label_message')}
+        >
+          <Label>{t('push.label_title')}</Label>
+          <Input />
+        </TextField>
+        <TextField
+          className="w-full"
           value={body}
-          onValueChange={setBody}
+          onChange={setBody}
           isRequired
-          minRows={3}
-          classNames={adminTextareaClassNames}
-        />
-        <Input
-          label={t('push.label_url')}
+        >
+          <Label>{t('push.label_message')}</Label>
+          <TextArea rows={3} />
+        </TextField>
+        <TextField
+          className="w-full"
           value={url}
-          onValueChange={setUrl}
-          placeholder={t('push.url_placeholder')}
-          classNames={adminInputClassNames}
-        />
+          onChange={setUrl}
+        >
+          <Label>{t('push.label_url')}</Label>
+          <Input placeholder={t('push.url_placeholder')} />
+        </TextField>
         <Button
-          color="primary"
           onPress={handleSend}
           isDisabled={!title.trim() || !body.trim()}
-          isLoading={sending}
+          isPending={sending}
           className="self-start"
         >
-          {t('push.send_btn')}
+          {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('push.send_btn')}</>}
         </Button>
       </div>
     </div>

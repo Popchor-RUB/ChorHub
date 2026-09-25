@@ -1,4 +1,4 @@
-import { Card, CardBody, Button, Chip } from '@heroui/react';
+import { Card, Button, Chip } from '@heroui/react';
 import type { RehearsalOverview } from '../../types';
 import { EditIcon } from '../icons/EditIcon';
 import { TrashIcon } from '../icons/TrashIcon';
@@ -37,31 +37,35 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
     : null;
   return (
     <Card
-      isPressable
-      onPress={onClick}
-      className={`w-full text-left hover:shadow-md transition-shadow border border-default-200 ${
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') onClick();
+      }}
+      className={`w-full text-left transition-shadow hover:shadow-md ${
         item.isOptional
-          ? 'bg-primary-100/55 border border-primary-200/80 dark:border-primary-400/80 opacity-80'
+          ? 'bg-accent-soft/55 border border-accent/80 dark:border-accent/80 opacity-80'
           : ''
       }`}
     >
-      <CardBody className="gap-2">
+      <Card.Content className="gap-2">
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-semibold">{item.title}</p>
               {item.isOptional && (
-                <Chip size="sm" variant="flat" color="primary">
+                <Chip size="sm" variant="tertiary" color="accent">
                   {t('rehearsals.optional_badge')}
                 </Chip>
               )}
             </div>
-            <p className="text-sm text-default-500">
+            <p className="text-sm text-muted">
               {dateLabel}
               {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}
             </p>
             <div className="mt-1">
-              <Chip color={type === 'future' ? 'primary' : 'success'} variant="flat" size="sm">
+              <Chip color={type === 'future' ? 'accent' : 'success'} variant="tertiary" size="sm">
                 {total}{' '}
                 {type === 'future'
                   ? t('attendance_detail.label_confirmed')
@@ -73,7 +77,7 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
             <Button
               isIconOnly
               size="sm"
-              variant="light"
+              variant="tertiary"
               aria-label={t('rehearsals.edit')}
               onPress={onEdit}
             >
@@ -82,24 +86,23 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
             <Button
               isIconOnly
               size="sm"
-              variant="light"
-              color="danger"
+              variant="danger-soft"
               aria-label={t('rehearsals.delete')}
               onPress={onDelete}
             >
               <TrashIcon />
             </Button>
-            <span className="text-default-300 text-lg ml-1">›</span>
+            <span className="text-muted text-lg ml-1">›</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-1">
           {Object.entries(item.byVoice).map(([name, count]) => (
-            <Chip key={name} size="sm" variant="flat">
+            <Chip key={name} size="sm" variant="tertiary">
               {name}: {count}
             </Chip>
           ))}
         </div>
-      </CardBody>
+      </Card.Content>
     </Card>
   );
 }

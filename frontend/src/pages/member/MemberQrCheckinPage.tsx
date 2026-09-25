@@ -123,7 +123,7 @@ export function MemberQrCheckinPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">{t('checkin.member_title')}</h1>
-      <p className="text-sm text-default-500">{t('checkin.member_hint')}</p>
+      <p className="text-sm text-muted">{t('checkin.member_hint')}</p>
 
       <div className="flex flex-col items-center gap-4">
         {loading && !currentQrCodeDataUrl && <Spinner size="lg" />}
@@ -151,13 +151,13 @@ export function MemberQrCheckinPage() {
             </div>
 
             <div className="w-full max-w-[360px] mt-4 flex flex-col gap-2">
-              <div className="h-2 rounded-full bg-default-200 overflow-hidden" aria-hidden="true">
+              <div className="h-2 rounded-full bg-surface-secondary overflow-hidden" aria-hidden="true">
                 <div
-                  className="h-full bg-primary transition-[width] duration-1000 ease-linear"
+                  className="h-full bg-accent transition-[width] duration-1000 ease-linear"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <p className="text-xs text-default-500 text-center">
+              <p className="text-xs text-muted text-center">
                 {t('checkin.member_refresh_in', { time: formatCountdown(remainingSeconds) })}
               </p>
             </div>

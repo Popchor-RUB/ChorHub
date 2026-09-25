@@ -20,7 +20,7 @@ interface Props {
 
 export function VoiceGroupList({ groups, collapsedVoices, onToggle, header, emptyState }: Props) {
   return (
-    <div className="rounded-xl border border-divider overflow-hidden">
+    <div className="rounded-xl border border-separator overflow-hidden">
       {header}
       {groups.length === 0 && emptyState}
       {groups.map(({ voice, label, headerRight, rows }, groupIdx) => {
@@ -31,14 +31,14 @@ export function VoiceGroupList({ groups, collapsedVoices, onToggle, header, empt
             <button
               className={[
                 'w-full flex flex-col items-start gap-1 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-0',
-                'bg-default-100 hover:bg-default-200 transition-colors',
-                'text-sm font-semibold text-default-700',
-                !isCollapsed || !isLastGroup ? 'border-b border-divider' : '',
+                'bg-surface-secondary hover:bg-surface-secondary transition-colors',
+                'text-sm font-semibold text-foreground',
+                !isCollapsed || !isLastGroup ? 'border-b border-separator' : '',
               ].filter(Boolean).join(' ')}
               onClick={() => onToggle(voice)}
             >
               <span className="flex items-center gap-2">
-                <span className="text-default-400">{isCollapsed ? '▸' : '▾'}</span>
+                <span className="text-muted">{isCollapsed ? '▸' : '▾'}</span>
                 <span>{label ?? voice} ({rows.length})</span>
               </span>
               <span className="w-full sm:w-auto">{headerRight}</span>
@@ -47,7 +47,7 @@ export function VoiceGroupList({ groups, collapsedVoices, onToggle, header, empt
               rows.map(({ key, content }, rowIdx) => (
                 <div
                   key={key}
-                  className={rowIdx < rows.length - 1 || !isLastGroup ? 'border-b border-divider' : ''}
+                  className={rowIdx < rows.length - 1 || !isLastGroup ? 'border-b border-separator' : ''}
                 >
                   {content}
                 </div>

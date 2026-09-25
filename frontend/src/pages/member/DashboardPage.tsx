@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Spinner, Tabs, Tab } from '@heroui/react';
+import { Spinner, Tabs } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { generalInfoApi, personalInfoApi } from '../../services/api';
 import { MarkdownRenderer } from '../../components/info/MarkdownRenderer';
@@ -25,21 +25,29 @@ export function InformationenPage() {
   }
 
   return (
-    <div className="bg-background rounded-xl p-4 border border-divider">
-      <Tabs
-        aria-label={t('info.member_segment_aria')}
-        variant="bordered"
-        classNames={{ panel: 'pt-4' }}
-      >
-        <Tab key="general" title={t('info.member_general_tab')}>
+    <div className="rounded-2xl border border-border bg-surface p-4 shadow-surface">
+      <Tabs variant="secondary">
+        <Tabs.ListContainer>
+          <Tabs.List aria-label={t('info.member_segment_aria')}>
+            <Tabs.Tab id="general">
+              {t('info.member_general_tab')}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+            <Tabs.Tab id="personal">
+              {t('info.member_personal_tab')}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+          </Tabs.List>
+        </Tabs.ListContainer>
+        <Tabs.Panel id="general" className="pt-4">
           <MarkdownRenderer content={generalInfo?.markdownContent ?? ''} />
-        </Tab>
-        <Tab key="personal" title={t('info.member_personal_tab')}>
+        </Tabs.Panel>
+        <Tabs.Panel id="personal" className="pt-4">
           <MarkdownRenderer
             content={personalInfo?.markdownContent ?? ''}
             emptyMessage={t('info.personal_empty')}
           />
-        </Tab>
+        </Tabs.Panel>
       </Tabs>
     </div>
   );

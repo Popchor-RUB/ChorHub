@@ -1,3 +1,4 @@
+import { Button } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 export function LanguageSwitcher() {
@@ -10,13 +11,14 @@ export function LanguageSwitcher() {
   };
 
   return (
-    <button
-      onClick={toggle}
+    <Button
+      size="sm"
+      variant="tertiary"
+      onPress={toggle}
       aria-label={current === 'de' ? 'Switch to English' : 'Zu Deutsch wechseln'}
-      title={current === 'de' ? 'Switch to English' : 'Zu Deutsch wechseln'}
-      className="px-2 py-1 text-xs font-medium rounded-md bg-default-100 hover:bg-default-200 transition-colors text-default-600"
+      className="min-w-0 px-2 text-xs"
     >
       {current === 'de' ? 'EN' : 'DE'}
-    </button>
+    </Button>
   );
 }

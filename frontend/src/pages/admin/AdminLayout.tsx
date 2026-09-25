@@ -1,12 +1,6 @@
 import { useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import {
-  Navbar,
-  NavbarBrand,
-  NavbarContent,
-  NavbarItem,
-  Button,
-} from '@heroui/react';
+import { Button } from '@heroui/react';
 import {
   UsersIcon,
   MusicalNoteIcon,
@@ -59,42 +53,43 @@ export function AdminLayout() {
   useIdleTimeout(handleIdleLogout, IDLE_TIMEOUT_MS);
 
   return (
-    <div className="min-h-screen bg-default-50">
-      <Navbar isBordered>
-        <NavbarBrand>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-40 border-b border-separator bg-background/85 backdrop-blur-xl">
+        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6" aria-label={t('nav.admin_badge')}>
+        <div className="flex items-center gap-2">
           <span className="font-bold text-xl">🎵 ChorHub</span>
-          <span className="ml-2 text-xs bg-warning-100 text-warning-700 px-2 py-0.5 rounded-full">
+          <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning-soft-foreground">
             {t('nav.admin_badge')}
           </span>
-        </NavbarBrand>
-        <NavbarContent className="hidden md:flex gap-4" justify="center">
+        </div>
+        <ul className="hidden items-center justify-center gap-4 md:flex">
           {navItemDefs.map((item) => (
-            <NavbarItem key={item.to}>
+            <li key={item.to}>
               <NavLink
                 to={item.to}
                 className={({ isActive }) =>
-                  isActive ? 'text-primary font-medium' : 'text-default-600 hover:text-default-900'
+                  isActive ? 'text-accent font-medium' : 'text-muted hover:text-foreground'
                 }
               >
                 {t(item.labelKey)}
               </NavLink>
-            </NavbarItem>
+            </li>
           ))}
-        </NavbarContent>
-        <NavbarContent justify="end">
-          <NavbarItem>
-            <span className="text-sm text-default-500 hidden sm:block">{adminSession?.username}</span>
-          </NavbarItem>
-          <NavbarItem className="hidden sm:flex">
+        </ul>
+        <ul className="flex items-center justify-end gap-1.5">
+          <li>
+            <span className="text-sm text-muted hidden sm:block">{adminSession?.username}</span>
+          </li>
+          <li className="hidden sm:flex">
             <LanguageSwitcher />
-          </NavbarItem>
-          <NavbarItem>
+          </li>
+          <li>
             <ThemeToggle />
-          </NavbarItem>
-          <NavbarItem>
+          </li>
+          <li>
             <Button
               className="sm:hidden"
-              variant="flat"
+              variant="tertiary"
               size="sm"
               onPress={handleLogout}
               isIconOnly
@@ -102,16 +97,17 @@ export function AdminLayout() {
             >
               <ArrowRightOnRectangleIcon className="w-5 h-5" />
             </Button>
-            <Button className="hidden sm:flex" variant="flat" size="sm" onPress={handleLogout}>
+            <Button className="hidden sm:flex" variant="tertiary" size="sm" onPress={handleLogout}>
               {t('nav.logout')}
             </Button>
-          </NavbarItem>
-        </NavbarContent>
-      </Navbar>
+          </li>
+        </ul>
+        </nav>
+      </header>
 
       {/* Mobile bottom nav */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-divider flex z-50"
+        className="fixed inset-x-0 bottom-0 z-50 flex border-t border-separator bg-background/95 backdrop-blur-xl md:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {navItemDefs.map((item) => (
@@ -119,7 +115,7 @@ export function AdminLayout() {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-primary font-semibold' : 'text-default-500'}`
+              `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-accent font-semibold' : 'text-muted'}`
             }
           >
             <item.icon className="w-6 h-6 mb-0.5" />

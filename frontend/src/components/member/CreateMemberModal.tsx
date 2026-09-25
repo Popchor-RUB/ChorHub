@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react';
 import {
   Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Button,
   Input,
+  Label,
+  ListBox,
   Select,
-  SelectItem,
+  Spinner,
+  TextField,
 } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminMembersApi, choirVoicesApi } from '../../services/api';
 import type { ChoirVoice } from '../../types';
-import { adminInputClassNames, adminSelectClassNames } from '../../styles/adminFormStyles';
 
 interface Props {
   isOpen: boolean;
@@ -82,66 +80,78 @@ export function CreateMemberModal({ isOpen, onClose, onCreated, onCreatedWithId 
   const isValid = form.firstName.trim() && form.lastName.trim() && form.email.trim();
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md">
-      <ModalContent>
-        <ModalHeader>{t('members.create_title')}</ModalHeader>
-        <ModalBody className="flex flex-col gap-3">
+    <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Modal.Container size="md">
+        <Modal.Dialog>
+          <Modal.CloseTrigger />
+          <Modal.Header><Modal.Heading>{t('members.create_title')}</Modal.Heading></Modal.Header>
+          <Modal.Body className="flex flex-col gap-3">
           <div className="flex gap-3">
-            <Input
-              label={t('members.create_first_name')}
+            <TextField
+              className="w-full"
+              variant="secondary"
               value={form.firstName}
-              onValueChange={(v) => setField('firstName', v)}
+              onChange={(value) => setField('firstName', value)}
               isRequired
-              autoFocus
-              classNames={adminInputClassNames}
-            />
-            <Input
-              label={t('members.create_last_name')}
+            >
+              <Label>{t('members.create_first_name')}</Label>
+              <Input autoFocus />
+            </TextField>
+            <TextField
+              className="w-full"
+              variant="secondary"
               value={form.lastName}
-              onValueChange={(v) => setField('lastName', v)}
+              onChange={(value) => setField('lastName', value)}
               isRequired
-              classNames={adminInputClassNames}
-            />
+            >
+              <Label>{t('members.create_last_name')}</Label>
+              <Input />
+            </TextField>
           </div>
-          <Input
-            label={t('members.create_email')}
+          <TextField
+            className="w-full"
+            variant="secondary"
             type="email"
             value={form.email}
-            onValueChange={(v) => setField('email', v)}
+            onChange={(value) => setField('email', value)}
             isRequired
-            classNames={adminInputClassNames}
-          />
+          >
+            <Label>{t('members.create_email')}</Label>
+            <Input />
+          </TextField>
           {voices.length > 0 && (
             <Select
-              label={t('members.create_voice')}
-              selectedKeys={form.voiceId ? new Set([form.voiceId]) : new Set()}
-              classNames={adminSelectClassNames}
-              onSelectionChange={(keys) => {
-                const selected = [...keys][0];
+              variant="secondary"
+              value={form.voiceId || null}
+              onChange={(selected) => {
                 setField('voiceId', typeof selected === 'string' ? selected : '');
               }}
             >
-              {voices.map((v) => (
-                <SelectItem key={v.id}>{v.name}</SelectItem>
-              ))}
+              <Label>{t('members.create_voice')}</Label>
+              <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {voices.map((voice) => (
+                    <ListBox.Item key={voice.id} id={voice.id} textValue={voice.name}>
+                      {voice.name}<ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
             </Select>
           )}
           {error && <p className="text-danger text-sm">{error}</p>}
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="flat" onPress={onClose}>
+          </Modal.Body>
+          <Modal.Footer>
+          <Button variant="tertiary" onPress={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button
-            color="primary"
-            onPress={handleSubmit}
-            isLoading={saving}
-            isDisabled={!isValid}
-          >
-            {t('members.create_btn')}
+          <Button onPress={handleSubmit} isPending={saving} isDisabled={!isValid}>
+            {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('members.create_btn')}</>}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

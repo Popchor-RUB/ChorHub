@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@heroui/react';
+import { Button, Modal, Spinner } from '@heroui/react';
 import { QrCodeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import type { QrScanResult } from './QrScannerModal';
@@ -64,23 +64,25 @@ export function QrScanResultModal({
       : 'font-medium';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-      <ModalContent data-testid="qr-scan-result-modal">
-        <ModalHeader>{t('checkin.admin_result_title')}</ModalHeader>
-        <ModalBody>
+    <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Modal.Container size="lg">
+        <Modal.Dialog data-testid="qr-scan-result-modal">
+          <Modal.CloseTrigger />
+          <Modal.Header><Modal.Heading>{t('checkin.admin_result_title')}</Modal.Heading></Modal.Header>
+          <Modal.Body>
           {!scanResult ? (
-            <p className="text-default-500 text-sm">{t('checkin.admin_waiting')}</p>
+            <p className="text-muted text-sm">{t('checkin.admin_waiting')}</p>
           ) : memberInfoFetchError ? (
             <p className="text-danger font-medium">{t('checkin.admin_member_info_fetch_error')}</p>
           ) : (
             <div className="space-y-2 text-sm">
               <p>
-                <span className="text-default-500 text-base">{t('checkin.admin_name')}:</span>{' '}
+                <span className="text-muted text-base">{t('checkin.admin_name')}:</span>{' '}
                 <span
                   role={canOpenMemberDetail ? 'button' : undefined}
                   tabIndex={canOpenMemberDetail ? 0 : undefined}
                   className={canOpenMemberDetail
-                    ? 'font-semibold text-3xl leading-tight cursor-pointer underline decoration-dotted underline-offset-4 hover:text-primary transition-colors'
+                    ? 'font-semibold text-3xl leading-tight cursor-pointer underline decoration-dotted underline-offset-4 hover:text-accent transition-colors'
                     : 'font-semibold text-3xl leading-tight'}
                   onClick={canOpenMemberDetail ? onOpenMemberDetail : undefined}
                   onKeyDown={canOpenMemberDetail ? (e) => {
@@ -94,27 +96,27 @@ export function QrScanResultModal({
                 </span>
               </p>
               <p>
-                <span className="text-default-500">{t('checkin.admin_email')}:</span>{' '}
+                <span className="text-muted">{t('checkin.admin_email')}:</span>{' '}
                 <span className="font-medium">{memberEmail}</span>
               </p>
               <p>
-                <span className="text-default-500">{t('checkin.admin_last_attended')}:</span>{' '}
+                <span className="text-muted">{t('checkin.admin_last_attended')}:</span>{' '}
                 <span className={lastAttendedClassName}>{lastAttendedText}</span>
               </p>
               <p>
-                <span className="text-default-500">{t('checkin.admin_plan')}:</span>{' '}
+                <span className="text-muted">{t('checkin.admin_plan')}:</span>{' '}
                 <span className={attendancePlanMissing ? 'font-medium text-danger' : 'font-medium'}>
                   {attendancePlanText}
                 </span>
               </p>
               <p>
-                <span className="text-default-500">{t('checkin.admin_created')}:</span>{' '}
+                <span className="text-muted">{t('checkin.admin_created')}:</span>{' '}
                 <span className={isOlderThanFiveMinutes ? 'font-medium text-danger' : 'font-medium'}>
                   {relativeIssuedAt}
                 </span>
               </p>
               <p>
-                <span className="text-default-500">{t('checkin.admin_signature')}:</span>{' '}
+                <span className="text-muted">{t('checkin.admin_signature')}:</span>{' '}
                 <span className={scanResult.signatureValid ? 'text-success font-semibold' : 'text-danger font-semibold'}>
                   {scanResult.signatureValid ? t('checkin.admin_signature_valid') : t('checkin.admin_signature_invalid')}
                 </span>
@@ -130,19 +132,18 @@ export function QrScanResultModal({
               )}
             </div>
           )}
-        </ModalBody>
-        <ModalFooter>
+          </Modal.Body>
+          <Modal.Footer>
           <Button
-            color={scannedMemberAttended ? 'success' : 'default'}
-            variant={scannedMemberAttended ? 'solid' : 'bordered'}
-            isLoading={scanRecordSaving}
+            variant={scannedMemberAttended ? 'primary' : 'secondary'}
+            isPending={scanRecordSaving}
             isDisabled={!scanResult?.signatureValid || !scanResult || memberInfoFetchError}
             onPress={onRecordAttendance}
           >
-            {scannedMemberAttended ? t('attendance.btn_present') : t('attendance.btn_record')}
+            {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{scannedMemberAttended ? t('attendance.btn_present') : t('attendance.btn_record')}</>}
           </Button>
           <Button
-            variant="flat"
+            variant="tertiary"
             isIconOnly
             aria-label={t('checkin.admin_scan_next')}
             onPress={onScanNext}
@@ -150,15 +151,16 @@ export function QrScanResultModal({
             <QrCodeIcon className="w-5 h-5" />
           </Button>
           <Button
-            variant="flat"
+            variant="tertiary"
             isIconOnly
             aria-label={t('checkin.admin_close_result')}
             onPress={onClose}
           >
             <XMarkIcon className="w-5 h-5" />
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

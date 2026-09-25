@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
-import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Spinner } from '@heroui/react';
+import { Button, Modal, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import type { CheckinPayload } from '../../types';
 import { getCheckinVerificationKey } from '../../services/checkinPublicKey';
@@ -204,15 +204,17 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
-      <ModalContent data-testid="qr-scanner-modal">
-        <ModalHeader>{t('checkin.admin_modal_title')}</ModalHeader>
-        <ModalBody>
+    <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Modal.Container size="lg" scroll="inside">
+        <Modal.Dialog data-testid="qr-scanner-modal">
+          <Modal.CloseTrigger />
+          <Modal.Header><Modal.Heading>{t('checkin.admin_modal_title')}</Modal.Heading></Modal.Header>
+          <Modal.Body>
           <div className="bg-black rounded-xl overflow-hidden relative min-h-[260px]">
             <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
             {availableCameraIds.length > 1 && (
               <Button
-                variant="flat"
+                variant="tertiary"
                 isIconOnly
                 size="sm"
                 className="absolute bottom-3 right-3 z-10 bg-black/65 text-white"
@@ -224,17 +226,17 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
             )}
             {keyLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                <Spinner color="white" />
+                <Spinner color="current" />
               </div>
             )}
           </div>
           {keyError && <p className="text-danger text-sm">{keyError}</p>}
           {scannerError && <p className="text-danger text-sm">{scannerError}</p>}
-          {!scannerError && !keyError && <p className="text-default-500 text-sm">{t('checkin.admin_waiting')}</p>}
-        </ModalBody>
-        <ModalFooter>
+          {!scannerError && !keyError && <p className="text-muted text-sm">{t('checkin.admin_waiting')}</p>}
+          </Modal.Body>
+          <Modal.Footer>
           <Button
-            variant="flat"
+            variant="tertiary"
             onPress={() => {
               setKeyError(null);
               setScannerError(null);
@@ -246,11 +248,12 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
           >
             {t('checkin.admin_reload_key')}
           </Button>
-          <Button color="primary" onPress={onClose}>
+          <Button onPress={onClose}>
             {t('common.close')}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

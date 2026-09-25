@@ -2,16 +2,13 @@ import { useEffect, useState } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import {
   Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Chip,
   Button,
+  CloseButton,
   Spinner,
   Input,
-  useDisclosure,
+  TextField,
+  useOverlayState,
 } from '@heroui/react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +18,6 @@ import { MemberDetailModal } from '../../components/member/MemberDetailModal';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import { MemberActivityStatsPanel } from '../../components/member/MemberActivityStatsPanel';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
-import { adminInputClassNames } from '../../styles/adminFormStyles';
 
 export function MemberOverviewPage() {
   const [members, setMembers] = useState<MemberOverview[]>([]);
@@ -30,8 +26,8 @@ export function MemberOverviewPage() {
   const [search, setSearch] = useState('');
   const [voiceFilter, setVoiceFilter] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<MemberOverview | null>(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
+  const { isOpen, open: onOpen, close: onClose } = useOverlayState();
+  const { isOpen: isCreateOpen, open: onCreateOpen, close: onCreateClose } = useOverlayState();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -93,33 +89,37 @@ export function MemberOverviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('members.title')}</h1>
         <div className="grid grid-cols-3 gap-2 w-full sm:w-auto sm:flex sm:shrink-0">
-          <Button size="sm" variant="flat" isLoading={exporting} onPress={handleExport}>
+          <Button size="sm" variant="tertiary" isPending={exporting} onPress={handleExport}>
+            {exporting && <Spinner color="current" size="sm" />}
             <span className="sm:hidden">{t('members.export_short')}</span>
             <span className="hidden sm:inline">{t('members.export_excel')}</span>
           </Button>
           <Button
             size="sm"
-            variant="flat"
+            variant="tertiary"
             onPress={() => navigate('/admin/mitglieder/importieren')}
           >
             <span className="sm:hidden">{t('members.import_short')}</span>
             <span className="hidden sm:inline">{t('members.import_csv')}</span>
           </Button>
-          <Button color="primary" size="sm" onPress={onCreateOpen}>
+          <Button size="sm" onPress={onCreateOpen}>
             <span className="sm:hidden">{t('members.create_short')}</span>
             <span className="hidden sm:inline">{t('members.create_new')}</span>
           </Button>
         </div>
       </div>
       <MemberActivityStatsPanel />
-      <Input
-        size="sm"
-        placeholder={t('members.search_placeholder')}
+      <TextField
+        className="w-full"
         value={search}
-        onValueChange={setSearch}
-        isClearable
-        classNames={adminInputClassNames}
-      />
+        onChange={setSearch}
+        aria-label={t('members.search_placeholder')}
+      >
+        <div className="flex items-center gap-1">
+          <Input placeholder={t('members.search_placeholder')} />
+          {search && <CloseButton aria-label={t('members.search_placeholder')} onPress={() => setSearch('')} />}
+        </div>
+      </TextField>
       <VoiceFilterChips
         voices={voiceNames}
         selected={voiceFilter}
@@ -132,50 +132,53 @@ export function MemberOverviewPage() {
           <Spinner />
         </div>
       ) : (
-        <Table
-          aria-label={t('members.table_aria')}
-          isStriped
-          className="[&_tr]:cursor-pointer"
-          onRowAction={(key) => {
-            const member = members.find((m) => m.id === key);
-            if (member) handleRowClick(member);
-          }}
-        >
-          <TableHeader>
-            <TableColumn>{t('members.col_name')}</TableColumn>
-            <TableColumn>{t('members.col_email')}</TableColumn>
-            <TableColumn>{t('members.col_voice')}</TableColumn>
-            <TableColumn>{t('members.col_rehearsals')}</TableColumn>
-            <TableColumn>{t('members.col_unexcused')}</TableColumn>
-          </TableHeader>
-          <TableBody emptyContent={t('members.no_members')}>
+        <Table>
+          <Table.ScrollContainer>
+          <Table.Content
+            aria-label={t('members.table_aria')}
+            className="min-w-[700px] [&_tbody_tr]:cursor-pointer"
+            onRowAction={(key) => {
+              const member = members.find((item) => item.id === String(key));
+              if (member) handleRowClick(member);
+            }}
+          >
+          <Table.Header>
+            <Table.Column isRowHeader>{t('members.col_name')}</Table.Column>
+            <Table.Column>{t('members.col_email')}</Table.Column>
+            <Table.Column>{t('members.col_voice')}</Table.Column>
+            <Table.Column>{t('members.col_rehearsals')}</Table.Column>
+            <Table.Column>{t('members.col_unexcused')}</Table.Column>
+          </Table.Header>
+          <Table.Body renderEmptyState={() => <p className="py-4 text-center text-muted">{t('members.no_members')}</p>}>
             {filteredMembers.map((m) => (
-              <TableRow key={m.id}>
-                <TableCell>
-                  <span className="inline-flex items-center gap-1 text-primary font-medium">
+              <Table.Row key={m.id} id={m.id}>
+                <Table.Cell>
+                  <span className="inline-flex items-center gap-1 text-accent font-medium">
                     <span>{m.firstName} {m.lastName}</span>
                     <MagnifyingGlassIcon className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
                   </span>
-                </TableCell>
-                <TableCell className="text-sm text-default-500">{m.email}</TableCell>
-                <TableCell>
-                  <Chip size="sm" variant="flat">
+                </Table.Cell>
+                <Table.Cell className="text-sm text-muted">{m.email}</Table.Cell>
+                <Table.Cell>
+                  <Chip size="sm" variant="tertiary">
                     {m.choirVoice?.name ?? '—'}
                   </Chip>
-                </TableCell>
-                <TableCell>{m.attendanceCount}</TableCell>
-                <TableCell>
+                </Table.Cell>
+                <Table.Cell>{m.attendanceCount}</Table.Cell>
+                <Table.Cell>
                   {m.unexcusedAbsenceCount > 0 ? (
-                    <Chip size="sm" color="danger" variant="flat">
+                    <Chip size="sm" color="danger" variant="tertiary">
                       {m.unexcusedAbsenceCount}
                     </Chip>
                   ) : (
-                    <span className="text-default-400">0</span>
+                    <span className="text-muted">0</span>
                   )}
-                </TableCell>
-              </TableRow>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </TableBody>
+          </Table.Body>
+          </Table.Content>
+          </Table.ScrollContainer>
         </Table>
       )}
 

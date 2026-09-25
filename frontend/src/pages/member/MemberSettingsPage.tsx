@@ -2,10 +2,6 @@ import { useState } from 'react';
 import {
   Button,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
   Switch,
 } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
@@ -38,22 +34,26 @@ export function MemberSettingsPage() {
       <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
 
-      <div className="bg-background rounded-xl border border-divider p-4 flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-4 shadow-surface">
         <div className="min-w-0">
           <p className="font-medium">{t('nav.notifications')}</p>
-          <p className="mt-1 text-xs text-default-500">
+          <p className="mt-1 text-xs text-muted">
             {denied ? t('notifications.blocked_help') : t('notifications.member_help')}
           </p>
         </div>
         <Switch
           isSelected={isSubscribed}
           isDisabled={denied || isLoading}
-          onValueChange={handleNotificationToggle}
+          onChange={handleNotificationToggle}
           aria-label={t('nav.notifications')}
-        />
+        >
+          <Switch.Content>
+            <Switch.Control><Switch.Thumb /></Switch.Control>
+          </Switch.Content>
+        </Switch>
       </div>
 
-      <div className="bg-background rounded-xl border border-divider p-4 flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-4 shadow-surface">
         <div className="min-w-0">
           <p className="font-medium">{t('settings.language')}</p>
         </div>
@@ -61,24 +61,27 @@ export function MemberSettingsPage() {
       </div>
       </div>
 
-      <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} size="sm">
-        <ModalContent>
-          <ModalHeader>{t('notifications.disable_title')}</ModalHeader>
-          <ModalBody>
-            <p className="text-sm text-default-600">
+      <Modal.Backdrop isOpen={confirmOpen} onOpenChange={setConfirmOpen}>
+        <Modal.Container size="sm">
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header><Modal.Heading>{t('notifications.disable_title')}</Modal.Heading></Modal.Header>
+            <Modal.Body>
+            <p className="text-sm text-muted">
               {t('notifications.disable_body')}
             </p>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="flat" onPress={() => setConfirmOpen(false)}>
+            </Modal.Body>
+            <Modal.Footer>
+            <Button variant="tertiary" onPress={() => setConfirmOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button color="danger" onPress={handleConfirmUnsubscribe}>
+            <Button variant="danger" onPress={handleConfirmUnsubscribe}>
               {t('notifications.deactivate')}
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </>
   );
 }

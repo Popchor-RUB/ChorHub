@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Checkbox, Spinner, Tab, Tabs } from '@heroui/react';
+import { Checkbox, Spinner, Tabs } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { generalInfoApi } from '../../services/api';
 import { MarkdownEditor } from '../../components/info/MarkdownEditor';
@@ -44,13 +44,24 @@ export function GeneralInfoPage() {
       <Tabs
         selectedKey={selectedTab}
         onSelectionChange={(key) => setSelectedTab(String(key))}
-        aria-label={t('info.admin_segment_aria')}
-        variant="underlined"
+        variant="secondary"
       >
-        <Tab key="general" title={t('info.member_general_tab')}>
+        <Tabs.ListContainer>
+          <Tabs.List aria-label={t('info.admin_segment_aria')}>
+            <Tabs.Tab id="general">
+              {t('info.member_general_tab')}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+            <Tabs.Tab id="personal">
+              {t('info.member_personal_tab')}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+          </Tabs.List>
+        </Tabs.ListContainer>
+        <Tabs.Panel id="general">
           <div className="mt-2 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-default-500">{t('info.description')}</p>
+              <p className="text-sm text-muted">{t('info.description')}</p>
               {saved && <span className="text-success text-sm font-medium">{t('common.saved')}</span>}
             </div>
             <MarkdownEditor
@@ -59,16 +70,19 @@ export function GeneralInfoPage() {
               onSave={handleSave}
               saving={saving}
             />
-            <Checkbox isSelected={sendPush} onValueChange={setSendPush}>
-              {t('info.send_push')}
+            <Checkbox isSelected={sendPush} onChange={setSendPush}>
+              <Checkbox.Content>
+                <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+                {t('info.send_push')}
+              </Checkbox.Content>
             </Checkbox>
           </div>
-        </Tab>
-        <Tab key="personal" title={t('info.member_personal_tab')}>
+        </Tabs.Panel>
+        <Tabs.Panel id="personal">
           <div className="mt-2">
             <AdminPersonalInfoPanel />
           </div>
-        </Tab>
+        </Tabs.Panel>
       </Tabs>
     </div>
   );

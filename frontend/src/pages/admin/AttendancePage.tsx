@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Select,
-  SelectItem,
-  SelectSection,
+  CloseButton,
+  Header,
   Input,
   Button,
+  Label,
+  ListBox,
+  Separator,
   Spinner,
-  useDisclosure,
+  TextField,
+  useOverlayState,
 } from '@heroui/react';
 import { MagnifyingGlassIcon, QrCodeIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +27,6 @@ import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
 import { useAttendanceKeyboard } from '../../hooks/useAttendanceKeyboard';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateLong, formatDateNumeric } from '../../utils/dateFormatting';
-import { adminInputClassNames, adminSelectClassNames } from '../../styles/adminFormStyles';
 
 const NO_VOICE_KEY = '__no_voice__';
 
@@ -58,14 +61,14 @@ export function AttendancePage() {
   const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null);
 
   const [selectedMember, setSelectedMember] = useState<AttendanceRecord | null>(null);
-  const { isOpen: isMemberOpen, onOpen: onMemberOpen, onClose: onMemberClose } = useDisclosure();
+  const { isOpen: isMemberOpen, open: onMemberOpen, close: onMemberClose } = useOverlayState();
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  const { isOpen: isCreateOpen, onOpen: onCreateOpen, onClose: onCreateClose } = useDisclosure();
-  const { isOpen: isScannerOpen, onOpen: onScannerOpen, onClose: onScannerClose } = useDisclosure();
-  const { isOpen: isScanResultOpen, onOpen: onScanResultOpen, onClose: onScanResultClose } = useDisclosure();
+  const { isOpen: isCreateOpen, open: onCreateOpen, close: onCreateClose } = useOverlayState();
+  const { isOpen: isScannerOpen, open: onScannerOpen, close: onScannerClose } = useOverlayState();
+  const { isOpen: isScanResultOpen, open: onScanResultOpen, close: onScanResultClose } = useOverlayState();
   const [scanResult, setScanResult] = useState<QrScanResult | null>(null);
   const [scanRecordSaving, setScanRecordSaving] = useState(false);
   const [scanRecordError, setScanRecordError] = useState<string | null>(null);
@@ -315,14 +318,14 @@ export function AttendancePage() {
           }}
           className={[
             'grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_160px_110px] items-center px-4 py-3 transition-colors',
-            member.attended ? 'bg-success-50 dark:bg-success-900/20' : 'bg-content1',
+            member.attended ? 'bg-success-soft dark:bg-success-900/20' : 'bg-surface',
             isFocused ? 'ring-2 ring-inset ring-primary' : '',
           ].filter(Boolean).join(' ')}
           onClick={() => setFocusedMemberId(member.id)}
         >
           <div className="min-w-0">
             <p
-              className="font-medium text-sm cursor-pointer transition-colors text-primary inline-flex items-center gap-1 max-w-full"
+              className="font-medium text-sm cursor-pointer transition-colors text-accent inline-flex items-center gap-1 max-w-full"
               onClick={(e) => { e.stopPropagation(); openMemberDetail(member); }}
             >
               <span className="truncate">{member.firstName} {member.lastName}</span>
@@ -338,28 +341,27 @@ export function AttendancePage() {
                 {t('attendance.unexcused_warning', { count: unexcusedAbsenceCount })}
               </p>
             )}
-            <p className="text-xs text-default-400 sm:hidden mt-0.5">
+            <p className="text-xs text-muted sm:hidden mt-0.5">
               {formatLastAttended(member.lastAttendedRehearsalsAgo)}
             </p>
           </div>
-          <p className="hidden sm:block text-sm text-default-500">
+          <p className="hidden sm:block text-sm text-muted">
             {formatLastAttended(member.lastAttendedRehearsalsAgo)}
           </p>
           <div className="flex justify-end items-center gap-1.5">
             {shortcutNum !== null && (
-              <span className="hidden sm:block text-xs font-mono text-default-400 w-4 text-center">
+              <span className="hidden sm:block text-xs font-mono text-muted w-4 text-center">
                 {shortcutNum}
               </span>
             )}
             <Button
               size="sm"
-              color={member.attended ? 'success' : 'default'}
-              variant={member.attended ? 'solid' : 'bordered'}
-              isLoading={isSaving}
+              variant={member.attended ? 'primary' : 'secondary'}
+              isPending={isSaving}
               onPress={() => toggleAttendance(member.id, member.attended)}
               className="min-w-[90px]"
             >
-              {member.attended ? t('attendance.btn_present') : t('attendance.btn_record')}
+              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{member.attended ? t('attendance.btn_present') : t('attendance.btn_record')}</>}
             </Button>
           </div>
         </div>
@@ -371,7 +373,7 @@ export function AttendancePage() {
     voice: NO_VOICE_KEY,
     label: t('attendance.no_voice_group'),
     headerRight: (
-      <span className="block w-full text-left text-xs font-normal text-default-500 sm:w-auto sm:text-right">
+      <span className="block w-full text-left text-xs font-normal text-muted sm:w-auto sm:text-right">
         {t('attendance.group_present', { attended: noVoiceMembers.filter((m) => m.attended).length, total: noVoiceMembers.length })}
       </span>
     ),
@@ -384,7 +386,7 @@ export function AttendancePage() {
       return {
         voice: group.voice,
         headerRight: (
-          <span className="block w-full text-left text-xs font-normal text-default-500 sm:w-auto sm:text-right">
+          <span className="block w-full text-left text-xs font-normal text-muted sm:w-auto sm:text-right">
             {t('attendance.group_present', { attended: groupAttended, total: group.members.length })}
           </span>
         ),
@@ -400,33 +402,35 @@ export function AttendancePage() {
 
       <div className="flex flex-col gap-2">
         <Select
-          label={t('attendance.rehearsal_label')}
           placeholder={t('attendance.select_rehearsal')}
-          selectedKeys={selectedRehearsalId ? [selectedRehearsalId] : []}
-          classNames={adminSelectClassNames}
-          onSelectionChange={(keys) => {
-            const id = Array.from(keys)[0] as string;
-            setSelectedRehearsalId(id ?? '');
-          }}
+          value={selectedRehearsalId || null}
+          onChange={(key) => setSelectedRehearsalId(typeof key === 'string' ? key : '')}
         >
-          <SelectSection showDivider title={t('attendance.upcoming_rehearsals')}>
-            {futureRehearsals.map((r) => (
-              <SelectItem key={r.id} textValue={`${formatDateNumeric(r.date, dateLocale)} – ${r.title}`}>
-                {formatDateNumeric(r.date, dateLocale)} – {r.title}
-              </SelectItem>
-            ))}
-          </SelectSection>
-          <SelectSection title={t('attendance.past_rehearsals')}>
-            {pastRehearsals.map((r) => (
-              <SelectItem key={r.id} textValue={`${formatDateNumeric(r.date, dateLocale)} – ${r.title}`}>
-                {formatDateNumeric(r.date, dateLocale)} – {r.title}
-              </SelectItem>
-            ))}
-          </SelectSection>
+          <Label>{t('attendance.rehearsal_label')}</Label>
+          <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+          <Select.Popover>
+            <ListBox>
+              <ListBox.Section>
+                <Header>{t('attendance.upcoming_rehearsals')}</Header>
+                {futureRehearsals.map((rehearsal) => {
+                  const textValue = `${formatDateNumeric(rehearsal.date, dateLocale)} – ${rehearsal.title}`;
+                  return <ListBox.Item key={rehearsal.id} id={rehearsal.id} textValue={textValue}>{textValue}<ListBox.ItemIndicator /></ListBox.Item>;
+                })}
+                <Separator />
+              </ListBox.Section>
+              <ListBox.Section>
+                <Header>{t('attendance.past_rehearsals')}</Header>
+                {pastRehearsals.map((rehearsal) => {
+                  const textValue = `${formatDateNumeric(rehearsal.date, dateLocale)} – ${rehearsal.title}`;
+                  return <ListBox.Item key={rehearsal.id} id={rehearsal.id} textValue={textValue}>{textValue}<ListBox.ItemIndicator /></ListBox.Item>;
+                })}
+              </ListBox.Section>
+            </ListBox>
+          </Select.Popover>
         </Select>
 
         {selectedRehearsal && !loadingRecords && (
-          <p className="text-sm text-default-500 px-1">
+          <p className="text-sm text-muted px-1">
             {formatDateLong(selectedRehearsal.date, dateLocale)} ·{' '}
             {t('attendance.present_of', { attended: attendedCount, total: records.length })}
           </p>
@@ -438,20 +442,20 @@ export function AttendancePage() {
         <>
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
-              <Input
-                ref={searchInputRef}
-                placeholder={t('attendance.filter_name')}
-                value={nameFilter}
-                onValueChange={setNameFilter}
-                onClear={() => setNameFilter('')}
-                isClearable
-                size="sm"
+              <TextField
                 className="flex-1"
-                classNames={adminInputClassNames}
-              />
+                value={nameFilter}
+                onChange={setNameFilter}
+                aria-label={t('attendance.filter_name')}
+              >
+                <div className="flex items-center gap-1">
+                  <Input ref={searchInputRef} placeholder={t('attendance.filter_name')} />
+                  {nameFilter && <CloseButton aria-label={t('attendance.filter_name')} onPress={() => setNameFilter('')} />}
+                </div>
+              </TextField>
               <Button
                 size="sm"
-                variant="flat"
+                variant="tertiary"
                 isIconOnly
                 aria-label={t('checkin.admin_scan_button')}
                 data-testid="attendance-open-qr-scanner"
@@ -459,7 +463,7 @@ export function AttendancePage() {
               >
                 <QrCodeIcon className="w-5 h-5" />
               </Button>
-              <Button size="sm" color="primary" onPress={onCreateOpen}>
+              <Button size="sm" onPress={onCreateOpen}>
                 {t('members.create_new')}
               </Button>
             </div>
@@ -479,20 +483,20 @@ export function AttendancePage() {
             collapsedVoices={collapsedVoices}
             onToggle={toggleVoiceCollapse}
             header={
-              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_110px] px-4 py-2 bg-default-50 border-b border-divider text-xs font-semibold text-default-500 uppercase tracking-wide">
+              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_110px] px-4 py-2 bg-surface-secondary border-b border-separator text-xs font-semibold text-muted uppercase tracking-wide">
                 <span>{t('members.col_name')}</span>
                 <span>{t('attendance.col_last_rehearsal')}</span>
                 <span className="text-right">{t('attendance.col_attendance')}</span>
               </div>
             }
             emptyState={
-              <p className="text-center text-default-400 py-10 text-sm">
+              <p className="text-center text-muted py-10 text-sm">
                 {t('attendance.no_members')}
               </p>
             }
           />
 
-          <p className="hidden sm:block text-xs text-default-400 text-center">
+          <p className="hidden sm:block text-xs text-muted text-center">
             {t('attendance.keyboard_hint')}
           </p>
         </>

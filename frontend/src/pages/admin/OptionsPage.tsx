@@ -2,18 +2,15 @@ import { useEffect, useState } from 'react';
 import {
   Button,
   Input,
+  Label,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
   Spinner,
-  useDisclosure,
+  TextField,
+  useOverlayState,
 } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { choirVoicesApi } from '../../services/api';
 import type { ChoirVoice } from '../../types';
-import { adminInputClassNames } from '../../styles/adminFormStyles';
 
 export function OptionsPage() {
   const [voices, setVoices] = useState<ChoirVoice[]>([]);
@@ -26,8 +23,8 @@ export function OptionsPage() {
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
 
-  const addModal = useDisclosure();
-  const deleteModal = useDisclosure();
+  const addModal = useOverlayState();
+  const deleteModal = useOverlayState();
 
   const load = async () => {
     const res = await choirVoicesApi.list().catch(() => ({ data: [] }));
@@ -44,7 +41,7 @@ export function OptionsPage() {
     try {
       await choirVoicesApi.create(newName.trim());
       setNewName('');
-      addModal.onClose();
+      addModal.close();
       await load();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
@@ -92,14 +89,14 @@ export function OptionsPage() {
     setError(null);
     try {
       await choirVoicesApi.remove(deletingId);
-      deleteModal.onClose();
+      deleteModal.close();
       setDeletingId(null);
       await load();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message
         ?? t('voice.error_delete');
       setError(msg);
-      deleteModal.onClose();
+      deleteModal.close();
     }
   };
 
@@ -113,16 +110,15 @@ export function OptionsPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t('voice.section_title')}</h2>
           <Button
-            color="primary"
             size="sm"
-            onPress={() => { setNewName(''); setError(null); addModal.onOpen(); }}
+            onPress={() => { setNewName(''); setError(null); addModal.open(); }}
           >
             {t('voice.add')}
           </Button>
         </div>
 
         {error && (
-          <div className="text-sm text-danger bg-danger-50 dark:bg-danger-50/10 border border-danger-200 rounded-lg px-3 py-2">
+          <div className="rounded-xl border border-danger/20 bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">
             {error}
           </div>
         )}
@@ -130,32 +126,30 @@ export function OptionsPage() {
         {loading ? (
           <div className="flex justify-center pt-8"><Spinner /></div>
         ) : voices.length === 0 ? (
-          <p className="text-default-400 text-sm">{t('voice.no_voices_admin')}</p>
+          <p className="text-muted text-sm">{t('voice.no_voices_admin')}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {voices.map((voice, idx) => (
               <div
                 key={voice.id}
-                className="flex items-center gap-3 px-4 py-3 bg-default-50 dark:bg-default-100/5 rounded-xl border border-default-200"
+                className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3"
               >
                 {editingId === voice.id ? (
-                  <Input
-                    autoFocus
-                    size="sm"
-                    value={editName}
-                    onValueChange={setEditName}
+                  <TextField
                     className="flex-1"
-                    classNames={adminInputClassNames}
-                    onKeyDown={(e) => {
+                    value={editName}
+                    onChange={setEditName}
+                  >
+                    <Input autoFocus onKeyDown={(e) => {
                       if (e.key === 'Enter') handleRenameCommit(voice.id);
                       if (e.key === 'Escape') setEditingId(null);
-                    }}
-                  />
+                    }} />
+                  </TextField>
                 ) : (
                   <span className="flex-1 font-medium flex items-center gap-2">
                     {voice.name}
                     {voice.memberCount !== undefined && (
-                      <span className="text-xs text-default-400 font-normal">
+                      <span className="text-xs text-muted font-normal">
                         {voice.memberCount}{' '}
                         {t(voice.memberCount === 1 ? 'common.member_one' : 'common.member_other')}
                       </span>
@@ -166,21 +160,21 @@ export function OptionsPage() {
                 <div className="flex gap-1 shrink-0">
                   {editingId === voice.id ? (
                     <>
-                      <Button size="sm" color="primary" onPress={() => handleRenameCommit(voice.id)}>
+                      <Button size="sm" onPress={() => handleRenameCommit(voice.id)}>
                         {t('common.save')}
                       </Button>
-                      <Button size="sm" variant="flat" onPress={() => setEditingId(null)}>
+                      <Button size="sm" variant="tertiary" onPress={() => setEditingId(null)}>
                         {t('common.cancel')}
                       </Button>
                     </>
                   ) : (
                     <>
-                      <Button size="sm" variant="flat" onPress={() => handleRenameStart(voice)} isIconOnly aria-label={t('common.rename')}>
+                      <Button size="sm" variant="tertiary" onPress={() => handleRenameStart(voice)} isIconOnly aria-label={t('common.rename')}>
                         ✏️
                       </Button>
                       <Button
                         size="sm"
-                        variant="flat"
+                        variant="tertiary"
                         onPress={() => handleMove(voice, 'up')}
                         isDisabled={idx === 0}
                         isIconOnly
@@ -190,7 +184,7 @@ export function OptionsPage() {
                       </Button>
                       <Button
                         size="sm"
-                        variant="flat"
+                        variant="tertiary"
                         onPress={() => handleMove(voice, 'down')}
                         isDisabled={idx === voices.length - 1}
                         isIconOnly
@@ -200,9 +194,8 @@ export function OptionsPage() {
                       </Button>
                       <Button
                         size="sm"
-                        color="danger"
-                        variant="flat"
-                        onPress={() => { setDeletingId(voice.id); setError(null); deleteModal.onOpen(); }}
+                        variant="danger-soft"
+                        onPress={() => { setDeletingId(voice.id); setError(null); deleteModal.open(); }}
                         isIconOnly
                         aria-label={t('common.delete')}
                       >
@@ -218,46 +211,52 @@ export function OptionsPage() {
       </section>
 
       {/* Add modal */}
-      <Modal isOpen={addModal.isOpen} onClose={addModal.onClose}>
-        <ModalContent>
-          <ModalHeader>{t('voice.new_voice')}</ModalHeader>
-          <ModalBody>
-            <Input
-              autoFocus
-              label={t('common.name')}
-              placeholder={t('voice.name_placeholder')}
+      <Modal.Backdrop isOpen={addModal.isOpen} onOpenChange={addModal.setOpen}>
+        <Modal.Container>
+          <Modal.Dialog>
+          <Modal.CloseTrigger />
+          <Modal.Header><Modal.Heading>{t('voice.new_voice')}</Modal.Heading></Modal.Header>
+          <Modal.Body>
+            <TextField
+              className="w-full"
+              variant="secondary"
               value={newName}
-              onValueChange={setNewName}
-              classNames={adminInputClassNames}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="flat" onPress={addModal.onClose}>{t('common.cancel')}</Button>
-            <Button color="primary" isLoading={adding} onPress={handleAdd} isDisabled={!newName.trim()}>
-              {t('common.add')}
+              onChange={setNewName}
+            >
+              <Label>{t('common.name')}</Label>
+              <Input autoFocus placeholder={t('voice.name_placeholder')} onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }} />
+            </TextField>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" onPress={addModal.close}>{t('common.cancel')}</Button>
+            <Button isPending={adding} onPress={handleAdd} isDisabled={!newName.trim()}>
+              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('common.add')}</>}
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
 
       {/* Delete confirm modal */}
-      <Modal isOpen={deleteModal.isOpen} onClose={deleteModal.onClose}>
-        <ModalContent>
-          <ModalHeader>{t('voice.delete_title')}</ModalHeader>
-          <ModalBody>
+      <Modal.Backdrop isOpen={deleteModal.isOpen} onOpenChange={deleteModal.setOpen}>
+        <Modal.Container>
+          <Modal.Dialog>
+          <Modal.CloseTrigger />
+          <Modal.Header><Modal.Heading>{t('voice.delete_title')}</Modal.Heading></Modal.Header>
+          <Modal.Body>
             <p
               dangerouslySetInnerHTML={{
                 __html: t('voice.delete_confirm', { name: deletingVoice?.name ?? '' }),
               }}
             />
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="flat" onPress={deleteModal.onClose}>{t('common.cancel')}</Button>
-            <Button color="danger" onPress={handleDeleteConfirm}>{t('common.delete')}</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" onPress={deleteModal.close}>{t('common.cancel')}</Button>
+            <Button variant="danger" onPress={handleDeleteConfirm}>{t('common.delete')}</Button>
+          </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </div>
   );
 }

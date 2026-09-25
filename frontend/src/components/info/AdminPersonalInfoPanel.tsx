@@ -3,31 +3,22 @@ import axios from 'axios';
 import {
   Button,
   Card,
-  CardBody,
   Checkbox,
   Input,
+  Label,
   Radio,
   RadioGroup,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
   Spinner,
   Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-  Textarea,
-  useDisclosure,
+  TextArea,
+  TextField,
+  useOverlayState,
 } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminPersonalInfoApi } from '../../services/api';
 import type { PersonalInfoMemberRow, PersonalInfoSendStatus } from '../../types';
 import { MarkdownEditor } from './MarkdownEditor';
-import { adminInputClassNames } from '../../styles/adminFormStyles';
 
 interface PlaceholderFileRow {
   id: string;
@@ -52,51 +43,53 @@ const MemberEditorTable = memo(function MemberEditorTable({
   t,
 }: MemberTableProps) {
   return (
-    <Card className="border border-divider shadow-sm bg-content1">
-      <CardBody className="gap-4">
+    <Card>
+      <Card.Content className="gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold">{t('info.personal_member_editor_title')}</h2>
-          <Input
-            size="sm"
-            placeholder={t('info.personal_member_search_placeholder')}
+          <TextField
+            className="w-full sm:max-w-xs"
+            variant="secondary"
             value={search}
-            onValueChange={onSearchChange}
-            classNames={adminInputClassNames}
-          />
+            onChange={onSearchChange}
+            aria-label={t('info.personal_member_search_placeholder')}
+          ><Input placeholder={t('info.personal_member_search_placeholder')} /></TextField>
         </div>
 
-        <Table aria-label={t('info.personal_member_table_aria')}>
-          <TableHeader>
-            <TableColumn>{t('members.col_name')}</TableColumn>
-            <TableColumn>{t('members.col_email')}</TableColumn>
-            <TableColumn>{t('info.personal_member_status')}</TableColumn>
-            <TableColumn>{t('common.edit')}</TableColumn>
-          </TableHeader>
-          <TableBody emptyContent={t('members.no_members')}>
+        <Table variant="secondary">
+          <Table.ScrollContainer><Table.Content aria-label={t('info.personal_member_table_aria')} className="min-w-[640px]">
+          <Table.Header>
+            <Table.Column isRowHeader>{t('members.col_name')}</Table.Column>
+            <Table.Column>{t('members.col_email')}</Table.Column>
+            <Table.Column>{t('info.personal_member_status')}</Table.Column>
+            <Table.Column>{t('common.edit')}</Table.Column>
+          </Table.Header>
+          <Table.Body renderEmptyState={() => <p className="py-4 text-center text-muted">{t('members.no_members')}</p>}>
             {members.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell>{member.firstName} {member.lastName}</TableCell>
-                <TableCell>{member.email}</TableCell>
-                <TableCell>
+              <Table.Row key={member.id} id={member.id}>
+                <Table.Cell>{member.firstName} {member.lastName}</Table.Cell>
+                <Table.Cell>{member.email}</Table.Cell>
+                <Table.Cell>
                   {member.hasPersonalInfo ? t('info.personal_member_status_ready') : t('info.personal_member_status_empty')}
-                </TableCell>
-                <TableCell>
-                  <Button size="sm" variant="flat" onPress={() => onEditMember(member.id)}>
+                </Table.Cell>
+                <Table.Cell>
+                  <Button size="sm" variant="tertiary" onPress={() => onEditMember(member.id)}>
                     {t('common.edit')}
                   </Button>
-                </TableCell>
-              </TableRow>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </TableBody>
+          </Table.Body>
+          </Table.Content></Table.ScrollContainer>
         </Table>
-      </CardBody>
+      </Card.Content>
     </Card>
   );
 });
 
 export function AdminPersonalInfoPanel() {
   const { t } = useTranslation();
-  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+  const { isOpen, open: onOpen, setOpen: onOpenChange, close: onClose } = useOverlayState();
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [savingMember, setSavingMember] = useState(false);
@@ -358,20 +351,20 @@ export function AdminPersonalInfoPanel() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Card className="border border-divider shadow-sm bg-content1">
-        <CardBody className="gap-4">
+      <Card>
+        <Card.Content className="gap-4">
           <h2 className="text-lg font-semibold">{t('info.personal_compose_title')}</h2>
-          <p className="text-sm text-default-500">{t('info.personal_compose_description')}</p>
+          <p className="text-sm text-muted">{t('info.personal_compose_description')}</p>
 
-          <div className="rounded-xl border border-default-200 bg-default-50 p-4">
-            <h3 className="text-sm font-semibold tracking-wide text-default-700">{t('info.personal_recipients_step_title')}</h3>
-            <p className="mt-1 text-xs text-default-500">
+          <div className="rounded-xl border border-border bg-surface-secondary p-4">
+            <h3 className="text-sm font-semibold tracking-wide text-foreground">{t('info.personal_recipients_step_title')}</h3>
+            <p className="mt-1 text-xs text-muted">
               {t('info.personal_recipients_selected', { count: selectedRecipientsCount ?? 0 })}
             </p>
             <RadioGroup
               className="mt-3"
               value={recipientMode}
-              onValueChange={(value) => {
+              onChange={(value) => {
                 const nextMode = value === 'all' ? 'all' : 'file';
                 setRecipientMode(nextMode);
                 if (nextMode === 'all') {
@@ -383,56 +376,58 @@ export function AdminPersonalInfoPanel() {
                 }
               }}
             >
-              <Radio value="all">{t('info.personal_recipients_all')}</Radio>
-              <Radio value="file">{t('info.personal_recipients_file')}</Radio>
+              <Radio value="all"><Radio.Content><Radio.Control><Radio.Indicator /></Radio.Control>{t('info.personal_recipients_all')}</Radio.Content></Radio>
+              <Radio value="file"><Radio.Content><Radio.Control><Radio.Indicator /></Radio.Control>{t('info.personal_recipients_file')}</Radio.Content></Radio>
             </RadioGroup>
             {recipientMode === 'file' && (
               <div className="mt-3 flex flex-col gap-3">
-                <label className="mb-2 block text-sm font-semibold text-default-700">{t('info.personal_recipients_label')}</label>
+                <label className="mb-2 block text-sm font-semibold text-foreground">{t('info.personal_recipients_label')}</label>
                 <input
                   type="file"
                   accept=".txt,text/plain"
                   onChange={(event) => { void handleRecipientsFileChange(event.target.files?.[0] ?? null); }}
-                  className="text-sm file:mr-2 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-primary"
+                  className="text-sm file:mr-2 file:rounded-md file:border-0 file:bg-accent/10 file:px-3 file:py-2 file:text-accent"
                 />
-                <Checkbox isSelected={deleteNonTargetedEntries} onValueChange={setDeleteNonTargetedEntries}>
-                  {t('info.personal_delete_non_targeted')}
+                <Checkbox isSelected={deleteNonTargetedEntries} onChange={setDeleteNonTargetedEntries}>
+                  <Checkbox.Content><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>{t('info.personal_delete_non_targeted')}</Checkbox.Content>
                 </Checkbox>
               </div>
             )}
           </div>
 
-          <div className="flex flex-col gap-2 rounded-xl border border-default-200 bg-default-50 p-4">
-            <h3 className="text-sm font-semibold tracking-wide text-default-700">{t('info.personal_placeholders_step_title')}</h3>
+          <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-secondary p-4">
+            <h3 className="text-sm font-semibold tracking-wide text-foreground">{t('info.personal_placeholders_step_title')}</h3>
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-default-300 px-3 py-1">{'{{firstname}}'}</span>
-              <span className="rounded-full border border-default-300 px-3 py-1">{'{{lastname}}'}</span>
+              <span className="rounded-full border border-border px-3 py-1">{'{{firstname}}'}</span>
+              <span className="rounded-full border border-border px-3 py-1">{'{{lastname}}'}</span>
               {placeholderRows
                 .map((row) => row.name.trim())
                 .filter(Boolean)
                 .map((name, index) => (
-                  <span key={`${name}-${index}`} className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-primary-700">
+                  <span key={`${name}-${index}`} className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-accent">
                     {`{{${name}}}`}
                   </span>
                 ))}
             </div>
             <div className="flex flex-col gap-3">
               {placeholderRows.map((row) => (
-                <div key={row.id} className="grid gap-2 rounded-lg border border-default-200 bg-content1 p-3 md:grid-cols-[1fr_auto_auto] md:items-end">
-                  <Input
-                    label={t('info.personal_placeholder_name_label')}
-                    placeholder="z. B. stipend"
+                <div key={row.id} className="grid gap-2 rounded-xl border border-border bg-surface p-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+                  <TextField
+                    className="w-full"
+                    variant="secondary"
                     value={row.name}
-                    onValueChange={(value) => updatePlaceholderRow(row.id, { name: value })}
-                    classNames={adminInputClassNames}
-                  />
+                    onChange={(value) => updatePlaceholderRow(row.id, { name: value })}
+                  >
+                    <Label>{t('info.personal_placeholder_name_label')}</Label>
+                    <Input placeholder="z. B. stipend" />
+                  </TextField>
                   <input
                     type="file"
                     accept=".txt,text/plain"
                     onChange={(event) => { void handlePlaceholderFileChange(row.id, event.target.files?.[0] ?? null); }}
-                    className="text-sm file:mr-2 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-primary"
+                    className="text-sm file:mr-2 file:rounded-md file:border-0 file:bg-accent/10 file:px-3 file:py-2 file:text-accent"
                   />
-                  <Button variant="light" color="danger" onPress={() => removePlaceholderRow(row.id)}>
+                  <Button variant="danger-soft" onPress={() => removePlaceholderRow(row.id)}>
                     {t('common.delete')}
                   </Button>
                   {row.lineCount !== null && selectedRecipientsCount !== null && row.lineCount !== selectedRecipientsCount && (
@@ -443,7 +438,7 @@ export function AdminPersonalInfoPanel() {
                 </div>
               ))}
             </div>
-            <Button variant="flat" onPress={addPlaceholderRow}>
+            <Button variant="tertiary" onPress={addPlaceholderRow}>
               {t('info.personal_add_placeholder')}
             </Button>
             {placeholderCountMismatch && (
@@ -453,15 +448,15 @@ export function AdminPersonalInfoPanel() {
             )}
           </div>
 
-          <div className="rounded-xl border border-default-200 bg-default-50 p-4">
-            <h3 className="text-sm font-semibold tracking-wide text-default-700">{t('info.personal_message_step_title')}</h3>
-            <Input
+          <div className="rounded-xl border border-border bg-surface-secondary p-4">
+            <h3 className="text-sm font-semibold tracking-wide text-foreground">{t('info.personal_message_step_title')}</h3>
+            <TextField
               className="mt-3"
-              label={t('info.personal_subject_label')}
               value={emailSubject}
-              onValueChange={setEmailSubject}
-              classNames={adminInputClassNames}
-            />
+              onChange={setEmailSubject}
+            >
+              <Label>{t('info.personal_subject_label')}</Label><Input />
+            </TextField>
             <div className="mt-3">
               <MarkdownEditor
                 value={markdownTemplate}
@@ -473,11 +468,11 @@ export function AdminPersonalInfoPanel() {
             </div>
           </div>
 
-          <Checkbox isSelected={sendEmail} onValueChange={setSendEmail}>
-            {t('info.personal_send_email')}
+          <Checkbox isSelected={sendEmail} onChange={setSendEmail}>
+            <Checkbox.Content><Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>{t('info.personal_send_email')}</Checkbox.Content>
           </Checkbox>
 
-          <div className="text-sm text-default-600">
+          <div className="text-sm text-muted">
             <p className="font-medium">{t('info.personal_send_status_label')}</p>
             {sendStatus && (
               <>
@@ -507,14 +502,14 @@ export function AdminPersonalInfoPanel() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button color="primary" onPress={handlePublish} isLoading={publishing} isDisabled={isCampaignRunning}>
-              {t('info.personal_publish')}
+            <Button onPress={handlePublish} isPending={publishing} isDisabled={isCampaignRunning}>
+              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('info.personal_publish')}</>}
             </Button>
             {isCampaignRunning && <span className="text-warning text-sm">{t('info.personal_campaign_running')}</span>}
             {publishSuccess && <span className="text-success text-sm font-medium">{t('common.saved')}</span>}
             {publishError && <span className="text-danger text-sm">{publishError}</span>}
           </div>
-        </CardBody>
+        </Card.Content>
       </Card>
 
       <MemberEditorTable
@@ -525,30 +520,31 @@ export function AdminPersonalInfoPanel() {
         t={t}
       />
 
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="5xl" backdrop="blur">
-        <ModalContent>
-          {(modalClose) => (
-            <>
-              <ModalHeader>{editingMember ? `${editingMember.firstName} ${editingMember.lastName}` : t('common.edit')}</ModalHeader>
-              <ModalBody>
-                <Textarea
-                  value={editingMember?.markdownContent ?? ''}
-                  onValueChange={(value) => setEditingMember((prev) => (prev ? { ...prev, markdownContent: value } : prev))}
-                  minRows={16}
-                  classNames={{
-                    ...adminInputClassNames,
-                    input: `${adminInputClassNames.input} font-mono text-sm`,
-                  }}
-                />
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={modalClose}>{t('common.cancel')}</Button>
-                <Button color="primary" onPress={handleSaveMember} isLoading={savingMember}>{t('common.save')}</Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      <Modal.Backdrop isOpen={isOpen} onOpenChange={onOpenChange} variant="blur">
+        <Modal.Container size="lg">
+          <Modal.Dialog>
+            <Modal.CloseTrigger />
+            <Modal.Header><Modal.Heading>{editingMember ? `${editingMember.firstName} ${editingMember.lastName}` : t('common.edit')}</Modal.Heading></Modal.Header>
+            <Modal.Body>
+              <TextField
+                className="w-full"
+                variant="secondary"
+                value={editingMember?.markdownContent ?? ''}
+                onChange={(value) => setEditingMember((prev) => (prev ? { ...prev, markdownContent: value } : prev))}
+              >
+                <Label className="sr-only">{t('common.edit')}</Label>
+                <TextArea rows={16} className="font-mono text-sm" />
+              </TextField>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="tertiary" onPress={onClose}>{t('common.cancel')}</Button>
+              <Button onPress={handleSaveMember} isPending={savingMember}>
+                {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('common.save')}</>}
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </div>
   );
 }

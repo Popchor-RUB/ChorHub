@@ -24,6 +24,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: basePath,
+    resolve: {
+      alias: {
+        '@': path.resolve(projectRoot, 'src'),
+      },
+    },
     plugins: [react(), tailwindcss()],
     server: {
       host: '0.0.0.0',

@@ -2,15 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
-  CardBody,
   Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
   Input,
+  Label,
+  ListBox,
   Select,
-  SelectItem,
   Spinner,
+  TextField,
 } from '@heroui/react';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
@@ -19,7 +17,6 @@ import { Link, useParams } from 'react-router-dom';
 import { MemberRehearsalOverview } from '../../components/member/MemberRehearsalOverview';
 import { adminMembersApi, choirVoicesApi } from '../../services/api';
 import { useDateLocale } from '../../hooks/useDateLocale';
-import { adminInputClassNames, adminSelectClassNames } from '../../styles/adminFormStyles';
 import type { AdminMemberDetail, ChoirVoice, MemberRehearsalEntry } from '../../types';
 
 type FormState = {
@@ -169,96 +166,108 @@ export function AdminMemberDetailPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 pb-8" data-testid="member-detail-page">
       <div className="flex flex-col gap-1">
-        <Link className="text-sm text-primary hover:underline" to="/admin/mitglieder">
+        <Link className="text-sm text-accent hover:underline" to="/admin/mitglieder">
           {t('common.back')}
         </Link>
         <h1 className="text-3xl font-semibold tracking-tight">{t('members.detail_title')}</h1>
-        <p className="text-default-500">{member.firstName} {member.lastName}</p>
+        <p className="text-muted">{member.firstName} {member.lastName}</p>
       </div>
 
-      <Card className="border border-divider bg-content1 shadow-sm">
-        <CardBody className="grid gap-4 md:grid-cols-2">
-          <Input
-            label={t('members.create_first_name')}
+      <Card>
+        <Card.Content className="grid gap-4 md:grid-cols-2">
+          <TextField
+            className="w-full"
+            variant="secondary"
             value={form.firstName}
-            onValueChange={(v) => setForm((prev) => ({ ...prev, firstName: v }))}
-            classNames={adminInputClassNames}
+            onChange={(value) => setForm((prev) => ({ ...prev, firstName: value }))}
             data-testid="member-detail-first-name"
-          />
-          <Input
-            label={t('members.create_last_name')}
+          >
+            <Label>{t('members.create_first_name')}</Label><Input />
+          </TextField>
+          <TextField
+            className="w-full"
+            variant="secondary"
             value={form.lastName}
-            onValueChange={(v) => setForm((prev) => ({ ...prev, lastName: v }))}
-            classNames={adminInputClassNames}
+            onChange={(value) => setForm((prev) => ({ ...prev, lastName: value }))}
             data-testid="member-detail-last-name"
-          />
+          >
+            <Label>{t('members.create_last_name')}</Label><Input />
+          </TextField>
           <div className="grid gap-3 md:col-span-2 md:grid-cols-[1fr_auto]">
-            <Input
-              label={t('members.create_email')}
+            <TextField
+              className="w-full"
+              variant="secondary"
               type="email"
               value={form.email}
-              onValueChange={(v) => setForm((prev) => ({ ...prev, email: v }))}
-              classNames={adminInputClassNames}
+              onChange={(value) => setForm((prev) => ({ ...prev, email: value }))}
               data-testid="member-detail-email"
-            />
+            >
+              <Label>{t('members.create_email')}</Label><Input />
+            </TextField>
             <div className="self-end">
               <Dropdown>
-                <DropdownTrigger>
-                  <Button
-                    variant="flat"
-                    endContent={<ChevronDownIcon className="h-4 w-4" />}
-                    isLoading={mailSending !== null}
-                    isDisabled={mailSending !== null}
-                    data-testid="member-detail-email-menu"
-                  >
-                    {t('members.detail_mail_actions')}
-                  </Button>
-                </DropdownTrigger>
-                <DropdownMenu aria-label={t('members.detail_mail_actions')}>
-                  <DropdownItem key="invite" onPress={() => handleSendMail('invite')}>
-                    {t('members.detail_send_invite')}
-                  </DropdownItem>
-                  <DropdownItem key="login" onPress={() => handleSendMail('login')}>
-                    {t('members.detail_send_login')}
-                  </DropdownItem>
-                </DropdownMenu>
+                <Button
+                  variant="tertiary"
+                  isPending={mailSending !== null}
+                  isDisabled={mailSending !== null}
+                  data-testid="member-detail-email-menu"
+                >
+                  {mailSending !== null && <Spinner color="current" size="sm" />}
+                  {t('members.detail_mail_actions')}
+                  <ChevronDownIcon className="h-4 w-4" />
+                </Button>
+                <Dropdown.Popover>
+                  <Dropdown.Menu aria-label={t('members.detail_mail_actions')}>
+                    <Dropdown.Item id="invite" textValue={t('members.detail_send_invite')} onAction={() => handleSendMail('invite')}>
+                      <Label>{t('members.detail_send_invite')}</Label>
+                    </Dropdown.Item>
+                    <Dropdown.Item id="login" textValue={t('members.detail_send_login')} onAction={() => handleSendMail('login')}>
+                      <Label>{t('members.detail_send_login')}</Label>
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
               </Dropdown>
             </div>
           </div>
 
           <Select
-            label={t('members.create_voice')}
-            selectedKeys={form.voiceId ? new Set([form.voiceId]) : new Set()}
-            classNames={adminSelectClassNames}
-            onSelectionChange={(keys) => {
-              const selected = [...keys][0];
+            variant="secondary"
+            value={form.voiceId || null}
+            onChange={(selected) => {
               setForm((prev) => ({ ...prev, voiceId: typeof selected === 'string' ? selected : '' }));
             }}
             data-testid="member-detail-voice"
           >
-            {voices.map((v) => (
-              <SelectItem key={v.id}>{v.name}</SelectItem>
-            ))}
+            <Label>{t('members.create_voice')}</Label>
+            <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                {voices.map((voice) => (
+                  <ListBox.Item key={voice.id} id={voice.id} textValue={voice.name}>
+                    {voice.name}<ListBox.ItemIndicator />
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Popover>
           </Select>
 
           <div className="flex items-center gap-3 md:justify-end">
             <Button
-              color="primary"
               onPress={handleSave}
-              isLoading={saving}
+              isPending={saving}
               isDisabled={!dirty || saving}
               data-testid="member-detail-save"
             >
-              {t('common.save')}
+              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('common.save')}</>}
             </Button>
             {saved && <span className="text-success text-sm">{t('common.saved')}</span>}
             {error && <span className="text-danger text-sm">{error}</span>}
           </div>
-        </CardBody>
+        </Card.Content>
       </Card>
 
-      <Card className="border border-divider bg-content1 shadow-sm">
-        <CardBody>
+      <Card>
+        <Card.Content>
           <MemberRehearsalOverview
             rehearsals={rehearsals}
             dateLocale={dateLocale}
@@ -275,7 +284,7 @@ export function AdminMemberDetailPage() {
             className="gap-4"
             testIdPrefix="member-detail"
           />
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

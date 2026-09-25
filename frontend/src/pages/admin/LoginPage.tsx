@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardBody, CardHeader, Input, Button } from '@heroui/react';
+import { Button, Card, Input, Label, Spinner, TextField } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { adminInputClassNames } from '../../styles/adminFormStyles';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
@@ -31,36 +30,40 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-default-50">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-surface-secondary">
       <Card className="w-full max-w-md">
-        <CardHeader className="flex flex-col items-start gap-1 pb-0">
-          <h1 className="text-2xl font-bold">{t('auth.admin_title')}</h1>
-          <p className="text-default-500 text-sm">{t('auth.admin_subtitle')}</p>
-        </CardHeader>
-        <CardBody>
+        <Card.Header className="flex flex-col items-start gap-1 pb-0">
+          <Card.Title>{t('auth.admin_title')}</Card.Title>
+          <Card.Description>{t('auth.admin_subtitle')}</Card.Description>
+        </Card.Header>
+        <Card.Content>
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
-            <Input
-              label={t('auth.username')}
+            <TextField
+              className="w-full"
+              variant="secondary"
               value={username}
-              onValueChange={setUsername}
+              onChange={setUsername}
               isRequired
-              autoComplete="username"
-              classNames={adminInputClassNames}
-            />
-            <Input
-              label={t('auth.password')}
+            >
+              <Label>{t('auth.username')}</Label>
+              <Input autoComplete="username" />
+            </TextField>
+            <TextField
+              className="w-full"
+              variant="secondary"
               type="password"
               value={password}
-              onValueChange={setPassword}
-              autoComplete="current-password"
-              classNames={adminInputClassNames}
-            />
+              onChange={setPassword}
+            >
+              <Label>{t('auth.password')}</Label>
+              <Input autoComplete="current-password" />
+            </TextField>
             {error && <p className="text-danger text-sm">{error}</p>}
-            <Button type="submit" color="primary" isLoading={loading} fullWidth>
-              {t('auth.login')}
+            <Button type="submit" isPending={loading} fullWidth>
+              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('auth.login')}</>}
             </Button>
           </form>
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Modal, ModalBody, ModalContent } from '@heroui/react';
+import { Button, Modal } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 
 interface Props {
@@ -51,12 +51,12 @@ function ShareIcon({ className }: { className?: string }) {
 function Step({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: React.ReactNode }) {
   return (
     <li className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+      <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0 mt-0.5">
         {icon}
       </div>
       <div>
         <p className="text-sm font-medium">{title}</p>
-        <p className="text-xs text-default-500 mt-0.5">{desc}</p>
+        <p className="text-xs text-muted mt-0.5">{desc}</p>
       </div>
     </li>
   );
@@ -64,14 +64,11 @@ function Step({ icon, title, desc }: { icon: React.ReactNode; title: string; des
 
 function TutorialVideoModal({ open, src, onClose }: { open: boolean; src: string; onClose: () => void }) {
   return (
-    <Modal
-      isOpen={open}
-      onClose={onClose}
-      size="full"
-      classNames={{ wrapper: 'z-[10010]' }}
-    >
-      <ModalContent>
-        <ModalBody className="pt-[calc(env(safe-area-inset-top)+3rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+    <Modal.Backdrop className="z-[10010]" isOpen={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <Modal.Container size="full">
+        <Modal.Dialog>
+          <Modal.CloseTrigger />
+          <Modal.Body className="pt-[calc(env(safe-area-inset-top)+3rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <div className="h-full flex items-center justify-center">
             <video
               className="w-full h-auto max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-5.5rem)] bg-black rounded-xl"
@@ -82,9 +79,10 @@ function TutorialVideoModal({ open, src, onClose }: { open: boolean; src: string
               src={src}
             />
           </div>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+          </Modal.Body>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
 
@@ -103,7 +101,7 @@ function StepList({ className }: { className?: string }) {
         {ios26 && (
           <Step
             icon={
-              <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+              <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-accent" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm6 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm6 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
               </svg>
             }
@@ -112,7 +110,7 @@ function StepList({ className }: { className?: string }) {
           />
         )}
         <Step
-          icon={<ShareIcon className="w-4 h-4 text-primary" />}
+          icon={<ShareIcon className="w-4 h-4 text-accent" />}
           title={t(ios26 ? 'ios_guide.step26_2_title' : 'ios_guide.step1_title')}
           desc={
             <>
@@ -124,7 +122,7 @@ function StepList({ className }: { className?: string }) {
         />
         <Step
           icon={
-            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-accent" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
           }
@@ -133,17 +131,17 @@ function StepList({ className }: { className?: string }) {
         />
         <Step
           icon={
-            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-accent" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
           }
           title={t('ios_guide.step3_title')}
           desc={t('ios_guide.step3_desc')}
         />
-        <li aria-hidden className="border-t border-divider pt-1 mt-1" />
+        <li aria-hidden className="border-t border-separator pt-1 mt-1" />
         <Step
           icon={
-            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-primary" aria-hidden>
+            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-accent" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9a3.75 3.75 0 1 1 7.02 1.875c-.66 1.292-2.024 1.84-2.977 2.625-.575.473-1.043 1.05-1.043 2.25m.01 3h.008v.008h-.008v-.008Z" />
             </svg>
           }
@@ -152,7 +150,7 @@ function StepList({ className }: { className?: string }) {
             <button
               type="button"
               onClick={() => setVideoOpen(true)}
-              className="underline underline-offset-2 text-primary"
+              className="underline underline-offset-2 text-accent"
             >
               {t('ios_guide.step4_link')}
             </button>
@@ -178,13 +176,13 @@ function ToolbarHint({ inSheet = false }: { inSheet?: boolean }) {
 
   return (
     <div className={wrapperClasses}>
-      <p className="text-xs text-default-400">{t(ios26 ? 'ios_guide.menu_hint' : 'ios_guide.share_hint')}</p>
+      <p className="text-xs text-muted">{t(ios26 ? 'ios_guide.menu_hint' : 'ios_guide.share_hint')}</p>
       <svg
         fill="none"
         viewBox="0 0 24 24"
         strokeWidth={2.5}
         stroke="currentColor"
-        className="w-5 h-5 text-default-400 animate-bounce"
+        className="w-5 h-5 text-muted animate-bounce"
         aria-hidden
       >
         <path strokeLinecap="round" strokeLinejoin="round" d={arrowPath} />
@@ -221,7 +219,7 @@ function ForcedGuide() {
           className="w-20 h-20 rounded-[22%] shadow-lg"
         />
         <h1 className="text-2xl font-bold text-center">{t('ios_guide.install_title')}</h1>
-        <p className="text-default-500 text-sm text-center">{t('ios_guide.install_subtitle')}</p>
+        <p className="text-muted text-sm text-center">{t('ios_guide.install_subtitle')}</p>
       </div>
 
       <div className="w-full max-w-sm">
@@ -248,25 +246,25 @@ function DismissableGuide({ onDismiss }: { onDismiss: () => void }) {
       >
         {/* Handle bar */}
         <div className="pt-3 pb-1 flex justify-center">
-          <div className="w-10 h-1 bg-default-300 rounded-full" />
+          <div className="w-10 h-1 bg-surface-secondary rounded-full" />
         </div>
 
         <div className="px-5 pt-3">
           {/* Header row */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-11 h-11 bg-primary rounded-2xl flex items-center justify-center text-white text-lg shadow-sm flex-shrink-0">
+            <div className="w-11 h-11 bg-accent rounded-2xl flex items-center justify-center text-white text-lg shadow-sm flex-shrink-0">
               🎵
             </div>
             <div className="flex-1">
               <h2 className="text-base font-bold leading-tight">{t('ios_guide.install_title')}</h2>
-              <p className="text-default-500 text-xs">{t('ios_guide.install_subtitle')}</p>
+              <p className="text-muted text-xs">{t('ios_guide.install_subtitle')}</p>
             </div>
             <button
               onClick={onDismiss}
               aria-label={t('common.close')}
-              className="w-7 h-7 rounded-full bg-default-100 flex items-center justify-center flex-shrink-0"
+              className="w-7 h-7 rounded-full bg-surface-secondary flex items-center justify-center flex-shrink-0"
             >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-default-500" aria-hidden>
+              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-muted" aria-hidden>
                 <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
               </svg>
             </button>
@@ -276,7 +274,7 @@ function DismissableGuide({ onDismiss }: { onDismiss: () => void }) {
 
           <StepList className="mb-5" />
 
-          <Button variant="flat" fullWidth size="sm" onPress={onDismiss} className="mb-4">
+          <Button variant="tertiary" fullWidth size="sm" onPress={onDismiss} className="mb-4">
             {t('ios_guide.understood')}
           </Button>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { Modal, ModalContent, ModalHeader, ModalBody, Chip, Spinner } from '@heroui/react';
+import { Modal, Chip, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { attendanceApi } from '../../services/api';
 import type { RehearsalOverview, AttendanceRecord } from '../../types';
@@ -104,10 +104,10 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
       label,
       headerRight: (
         <span className="flex flex-col items-start gap-0.5 text-xs font-normal sm:flex-row sm:items-center sm:gap-3">
-          <span className="text-success-600">
+          <span className="text-success-soft-foreground">
             {primaryCount} {primaryLabel} ({pct(primaryCount)} %)
           </span>
-          <span className="text-default-400">
+          <span className="text-muted">
             {secondaryCount} {secondaryLabel} ({pct(secondaryCount)} %)
           </span>
         </span>
@@ -123,22 +123,22 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                 'flex items-center justify-between px-4 py-2.5 text-sm',
                 !showPlanStatus
                   ? m.attended
-                    ? 'bg-success-50 text-success-800'
+                    ? 'bg-success-soft text-success-soft-foreground'
                     : absent
-                    ? 'bg-danger-50 text-danger-800'
-                    : 'bg-content1 text-default-500'
+                    ? 'bg-danger-soft text-danger-soft-foreground'
+                    : 'bg-surface text-muted'
                   : m.plan === 'CONFIRMED'
-                  ? 'bg-success-50 text-success-800'
+                  ? 'bg-success-soft text-success-soft-foreground'
                   : m.plan === 'DECLINED'
-                  ? 'bg-danger-50 text-danger-800'
-                  : 'bg-content1 text-default-500',
+                  ? 'bg-danger-soft text-danger-soft-foreground'
+                  : 'bg-surface text-muted',
                 onMemberClick ? 'cursor-pointer hover:opacity-75 transition-opacity' : '',
               ].filter(Boolean).join(' ')}
             >
               <span
                 className={[
                   'font-medium inline-flex items-center gap-1',
-                  onMemberClick ? 'text-primary' : '',
+                  onMemberClick ? 'text-accent' : '',
                 ].filter(Boolean).join(' ')}
               >
                 <span>{m.firstName} {m.lastName}</span>
@@ -157,10 +157,10 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                   className={[
                     'text-xs font-medium',
                     m.plan === 'CONFIRMED'
-                      ? 'text-success-700'
+                      ? 'text-success-soft-foreground'
                       : m.plan === 'DECLINED'
-                      ? 'text-danger-700'
-                      : 'text-default-500',
+                      ? 'text-danger-soft-foreground'
+                      : 'text-muted',
                   ].join(' ')}
                 >
                   {m.plan === 'CONFIRMED'
@@ -187,15 +187,17 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
   ].filter((g) => g.rows.length > 0);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-      <ModalContent>
-        <ModalHeader className="flex flex-col gap-0.5">
-          <span>{rehearsal.title}</span>
-          <span className="text-sm font-normal text-default-500">
+    <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Modal.Container size="lg">
+        <Modal.Dialog>
+          <Modal.CloseTrigger />
+          <Modal.Header className="flex flex-col gap-0.5">
+          <Modal.Heading>{rehearsal.title}</Modal.Heading>
+          <span className="text-sm font-normal text-muted">
             {formatDateLong(rehearsal.date, dateLocale)}
           </span>
-        </ModalHeader>
-        <ModalBody className="p-0">
+          </Modal.Header>
+          <Modal.Body className="p-0">
           <div style={{ overflowY: 'auto', maxHeight: '70vh', padding: '0 1.5rem 1.5rem' }}>
             {loading ? (
               <div className="flex justify-center py-8">
@@ -207,17 +209,17 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                   {!showPlanStatus ? (
                     <>
                       <button type="button" onClick={() => setAttendanceFilter((prev) => (prev === 'PRESENT' ? null : 'PRESENT'))}>
-                        <Chip color="success" variant={attendanceFilter === 'PRESENT' ? 'solid' : 'flat'} className="cursor-pointer">
+                        <Chip color="success" variant={attendanceFilter === 'PRESENT' ? 'primary' : 'tertiary'} className="cursor-pointer">
                           {t('attendance_detail.present_chip', { count: records.filter((r) => r.attended).length })}
                         </Chip>
                       </button>
                       <button type="button" onClick={() => setAttendanceFilter((prev) => (prev === 'UNEXCUSED' ? null : 'UNEXCUSED'))}>
-                        <Chip color="danger" variant={attendanceFilter === 'UNEXCUSED' ? 'solid' : 'flat'} className="cursor-pointer">
+                        <Chip color="danger" variant={attendanceFilter === 'UNEXCUSED' ? 'primary' : 'tertiary'} className="cursor-pointer">
                           {t('attendance_detail.unexcused_chip', { count: records.filter((r) => isUnexpectedAbsence(r)).length })}
                         </Chip>
                       </button>
                       <button type="button" onClick={() => setAttendanceFilter((prev) => (prev === 'EXCUSED' ? null : 'EXCUSED'))}>
-                        <Chip color="default" variant={attendanceFilter === 'EXCUSED' ? 'solid' : 'flat'} className="cursor-pointer">
+                        <Chip color="default" variant={attendanceFilter === 'EXCUSED' ? 'primary' : 'tertiary'} className="cursor-pointer">
                           {t('attendance_detail.excused_chip', { count: records.filter((r) => !r.attended && r.plan === 'DECLINED').length })}
                         </Chip>
                       </button>
@@ -225,17 +227,17 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                   ) : (
                     <>
                       <button type="button" onClick={() => setPlanFilter((prev) => (prev === 'CONFIRMED' ? null : 'CONFIRMED'))}>
-                        <Chip color="success" variant={planFilter === 'CONFIRMED' ? 'solid' : 'flat'} className="cursor-pointer">
+                        <Chip color="success" variant={planFilter === 'CONFIRMED' ? 'primary' : 'tertiary'} className="cursor-pointer">
                           {t('attendance_detail.confirmed_chip', { count: records.filter((r) => r.plan === 'CONFIRMED').length })}
                         </Chip>
                       </button>
                       <button type="button" onClick={() => setPlanFilter((prev) => (prev === 'DECLINED' ? null : 'DECLINED'))}>
-                        <Chip color="danger" variant={planFilter === 'DECLINED' ? 'solid' : 'flat'} className="cursor-pointer">
+                        <Chip color="danger" variant={planFilter === 'DECLINED' ? 'primary' : 'tertiary'} className="cursor-pointer">
                           {t('attendance_detail.declined_chip', { count: records.filter((r) => r.plan === 'DECLINED').length })}
                         </Chip>
                       </button>
                       <button type="button" onClick={() => setPlanFilter((prev) => (prev === 'NONE' ? null : 'NONE'))}>
-                        <Chip color="default" variant={planFilter === 'NONE' ? 'solid' : 'flat'} className="cursor-pointer">
+                        <Chip color="default" variant={planFilter === 'NONE' ? 'primary' : 'tertiary'} className="cursor-pointer">
                           {t('attendance_detail.no_response_chip', { count: records.filter((r) => !r.plan).length })}
                         </Chip>
                       </button>
@@ -247,14 +249,15 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
                   collapsedVoices={collapsedVoices}
                   onToggle={toggleVoice}
                   emptyState={
-                    <p className="text-default-400 text-center py-4">{t('detail_modal.no_member_data')}</p>
+                    <p className="text-muted text-center py-4">{t('detail_modal.no_member_data')}</p>
                   }
                 />
               </>
             )}
           </div>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+          </Modal.Body>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

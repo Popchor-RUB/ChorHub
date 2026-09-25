@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardBody, CardHeader, Input, Button } from '@heroui/react';
+import { Button, Card, Input, Label, Spinner, TextField } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { memberAuthApi, validateStoredSessionToken } from '../../services/api';
@@ -80,7 +80,7 @@ export function MagicLinkRequestPage() {
   }, [resendCooldown]);
 
   if (!hasHydrated || checkingStoredSession) {
-    return <div className="min-h-[30vh] flex items-center justify-center text-default-500 text-sm">Lädt...</div>;
+    return <div className="min-h-[30vh] flex items-center justify-center text-muted text-sm">Lädt...</div>;
   }
 
   const handleSession = (token: string, member: { id: string; firstName: string; lastName: string }) => {
@@ -153,84 +153,94 @@ export function MagicLinkRequestPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-default-50">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-surface-secondary">
       {showGuide && <IOSInstallGuide forced={guideForced} onDismiss={dismissGuide} />}
       <Card className="w-full max-w-md">
-        <CardHeader className="flex flex-col items-start gap-1 pb-0">
-          <h1 className="text-2xl font-bold">{t('auth.member_title')}</h1>
-          <p className="text-default-500">{t('auth.member_subtitle')}</p>
-        </CardHeader>
-        <CardBody>
+        <Card.Header className="flex flex-col items-start gap-1 pb-0">
+          <Card.Title>{t('auth.member_title')}</Card.Title>
+          <Card.Description>{t('auth.member_subtitle')}</Card.Description>
+        </Card.Header>
+        <Card.Content>
           {view === 'email' ? (
             <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
-              <p className="text-default-600 text-sm">
+              <p className="text-muted text-sm">
                 {t('auth.email_instruction')}
               </p>
-              <Input
+              <TextField
+                className="w-full"
+                variant="secondary"
                 type="text"
-                label={t('auth.email_label')}
                 value={email}
-                onValueChange={setEmail}
+                onChange={setEmail}
                 isRequired
-                placeholder={t('auth.email_placeholder')}
-                autoComplete="email"
-                autoCorrect="off"
-                autoCapitalize="none"
-              />
+              >
+                <Label>{t('auth.email_label')}</Label>
+                <Input
+                  placeholder={t('auth.email_placeholder')}
+                  autoComplete="email"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                />
+              </TextField>
               {error && <p className="text-danger text-sm">{error}</p>}
-              <Button type="submit" color="primary" isLoading={loading} fullWidth>
-                {isToken(email.trim()) ? t('auth.login') : t('auth.continue')}
+              <Button type="submit" isPending={loading} fullWidth>
+                {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{isToken(email.trim()) ? t('auth.login') : t('auth.continue')}</>}
               </Button>
             </form>
           ) : (
             <form onSubmit={handleCodeSubmit} className="flex flex-col gap-4">
               <p
-                className="text-default-600 text-sm"
+                className="text-muted text-sm"
                 dangerouslySetInnerHTML={{
                   __html: t('auth.email_sent', { email: email.trim() }),
                 }}
               />
               <p
-                className="text-default-600 text-sm"
+                className="text-muted text-sm"
                 dangerouslySetInnerHTML={{ __html: t('auth.code_instruction') }}
               />
-              <Input
+              <TextField
+                className="w-full"
+                variant="secondary"
                 type="text"
-                inputMode="numeric"
-                label={t('auth.code_label')}
                 value={code}
-                onValueChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+                onChange={(value) => setCode(value.replace(/\D/g, '').slice(0, 6))}
                 isRequired
-                placeholder="123456"
-                autoComplete="one-time-code"
-                maxLength={6}
-                classNames={{ input: 'text-center text-2xl tracking-[0.5em] font-mono' }}
-              />
+              >
+                <Label>{t('auth.code_label')}</Label>
+                <Input
+                  inputMode="numeric"
+                  placeholder="123456"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  className="text-center font-mono text-2xl tracking-[0.5em]"
+                />
+              </TextField>
               {error && <p className="text-danger text-sm">{error}</p>}
-              <Button type="submit" color="primary" isLoading={loading} isDisabled={code.length !== 6} fullWidth>
-                {t('auth.login')}
+              <Button type="submit" isPending={loading} isDisabled={code.length !== 6} fullWidth>
+                {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('auth.login')}</>}
               </Button>
               <div className="flex gap-2">
                 <Button
-                  variant="flat"
+                  variant="tertiary"
                   onPress={() => { setView('email'); setCode(''); setError(''); setResendCooldown(0); }}
                   fullWidth
                 >
                   {t('common.back')}
                 </Button>
                 <Button
-                  variant="flat"
+                  variant="tertiary"
                   onPress={handleResend}
-                  isLoading={loading}
+                  isPending={loading}
                   isDisabled={loading || resendCooldown > 0}
                   fullWidth
                 >
-                  {resendCooldown > 0 ? `${t('auth.resend')} (${resendCooldown}s)` : t('auth.resend')}
+                  {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{resendCooldown > 0 ? `${t('auth.resend')} (${resendCooldown}s)` : t('auth.resend')}</>}
                 </Button>
               </div>
             </form>
           )}
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

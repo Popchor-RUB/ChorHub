@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
-import { Button, Card, CardBody, CardHeader, Divider } from '@heroui/react';
+import { Button, Card, Separator } from '@heroui/react';
 import { useAuthStore } from '../../store/authStore';
 
 type NormalizedError = {
@@ -71,37 +71,37 @@ export function RouteErrorBoundary() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center py-8">
       <Card className="w-full max-w-3xl">
-        <CardHeader className="flex flex-col items-start gap-1">
+        <Card.Header className="flex flex-col items-start gap-1">
           <h1 className="text-xl font-semibold">Unerwarteter Anwendungsfehler</h1>
-          <p className="text-sm text-default-600">
+          <p className="text-sm text-muted">
             Beim Laden oder Aktualisieren der Seite ist ein Fehler aufgetreten.
           </p>
-        </CardHeader>
-        <Divider />
-        <CardBody className="flex flex-col gap-4">
-          <div className="rounded-lg bg-danger-50 border border-danger-200 p-3">
-            <p className="text-sm font-semibold text-danger-700">{error.title}</p>
-            <p className="text-sm text-danger-700/90">{error.message}</p>
+        </Card.Header>
+        <Separator />
+        <Card.Content className="flex flex-col gap-4">
+          <div className="rounded-xl border border-danger/20 bg-danger-soft p-3">
+            <p className="text-sm font-semibold text-danger-soft-foreground">{error.title}</p>
+            <p className="text-sm text-danger-soft-foreground/90">{error.message}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button color="primary" onPress={() => window.location.reload()}>
+            <Button onPress={() => window.location.reload()}>
               Seite neu laden
             </Button>
-            <Button variant="flat" onPress={copyDiagnostics}>
+            <Button variant="tertiary" onPress={copyDiagnostics}>
               {copied ? 'Fehlerdetails kopiert' : 'Fehlerdetails kopieren'}
             </Button>
           </div>
 
-          <details className="rounded-lg border border-default-200 bg-default-50 p-3">
+          <details className="rounded-xl border border-border bg-surface-secondary p-3">
             <summary className="cursor-pointer text-sm font-medium">
               Technische Details anzeigen
             </summary>
-            <pre className="mt-3 whitespace-pre-wrap break-words text-xs text-default-700">
+            <pre className="mt-3 whitespace-pre-wrap break-words text-xs text-foreground">
               {diagnostics}
             </pre>
           </details>
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

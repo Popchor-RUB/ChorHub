@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Tabs, Tab, Spinner, Button, useDisclosure } from '@heroui/react';
+import { Tabs, Spinner, Button, useOverlayState } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { attendanceApi, rehearsalsApi } from '../../services/api';
 import type { AdminRehearsalListOverview, RehearsalOverview, Rehearsal, AttendanceRecord } from '../../types';
@@ -18,16 +18,16 @@ export function RehearsalOverviewPage() {
 
   const [selectedRehearsal, setSelectedRehearsal] = useState<RehearsalOverview | null>(null);
   const [selectedType, setSelectedType] = useState<'future' | 'past'>('past');
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen, open: onOpen, close: onClose } = useOverlayState();
 
   const [editTarget, setEditTarget] = useState<Rehearsal | null>(null);
-  const { isOpen: isFormOpen, onOpen: onFormOpen, onClose: onFormClose } = useDisclosure();
+  const { isOpen: isFormOpen, open: onFormOpen, close: onFormClose } = useOverlayState();
 
   const [deleteTarget, setDeleteTarget] = useState<Rehearsal | null>(null);
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, open: onDeleteOpen, close: onDeleteClose } = useOverlayState();
 
   const [selectedMember, setSelectedMember] = useState<AttendanceRecord | null>(null);
-  const { isOpen: isMemberOpen, onOpen: onMemberOpen, onClose: onMemberClose } = useDisclosure();
+  const { isOpen: isMemberOpen, open: onMemberOpen, close: onMemberClose } = useOverlayState();
 
   const loadData = () =>
     Promise.all([
@@ -77,16 +77,28 @@ export function RehearsalOverviewPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t('rehearsals.overview_title')}</h1>
-        <Button color="primary" onPress={openCreate}>
+        <Button onPress={openCreate}>
           {t('rehearsals.new')}
         </Button>
       </div>
 
-      <Tabs aria-label={t('rehearsals.overview_title')}>
-        <Tab key="future" title={t('rehearsals.upcoming_count', { count: future.length })}>
+      <Tabs>
+        <Tabs.ListContainer>
+          <Tabs.List aria-label={t('rehearsals.overview_title')}>
+            <Tabs.Tab id="future">
+              {t('rehearsals.upcoming_count', { count: future.length })}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+            <Tabs.Tab id="past">
+              {t('rehearsals.past_count', { count: past.length })}
+              <Tabs.Indicator />
+            </Tabs.Tab>
+          </Tabs.List>
+        </Tabs.ListContainer>
+        <Tabs.Panel id="future">
           <div className="flex flex-col gap-3 mt-4">
             {future.length === 0 ? (
-              <p className="text-default-500">{t('rehearsals.no_upcoming_admin')}</p>
+              <p className="text-muted">{t('rehearsals.no_upcoming_admin')}</p>
             ) : (
               future.map((r) => (
                 <OverviewCard
@@ -100,11 +112,11 @@ export function RehearsalOverviewPage() {
               ))
             )}
           </div>
-        </Tab>
-        <Tab key="past" title={t('rehearsals.past_count', { count: past.length })}>
+        </Tabs.Panel>
+        <Tabs.Panel id="past">
           <div className="flex flex-col gap-3 mt-4">
             {past.length === 0 ? (
-              <p className="text-default-500">{t('rehearsals.no_past_admin')}</p>
+              <p className="text-muted">{t('rehearsals.no_past_admin')}</p>
             ) : (
               past.map((r) => (
                 <OverviewCard
@@ -118,7 +130,7 @@ export function RehearsalOverviewPage() {
               ))
             )}
           </div>
-        </Tab>
+        </Tabs.Panel>
       </Tabs>
 
       {selectedRehearsal && (

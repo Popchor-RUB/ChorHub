@@ -2,12 +2,10 @@ import { useEffect, useState } from 'react';
 import {
   Button,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
+  Radio,
+  RadioGroup,
   Spinner,
-  useDisclosure,
+  useOverlayState,
 } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, membersApi, choirVoicesApi, memberCalendarApi } from '../../services/api';
@@ -25,8 +23,8 @@ export function RehearsalsPage() {
   const [availableVoices, setAvailableVoices] = useState<ChoirVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [savingVoice, setSavingVoice] = useState(false);
-  const voiceModal = useDisclosure();
-  const calendarModal = useDisclosure();
+  const voiceModal = useOverlayState();
+  const calendarModal = useOverlayState();
   const { t } = useTranslation();
 
   const calendarIcsUrl = memberCalendarApi.getIcsUrl();
@@ -53,7 +51,7 @@ export function RehearsalsPage() {
     setSelectedVoiceId(member?.choirVoice?.id ?? null);
     const res = await choirVoicesApi.list().catch(() => ({ data: [] }));
     setAvailableVoices(res.data as ChoirVoice[]);
-    voiceModal.onOpen();
+    voiceModal.open();
   };
 
   const handleSaveVoice = async () => {
@@ -61,7 +59,7 @@ export function RehearsalsPage() {
     try {
       const res = await membersApi.updateVoice(selectedVoiceId);
       setMember(res.data as Member);
-      voiceModal.onClose();
+      voiceModal.close();
     } finally {
       setSavingVoice(false);
     }
@@ -80,7 +78,7 @@ export function RehearsalsPage() {
 
   const closeCalendarModal = () => {
     setShowCalendarAdvanced(false);
-    calendarModal.onClose();
+    calendarModal.close();
   };
 
   const startOfToday = new Date();
@@ -104,47 +102,47 @@ export function RehearsalsPage() {
       <h1 className="text-2xl font-bold">{t('rehearsals.title')}</h1>
 
       {/* Voice banner */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-default-100 dark:bg-default-100/10 rounded-xl text-sm border border-default-200">
-        <span className="text-default-500">{t('voice.your_voice')}</span>
+      <div className="flex items-center gap-3 px-4 py-3 bg-surface-secondary dark:bg-surface-secondary/10 rounded-xl text-sm border border-border">
+        <span className="text-muted">{t('voice.your_voice')}</span>
         <span className="font-medium flex-1">
           {member?.choirVoice?.name ?? t('voice.not_set')}
         </span>
-        <Button size="sm" variant="flat" onPress={openVoiceModal}>
+        <Button size="sm" variant="tertiary" onPress={openVoiceModal}>
           {t('voice.change')}
         </Button>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="flex flex-col items-center justify-center gap-1 bg-success-50 dark:bg-success-50/10 rounded-xl p-3 border border-success-300/80">
+        <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-success/25 bg-success-soft p-3">
           <span className="text-2xl font-bold text-success">{attended}</span>
-          <span className="text-xs text-success-700 dark:text-success-400 text-center">{t('rehearsals.present')}</span>
+          <span className="text-xs text-success-soft-foreground dark:text-success-400 text-center">{t('rehearsals.present')}</span>
         </div>
-        <div className="flex flex-col items-center justify-center gap-1 bg-warning-50 dark:bg-warning-50/10 rounded-xl p-3 border border-warning-300/80">
+        <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-warning/25 bg-warning-soft p-3">
           <span className="text-2xl font-bold text-warning">{excused}</span>
-          <span className="text-xs text-warning-700 dark:text-warning-400 text-center">{t('rehearsals.excused')}</span>
+          <span className="text-xs text-warning-soft-foreground dark:text-warning-400 text-center">{t('rehearsals.excused')}</span>
         </div>
-        <div className="flex flex-col items-center justify-center gap-1 bg-danger-50 dark:bg-danger-50/10 rounded-xl p-3 border border-danger-200/80 dark:border-danger-400/80">
+        <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-danger/25 bg-danger-soft p-3">
           <span className="text-2xl font-bold text-danger">{unexcused}</span>
-          <span className="text-xs text-danger-700 dark:text-danger-400 text-center leading-tight">{t('rehearsals.unexcused')}</span>
+          <span className="text-xs text-danger-soft-foreground dark:text-danger-400 text-center leading-tight">{t('rehearsals.unexcused')}</span>
         </div>
       </div>
 
       {/* Upcoming rehearsals */}
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-default-600">
+          <h2 className="text-base font-semibold text-muted">
             {t('rehearsals.upcoming_count', { count: upcoming.length })}
           </h2>
           <Button
             size="sm"
-            variant="flat"
-            onPress={calendarModal.onOpen}
+            variant="tertiary"
+            onPress={calendarModal.open}
           >
             {t('rehearsals.calendar_button')}
           </Button>
         </div>
         {upcoming.length === 0 ? (
-          <p className="text-default-400 text-sm">{t('rehearsals.no_upcoming')}</p>
+          <p className="text-muted text-sm">{t('rehearsals.no_upcoming')}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {visibleUpcoming.map((r) => (
@@ -155,7 +153,6 @@ export function RehearsalsPage() {
         {!showAllRehearsals && hasHiddenRehearsals && (
           <div className="mt-3 flex justify-center">
             <Button
-              color="primary"
               onPress={() => setShowAllRehearsals(true)}
             >
               {t('rehearsals.show_all')}
@@ -167,7 +164,7 @@ export function RehearsalsPage() {
       {/* Past rehearsals */}
       {past.length > 0 && (
         <section>
-          <h2 className="text-base font-semibold text-default-400 mb-3">
+          <h2 className="text-base font-semibold text-muted mb-3">
             {t('rehearsals.past_count', { count: past.length })}
           </h2>
           <div className="flex flex-col gap-3">
@@ -184,59 +181,56 @@ export function RehearsalsPage() {
       )}
 
       {/* Voice change modal */}
-      <Modal isOpen={voiceModal.isOpen} onClose={voiceModal.onClose}>
-        <ModalContent>
-          <ModalHeader>{t('voice.change_title')}</ModalHeader>
-          <ModalBody>
+      <Modal.Backdrop isOpen={voiceModal.isOpen} onOpenChange={voiceModal.setOpen}>
+        <Modal.Container>
+          <Modal.Dialog>
+          <Modal.CloseTrigger />
+          <Modal.Header><Modal.Heading>{t('voice.change_title')}</Modal.Heading></Modal.Header>
+          <Modal.Body>
             {availableVoices.length === 0 ? (
-              <p className="text-default-400 text-sm">{t('voice.no_voices')}</p>
+              <p className="text-muted text-sm">{t('voice.no_voices')}</p>
             ) : (
-              <div className="flex flex-col gap-2">
+              <RadioGroup className="flex flex-col gap-2" value={selectedVoiceId ?? undefined} onChange={setSelectedVoiceId}>
                 {availableVoices.map((v) => (
-                  <button
+                  <Radio
                     key={v.id}
-                    type="button"
-                    onClick={() => setSelectedVoiceId(v.id)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm border transition-colors text-left ${
-                      selectedVoiceId === v.id
-                        ? 'bg-primary-50 border-primary-400 text-primary font-semibold'
-                        : 'bg-default-50 border-default-200 hover:bg-default-100'
-                    }`}
+                    value={v.id}
+                    className="rounded-xl border border-border bg-surface-secondary p-3"
                   >
-                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                      selectedVoiceId === v.id ? 'border-primary bg-primary' : 'border-default-400'
-                    }`}>
-                      {selectedVoiceId === v.id && <span className="w-2 h-2 rounded-full bg-white" />}
-                    </span>
+                    <Radio.Content>
+                    <Radio.Control><Radio.Indicator /></Radio.Control>
                     <span className="flex-1">{v.name}</span>
                     {v.memberCount !== undefined && (
-                      <span className="text-xs text-default-400">
+                      <span className="text-xs text-muted">
                         {v.memberCount}{' '}
                         {t(v.memberCount === 1 ? 'common.member_one' : 'common.member_other')}
                       </span>
                     )}
-                  </button>
+                    </Radio.Content>
+                  </Radio>
                 ))}
-              </div>
+              </RadioGroup>
             )}
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="flat" onPress={voiceModal.onClose}>{t('common.cancel')}</Button>
-            <Button color="primary" isLoading={savingVoice} onPress={handleSaveVoice}>
-              {t('common.save')}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" onPress={voiceModal.close}>{t('common.cancel')}</Button>
+            <Button isPending={savingVoice} onPress={handleSaveVoice}>
+              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('common.save')}</>}
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
 
       {/* Calendar subscribe modal */}
-      <Modal isOpen={calendarModal.isOpen} onClose={closeCalendarModal}>
-        <ModalContent>
-          <ModalHeader>{t('rehearsals.calendar_title')}</ModalHeader>
-          <ModalBody className="gap-3">
-            <p className="text-sm text-default-500">{t('rehearsals.calendar_hint')}</p>
+      <Modal.Backdrop isOpen={calendarModal.isOpen} onOpenChange={(open) => { if (!open) closeCalendarModal(); }}>
+        <Modal.Container>
+          <Modal.Dialog>
+          <Modal.CloseTrigger />
+          <Modal.Header><Modal.Heading>{t('rehearsals.calendar_title')}</Modal.Heading></Modal.Header>
+          <Modal.Body className="gap-3">
+            <p className="text-sm text-muted">{t('rehearsals.calendar_hint')}</p>
             <Button
-              color="primary"
               fullWidth
               isDisabled={!primaryCalendarUrl}
               onPress={() => {
@@ -248,13 +242,13 @@ export function RehearsalsPage() {
                 ? t('rehearsals.calendar_subscribe')
                 : t('rehearsals.calendar_add_google')}
             </Button>
-            <p className="text-xs text-default-400">
+            <p className="text-xs text-muted">
               {isAppleDevice
                 ? t('rehearsals.calendar_recommended_apple')
                 : t('rehearsals.calendar_recommended_google')}
             </p>
             <Button
-              variant="flat"
+              variant="tertiary"
               size="sm"
               className="self-start font-medium"
               onPress={() => setShowCalendarAdvanced((prev) => !prev)}
@@ -264,10 +258,10 @@ export function RehearsalsPage() {
                 : t('rehearsals.calendar_more_options_show')}
             </Button>
             {showCalendarAdvanced && (
-              <div className="flex flex-col gap-2 border-t border-divider pt-3">
-                <p className="text-xs text-default-400">{t('rehearsals.calendar_more_options_hint')}</p>
+              <div className="flex flex-col gap-2 border-t border-separator pt-3">
+                <p className="text-xs text-muted">{t('rehearsals.calendar_more_options_hint')}</p>
                 <Button
-                  variant="flat"
+                  variant="tertiary"
                   isDisabled={!secondaryCalendarUrl}
                   onPress={() => {
                     if (!secondaryCalendarUrl) return;
@@ -279,7 +273,7 @@ export function RehearsalsPage() {
                     : t('rehearsals.calendar_subscribe')}
                 </Button>
                 <Button
-                  variant="flat"
+                  variant="tertiary"
                   isDisabled={!calendarIcsUrl}
                   onPress={handleCopyCalendarLink}
                 >
@@ -287,14 +281,15 @@ export function RehearsalsPage() {
                 </Button>
               </div>
             )}
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="flat" onPress={closeCalendarModal}>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" onPress={closeCalendarModal}>
               {t('common.close')}
             </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </div>
   );
 }

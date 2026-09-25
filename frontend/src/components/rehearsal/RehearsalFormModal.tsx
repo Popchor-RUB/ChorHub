@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import {
   Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Button,
+  Calendar,
+  DateField,
+  FieldError,
   Input,
+  Label,
+  ListBox,
   Select,
-  SelectItem,
-  Textarea,
+  Spinner,
+  TextArea,
+  TextField,
   DatePicker,
   Switch,
 } from '@heroui/react';
@@ -19,11 +21,6 @@ import type { DateValue } from '@internationalized/date';
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi } from '../../services/api';
 import type { Rehearsal } from '../../types';
-import {
-  adminInputClassNames,
-  adminSelectClassNames,
-  adminTextareaClassNames,
-} from '../../styles/adminFormStyles';
 
 interface Props {
   rehearsal: Rehearsal | null;
@@ -168,106 +165,135 @@ export function RehearsalFormModal({ rehearsal, isOpen, onClose, onSaved }: Prop
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
-      <ModalContent>
-        <ModalHeader>{rehearsal ? t('rehearsals.form_title_edit') : t('rehearsals.form_title_new')}</ModalHeader>
-        <ModalBody className="pb-2 flex flex-col gap-3">
+    <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Modal.Container size="lg">
+        <Modal.Dialog>
+          <Modal.CloseTrigger />
+          <Modal.Header><Modal.Heading>{rehearsal ? t('rehearsals.form_title_edit') : t('rehearsals.form_title_new')}</Modal.Heading></Modal.Header>
+          <Modal.Body className="flex flex-col gap-3 pb-2">
           <I18nProvider locale={i18nLocale}>
             <DatePicker
-              label={t('rehearsals.date_time')}
               value={date}
               onChange={setDate}
-              showMonthAndYearPickers
               hideTimeZone
               granularity="minute"
               isRequired
               hourCycle={24}
-            />
+            >
+              <Label>{t('rehearsals.date_time')}</Label>
+              <DateField.Group variant="secondary">
+                <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
+                <DateField.Suffix><DatePicker.Trigger><DatePicker.TriggerIndicator /></DatePicker.Trigger></DateField.Suffix>
+              </DateField.Group>
+              <DatePicker.Popover>
+                <Calendar aria-label={t('rehearsals.date_time')}>
+                  <Calendar.Header>
+                    <Calendar.YearPickerTrigger><Calendar.YearPickerTriggerHeading /><Calendar.YearPickerTriggerIndicator /></Calendar.YearPickerTrigger>
+                    <Calendar.NavButton slot="previous" /><Calendar.NavButton slot="next" />
+                  </Calendar.Header>
+                  <Calendar.Grid>
+                    <Calendar.GridHeader>{(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}</Calendar.GridHeader>
+                    <Calendar.GridBody>{(calendarDate) => <Calendar.Cell date={calendarDate} />}</Calendar.GridBody>
+                  </Calendar.Grid>
+                  <Calendar.YearPickerGrid><Calendar.YearPickerGridBody>{({ year }) => <Calendar.YearPickerCell year={year} />}</Calendar.YearPickerGridBody></Calendar.YearPickerGrid>
+                </Calendar>
+              </DatePicker.Popover>
+            </DatePicker>
           </I18nProvider>
           {!rehearsal && (
             <Select
-              label={t('rehearsals.recurrence')}
-              selectedKeys={[recurrencePattern]}
-              classNames={adminSelectClassNames}
-              onSelectionChange={(keys) => {
-                if (keys === 'all') return;
-                const selected = Array.from(keys)[0] as RecurrencePattern | undefined;
-                setRecurrencePattern(selected ?? 'NONE');
-              }}
+              variant="secondary"
+              value={recurrencePattern}
+              onChange={(key) => setRecurrencePattern(typeof key === 'string' ? key as RecurrencePattern : 'NONE')}
             >
-              <SelectItem key="NONE">{t('rehearsals.recurrence_none')}</SelectItem>
-              <SelectItem key="DAILY">{t('rehearsals.recurrence_daily')}</SelectItem>
-              <SelectItem key="WEEKLY">{t('rehearsals.recurrence_weekly')}</SelectItem>
-              <SelectItem key="BIWEEKLY">{t('rehearsals.recurrence_biweekly')}</SelectItem>
-              <SelectItem key="MONTHLY">{t('rehearsals.recurrence_monthly')}</SelectItem>
+              <Label>{t('rehearsals.recurrence')}</Label>
+              <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+              <Select.Popover><ListBox>
+                <ListBox.Item id="NONE" textValue={t('rehearsals.recurrence_none')}>{t('rehearsals.recurrence_none')}<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="DAILY" textValue={t('rehearsals.recurrence_daily')}>{t('rehearsals.recurrence_daily')}<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="WEEKLY" textValue={t('rehearsals.recurrence_weekly')}>{t('rehearsals.recurrence_weekly')}<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="BIWEEKLY" textValue={t('rehearsals.recurrence_biweekly')}>{t('rehearsals.recurrence_biweekly')}<ListBox.ItemIndicator /></ListBox.Item>
+                <ListBox.Item id="MONTHLY" textValue={t('rehearsals.recurrence_monthly')}>{t('rehearsals.recurrence_monthly')}<ListBox.ItemIndicator /></ListBox.Item>
+              </ListBox></Select.Popover>
             </Select>
           )}
           {!rehearsal && recurrencePattern !== 'NONE' && (
             <I18nProvider locale={i18nLocale}>
               <DatePicker
-                label={t('rehearsals.recurrence_end_date')}
                 value={seriesEndDate}
                 onChange={setSeriesEndDate}
-                showMonthAndYearPickers
                 hideTimeZone
                 granularity="day"
                 isRequired
                 isInvalid={seriesRangeInvalid}
-                errorMessage={seriesRangeInvalid ? t('rehearsals.recurrence_end_date_invalid') : undefined}
-              />
+              >
+                <Label>{t('rehearsals.recurrence_end_date')}</Label>
+                <DateField.Group variant="secondary">
+                  <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
+                  <DateField.Suffix><DatePicker.Trigger><DatePicker.TriggerIndicator /></DatePicker.Trigger></DateField.Suffix>
+                </DateField.Group>
+                <DatePicker.Popover>
+                  <Calendar aria-label={t('rehearsals.recurrence_end_date')}>
+                    <Calendar.Header>
+                      <Calendar.YearPickerTrigger><Calendar.YearPickerTriggerHeading /><Calendar.YearPickerTriggerIndicator /></Calendar.YearPickerTrigger>
+                      <Calendar.NavButton slot="previous" /><Calendar.NavButton slot="next" />
+                    </Calendar.Header>
+                    <Calendar.Grid>
+                      <Calendar.GridHeader>{(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}</Calendar.GridHeader>
+                      <Calendar.GridBody>{(calendarDate) => <Calendar.Cell date={calendarDate} />}</Calendar.GridBody>
+                    </Calendar.Grid>
+                    <Calendar.YearPickerGrid><Calendar.YearPickerGridBody>{({ year }) => <Calendar.YearPickerCell year={year} />}</Calendar.YearPickerGridBody></Calendar.YearPickerGrid>
+                  </Calendar>
+                </DatePicker.Popover>
+                {seriesRangeInvalid && <FieldError>{t('rehearsals.recurrence_end_date_invalid')}</FieldError>}
+              </DatePicker>
             </I18nProvider>
           )}
-          <Input
-            label={t('common.title')}
-            value={title}
-            onValueChange={setTitle}
-            isRequired
-            classNames={adminInputClassNames}
-          />
-          <Input
-            label={t('rehearsals.location')}
+          <TextField className="w-full" variant="secondary" value={title} onChange={setTitle} isRequired>
+            <Label>{t('common.title')}</Label><Input />
+          </TextField>
+          <TextField className="w-full" variant="secondary"
             value={location}
-            onValueChange={setLocation}
-            placeholder={t('common.optional')}
-            classNames={adminInputClassNames}
-          />
-          <Input
+            onChange={setLocation}
+          >
+            <Label>{t('rehearsals.location')}</Label>
+            <Input placeholder={t('common.optional')} />
+          </TextField>
+          <TextField
+            className="w-full"
+            variant="secondary"
             type="number"
-            min={1}
-            label={t('rehearsals.duration_minutes')}
             value={durationMinutes}
-            onValueChange={setDurationMinutes}
-            placeholder={t('common.optional')}
-            classNames={adminInputClassNames}
-          />
+            onChange={setDurationMinutes}
+          >
+            <Label>{t('rehearsals.duration_minutes')}</Label>
+            <Input min={1} placeholder={t('common.optional')} />
+          </TextField>
           <Switch
             isSelected={isOptional}
-            onValueChange={setIsOptional}
+            onChange={setIsOptional}
           >
-            {t('rehearsals.optional_rehearsal')}
+            <Switch.Content><Switch.Control><Switch.Thumb /></Switch.Control>{t('rehearsals.optional_rehearsal')}</Switch.Content>
           </Switch>
-          <Textarea
-            label={t('common.description')}
-            value={description}
-            onValueChange={setDescription}
-            placeholder={t('common.optional')}
-            classNames={adminTextareaClassNames}
-          />
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="flat" onPress={onClose}>
+          <TextField className="w-full" variant="secondary" value={description} onChange={setDescription}>
+            <Label>{t('common.description')}</Label>
+            <TextArea rows={4} placeholder={t('common.optional')} />
+          </TextField>
+          </Modal.Body>
+          <Modal.Footer>
+          <Button variant="tertiary" onPress={onClose}>
             {t('common.cancel')}
           </Button>
           <Button
-            color="primary"
-            isLoading={saving}
+            isPending={saving}
             onPress={handleSave}
             isDisabled={!date || !title || (isNewSeries && !seriesEndDate) || seriesRangeInvalid}
           >
-            {t('common.save')}
+            {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('common.save')}</>}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

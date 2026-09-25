@@ -9,7 +9,7 @@ interface Props {
 
 export function MarkdownRenderer({ content, emptyMessage = 'Noch keine Informationen vorhanden.' }: Props) {
   if (!content) {
-    return <p className="text-default-400 italic">{emptyMessage}</p>;
+    return <p className="text-muted italic">{emptyMessage}</p>;
   }
 
   const withLinkBreaks = (text: string) => {

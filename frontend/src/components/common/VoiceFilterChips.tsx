@@ -1,4 +1,4 @@
-import { Chip } from '@heroui/react';
+import { Button } from '@heroui/react';
 import type { HTMLAttributes } from 'react';
 
 interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> {
@@ -11,26 +11,24 @@ export function VoiceFilterChips({ voices, selected, onChange, ...divProps }: Pr
   if (voices.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5" {...divProps}>
-      <Chip
+      <Button
         size="sm"
-        variant={!selected ? 'solid' : 'flat'}
-        color={!selected ? 'primary' : 'default'}
-        className="cursor-pointer select-none"
-        onClick={() => onChange(null)}
+        variant={!selected ? 'primary' : 'tertiary'}
+        className="rounded-full"
+        onPress={() => onChange(null)}
       >
         Alle
-      </Chip>
+      </Button>
       {voices.map((voice) => (
-        <Chip
+        <Button
           key={voice}
           size="sm"
-          variant={selected === voice ? 'solid' : 'flat'}
-          color={selected === voice ? 'primary' : 'default'}
-          className="cursor-pointer select-none"
-          onClick={() => onChange(selected === voice ? null : voice)}
+          variant={selected === voice ? 'primary' : 'tertiary'}
+          className="rounded-full"
+          onPress={() => onChange(selected === voice ? null : voice)}
         >
           {voice}
-        </Chip>
+        </Button>
       ))}
     </div>
   );

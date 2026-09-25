@@ -1,11 +1,8 @@
 import { useState } from 'react';
 import {
   Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Button,
+  Spinner,
 } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi } from '../../services/api';
@@ -35,25 +32,28 @@ export function DeleteConfirmModal({ rehearsal, isOpen, onClose, onDeleted }: Pr
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm">
-      <ModalContent>
-        <ModalHeader>{t('rehearsals.delete')}</ModalHeader>
-        <ModalBody className="pb-2">
+    <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Modal.Container size="sm">
+        <Modal.Dialog>
+          <Modal.CloseTrigger />
+          <Modal.Header><Modal.Heading>{t('rehearsals.delete')}</Modal.Heading></Modal.Header>
+          <Modal.Body className="pb-2">
           <p
             dangerouslySetInnerHTML={{
               __html: t('rehearsals.confirm_delete', { title: rehearsal?.title ?? '' }),
             }}
           />
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="flat" onPress={onClose}>
+          </Modal.Body>
+          <Modal.Footer>
+          <Button variant="tertiary" onPress={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button color="danger" isLoading={deleting} onPress={handleDelete}>
-            {t('common.delete')}
+          <Button variant="danger" isPending={deleting} onPress={handleDelete}>
+            {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('common.delete')}</>}
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

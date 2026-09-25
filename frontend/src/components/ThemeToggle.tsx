@@ -64,7 +64,7 @@ export function ThemeToggle() {
   return (
     <Button
       isIconOnly
-      variant="light"
+      variant="tertiary"
       size="sm"
       onPress={cycle}
       aria-label={ARIA_LABELS[preference]}

@@ -28,7 +28,7 @@ const PushNotificationsPage = lazy(() => import('./pages/admin/PushNotifications
 const OptionsPage = lazy(() => import('./pages/admin/OptionsPage').then((module) => ({ default: module.OptionsPage })));
 
 function LoadingScreen() {
-  return <div className="min-h-[30vh] flex items-center justify-center text-default-500 text-sm">Lädt...</div>;
+  return <div className="min-h-[30vh] flex items-center justify-center text-muted text-sm">Lädt...</div>;
 }
 
 function LazyPage({ children }: { children: React.ReactNode }) {

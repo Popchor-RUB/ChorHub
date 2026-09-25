@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardBody, Button, Checkbox, Chip } from '@heroui/react';
+import { Card, Button, Checkbox, Chip } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminMembersApi, choirVoicesApi } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
@@ -59,20 +59,20 @@ export function ImportMembersPage() {
       <h1 className="text-2xl font-bold">{t('members.import_title')}</h1>
 
       <Card>
-        <CardBody className="gap-4">
-          <p className="text-sm text-default-600">
+        <Card.Content className="gap-4">
+          <p className="text-sm text-muted">
             {t('members.import_description')}{' '}
-            <code className="bg-default-100 px-1 rounded">firstName, lastName, email, choirVoice</code>
+            <code className="bg-surface-secondary px-1 rounded">firstName, lastName, email, choirVoice</code>
           </p>
           {voices.length > 0 && (
-            <p className="text-xs text-default-400">
+            <p className="text-xs text-muted">
               {t('members.import_valid_voices')}{' '}
               {voices.map((v) => v.name).join(', ')}
             </p>
           )}
 
           <div
-            className="border-2 border-dashed border-default-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors"
+            className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-accent transition-colors"
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
             onClick={() => document.getElementById('csv-input')?.click()}
@@ -80,10 +80,10 @@ export function ImportMembersPage() {
             {file ? (
               <div>
                 <p className="font-medium">{file.name}</p>
-                <p className="text-sm text-default-500">{(file.size / 1024).toFixed(1)} KB</p>
+                <p className="text-sm text-muted">{(file.size / 1024).toFixed(1)} KB</p>
               </div>
             ) : (
-              <p className="text-default-400">{t('members.import_drop')}</p>
+              <p className="text-muted">{t('members.import_drop')}</p>
             )}
             <input
               id="csv-input"
@@ -96,36 +96,39 @@ export function ImportMembersPage() {
 
           {error && <p className="text-danger text-sm">{error}</p>}
 
-          <Checkbox isSelected={sendEmails} onValueChange={setSendEmails}>
-            {t('members.import_send_emails')}
+          <Checkbox isSelected={sendEmails} onChange={setSendEmails}>
+            <Checkbox.Content>
+              <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+              {t('members.import_send_emails')}
+            </Checkbox.Content>
           </Checkbox>
 
           <div className="flex gap-2">
-            <Button color="primary" onPress={handleImport} isLoading={loading} isDisabled={!file}>
+            <Button onPress={handleImport} isPending={loading} isDisabled={!file}>
               {t('members.import_btn')}
             </Button>
-            <Button variant="flat" onPress={() => navigate('/admin/mitglieder')}>
+            <Button variant="tertiary" onPress={() => navigate('/admin/mitglieder')}>
               {t('common.back')}
             </Button>
           </div>
-        </CardBody>
+        </Card.Content>
       </Card>
 
       {result && (
         <Card>
-          <CardBody className="gap-3">
+          <Card.Content className="gap-3">
             <h2 className="font-semibold">{t('members.import_result_title')}</h2>
             <div className="flex gap-2 flex-wrap">
-              <Chip color="success" variant="flat">{t('members.import_created', { count: result.created })}</Chip>
-              <Chip color="primary" variant="flat">{t('members.import_updated', { count: result.updated })}</Chip>
+              <Chip color="success" variant="tertiary">{t('members.import_created', { count: result.created })}</Chip>
+              <Chip color="accent" variant="tertiary">{t('members.import_updated', { count: result.updated })}</Chip>
               {result.failed.length > 0 && (
-                <Chip color="danger" variant="flat">{t('members.import_failed_count', { count: result.failed.length })}</Chip>
+                <Chip color="danger" variant="tertiary">{t('members.import_failed_count', { count: result.failed.length })}</Chip>
               )}
             </div>
             {result.failed.length > 0 && (
               <div className="mt-2">
                 <p className="text-sm font-medium text-danger mb-1">{t('members.import_errors_title')}</p>
-                <ul className="text-sm text-default-600 space-y-1">
+                <ul className="text-sm text-muted space-y-1">
                   {result.failed.map((f, i) => (
                     <li key={i}>
                       <span className="font-mono">{f.email}</span>: {f.reason}
@@ -134,7 +137,7 @@ export function ImportMembersPage() {
                 </ul>
               </div>
             )}
-          </CardBody>
+          </Card.Content>
         </Card>
       )}
     </div>

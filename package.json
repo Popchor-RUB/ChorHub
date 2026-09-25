@@ -2,6 +2,7 @@
   "name": "chorhub-e2e",
   "private": true,
   "scripts": {
+    "dev": "node scripts/dev.mjs",
     "test:e2e": "node e2e/scripts/run-e2e.mjs",
     "test:e2e:local": "playwright test",
     "test:e2e:ui": "playwright test --ui",

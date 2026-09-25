@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Chip, Select, SelectItem, Spinner } from '@heroui/react';
+import { Button, Chip, Label, ListBox, Select, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminMembersApi, rehearsalsApi } from '../../services/api';
 import type { MemberActivityStats, Rehearsal } from '../../types';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { formatDateNumeric } from '../../utils/dateFormatting';
-import { adminSelectClassNames } from '../../styles/adminFormStyles';
 
 const DEFAULT_SELECTION_COUNT = 5;
 const QUICK_SELECTION_COUNTS = [3, 5];
@@ -112,48 +111,47 @@ export function MemberActivityStatsPanel() {
   ];
 
   return (
-    <section className="rounded-lg border border-default-200 bg-content1 p-4 shadow-sm">
+    <section className="rounded-2xl border border-border bg-surface p-4 shadow-surface">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold">{t('members.activity_title')}</h2>
-            <p className="text-sm text-default-500">{t('members.activity_description')}</p>
+            <p className="text-sm text-muted">{t('members.activity_description')}</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <Select
-              aria-label={t('members.activity_rehearsals_label')}
-              label={t('members.activity_rehearsals_label')}
               selectionMode="multiple"
-              selectedKeys={selectedKeys}
+              variant="secondary"
+              value={Array.from(selectedKeys)}
               className="min-w-72"
-              classNames={adminSelectClassNames}
               isDisabled={loadingRehearsals || pastRehearsals.length === 0}
               placeholder={t('members.activity_rehearsals_placeholder')}
-              renderValue={(items) => t('members.activity_rehearsals_selected', { count: items.length })}
-              onSelectionChange={(keys) => {
-                if (keys === 'all') {
-                  setSelectedRehearsalIds(pastRehearsals.map((rehearsal) => rehearsal.id));
-                  return;
-                }
-                setSelectedRehearsalIds(Array.from(keys).map(String));
-              }}
+              onChange={(keys) => setSelectedRehearsalIds(Array.isArray(keys) ? keys.map(String) : [])}
             >
-              {pastRehearsals.map((rehearsal) => (
-                <SelectItem
-                  key={rehearsal.id}
-                  textValue={`${formatDateNumeric(rehearsal.date, dateLocale)} - ${rehearsal.title}`}
-                >
-                  {formatDateNumeric(rehearsal.date, dateLocale)} - {rehearsal.title}
-                </SelectItem>
-              ))}
+              <Label>{t('members.activity_rehearsals_label')}</Label>
+              <Select.Trigger>
+                <Select.Value>{() => t('members.activity_rehearsals_selected', { count: selectedRehearsalIds.length })}</Select.Value>
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {pastRehearsals.map((rehearsal) => {
+                    const textValue = `${formatDateNumeric(rehearsal.date, dateLocale)} - ${rehearsal.title}`;
+                    return (
+                      <ListBox.Item key={rehearsal.id} id={rehearsal.id} textValue={textValue}>
+                        {textValue}<ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    );
+                  })}
+                </ListBox>
+              </Select.Popover>
             </Select>
             <div className="grid grid-cols-2 gap-2 sm:flex">
               {QUICK_SELECTION_COUNTS.map((count) => (
                 <Button
                   key={count}
                   size="sm"
-                  variant={selectedRehearsalIds.length === count ? 'solid' : 'flat'}
-                  color={selectedRehearsalIds.length === count ? 'primary' : 'default'}
+                  variant={selectedRehearsalIds.length === count ? 'primary' : 'tertiary'}
                   isDisabled={pastRehearsals.length === 0}
                   onPress={() => selectLatest(count)}
                 >
@@ -169,13 +167,13 @@ export function MemberActivityStatsPanel() {
             <Spinner size="sm" />
           </div>
         ) : pastRehearsals.length === 0 ? (
-          <p className="text-sm text-default-500">{t('members.activity_no_rehearsals')}</p>
+          <p className="text-sm text-muted">{t('members.activity_no_rehearsals')}</p>
         ) : (
           <>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {metricItems.map((item) => (
-                <div key={item.label} className="rounded-md border border-default-200 px-3 py-2">
-                  <p className="text-xs uppercase text-default-500">{item.label}</p>
+                <div key={item.label} className="rounded-xl border border-border px-3 py-2">
+                  <p className="text-xs uppercase text-muted">{item.label}</p>
                   <p className="text-2xl font-semibold">{item.value}</p>
                 </div>
               ))}
@@ -185,27 +183,27 @@ export function MemberActivityStatsPanel() {
               <p className="text-sm text-danger">{t('members.activity_load_failed')}</p>
             ) : (
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-sm text-default-500">
+                <div className="flex items-center gap-2 text-sm text-muted">
                   <span>{t('members.activity_by_voice')}</span>
                 </div>
                 <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                   {(stats?.byVoice ?? []).map((voice) => {
                     const voiceLabel = voice.voiceName ?? t('members.activity_no_voice');
                     return (
-                      <div key={voice.voiceId ?? 'no-voice'} className="rounded-md border border-default-200 p-3">
+                      <div key={voice.voiceId ?? 'no-voice'} className="rounded-xl border border-border p-3">
                         <div className="flex items-center justify-between gap-2">
                           <span className="truncate text-sm font-medium">{voiceLabel}</span>
-                          <Chip size="sm" variant="flat">
+                          <Chip size="sm" variant="tertiary">
                             {voice.activeMembers} / {voice.totalMembers}
                           </Chip>
                         </div>
-                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-default-100">
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-secondary">
                           <div
-                            className="h-full rounded-full bg-primary"
+                            className="h-full rounded-full bg-accent"
                             style={{ width: `${Math.round(voice.activeRate * 100)}%` }}
                           />
                         </div>
-                        <p className="mt-1 text-xs text-default-500">
+                        <p className="mt-1 text-xs text-muted">
                           {formatPercent(voice.activeRate, numberLocale)}
                         </p>
                       </div>

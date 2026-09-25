@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardBody, Spinner } from '@heroui/react';
+import { Card, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { attendanceApi, memberAuthApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
@@ -52,21 +52,21 @@ export function MagicLinkVerifyPage() {
   }, [navigate, searchParams, setMemberSession, t]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-default-50">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-surface-secondary">
       <Card className="w-full max-w-md">
-        <CardBody className="text-center py-8">
+        <Card.Content className="text-center py-8">
           {error ? (
             <div>
               <p className="text-danger font-medium mb-2">{t('auth.login_failed')}</p>
-              <p className="text-default-600 text-sm">{error}</p>
+              <p className="text-muted text-sm">{error}</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4">
               <Spinner size="lg" />
-              <p className="text-default-600">{t('auth.processing')}</p>
+              <p className="text-muted">{t('auth.processing')}</p>
             </div>
           )}
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

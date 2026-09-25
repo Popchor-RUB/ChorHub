@@ -1,4 +1,4 @@
-import { Card, CardBody, CardHeader, Button, Chip } from '@heroui/react';
+import { Card, Button, Chip } from '@heroui/react';
 import type { Rehearsal, AttendanceResponse } from '../../types';
 import { attendanceApi } from '../../services/api';
 import { useState } from 'react';
@@ -41,11 +41,11 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
     : formatDateTimeShort(rehearsal.date, dateLocale);
   const location = rehearsal.location?.trim();
   const statusTintClass = rehearsal.myAttended === true
-    ? 'bg-success-100/55 border-success-300/80 dark:border-success-300/80'
+    ? 'bg-success-soft border-success/25'
     : rehearsal.myAttended === false && rehearsal.myPlan === 'DECLINED'
-      ? 'bg-warning-100/55 border-warning-300/80 dark:border-warning-400/80'
+      ? 'bg-warning-soft border-warning/25'
       : rehearsal.myAttended === false
-        ? 'bg-danger-100/55 border-danger-200/80 dark:border-danger-400/80'
+        ? 'bg-danger-soft border-danger/25'
         : '';
 
   const setPlan = async (response: AttendanceResponse) => {
@@ -69,40 +69,40 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
 
   return (
     <Card
-      className={`w-full border border-default-200 ${readOnly ? 'opacity-80' : ''} ${statusTintClass} ${
+      className={`w-full ${readOnly ? 'opacity-80' : ''} ${statusTintClass} ${
         rehearsal.isOptional && !statusTintClass
-          ? 'bg-primary-100/55 border border-primary-200/80 dark:border-primary-400/80'
+          ? 'bg-accent-soft/55 border border-accent/80 dark:border-accent/80'
           : ''
       }`}
       data-testid="rehearsal-card"
     >
-      <CardHeader className="flex flex-col items-start gap-1">
+      <Card.Header className="flex flex-col items-start gap-1">
         <div className="flex items-center gap-2 w-full">
           <h3 className="text-lg font-semibold flex-1">{rehearsal.title}</h3>
           {rehearsal.isOptional && (
-            <Chip size="sm" variant="flat" color="primary">
+            <Chip size="sm" variant="primary" color="accent">
               {t('rehearsals.optional_badge')}
             </Chip>
           )}
           {readOnly && (
-            <Chip size="sm" variant="flat" color="default">
+            <Chip size="sm" variant="primary" color="default">
               {t('rehearsals.past_chip')}
             </Chip>
           )}
         </div>
-        <p className="text-sm text-default-400">
+        <p className="text-sm text-muted">
           {dateLabel}
           {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}
         </p>
         {location && (
-          <p className="text-sm text-default-400">
+          <p className="text-sm text-muted">
             {t('rehearsals.location')}: {location}
           </p>
         )}
-      </CardHeader>
-      <CardBody className="flex flex-col gap-2 pt-0">
+      </Card.Header>
+      <Card.Content className="flex flex-col gap-2 pt-0">
         {rehearsal.description && (
-          <div className="prose max-w-none text-sm text-default-700 leading-relaxed pb-1">
+          <div className="prose max-w-none text-sm text-foreground leading-relaxed pb-1">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
@@ -118,24 +118,24 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
         )}
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{t('rehearsals.my_rsvp')}</span>
-          {rehearsal.myPlan === 'CONFIRMED' && <Chip color="success" size="sm">{t('rehearsals.confirmed')}</Chip>}
-          {rehearsal.myPlan === 'DECLINED' && <Chip color="danger" size="sm">{t('rehearsals.declined')}</Chip>}
-          {!rehearsal.myPlan && <Chip color="default" size="sm">{t('rehearsals.no_response')}</Chip>}
+          {rehearsal.myPlan === 'CONFIRMED' && <Chip color="success" variant='primary' size="sm">{t('rehearsals.confirmed')}</Chip>}
+          {rehearsal.myPlan === 'DECLINED' && <Chip color="danger" variant='primary' size="sm">{t('rehearsals.declined')}</Chip>}
+          {!rehearsal.myPlan && <Chip color="default" variant='primary' size="sm">{t('rehearsals.no_response')}</Chip>}
         </div>
         {rehearsal.myAttended != null && (
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{t('rehearsals.attendance_label')}</span>
             {rehearsal.myAttended === true && (
-              <Chip color="success" size="sm" variant="flat">{t('rehearsals.present')}</Chip>
+              <Chip color="success" size="sm" variant="primary">{t('rehearsals.present')}</Chip>
             )}
             {rehearsal.myAttended === false && rehearsal.myPlan === 'DECLINED' && (
-              <Chip color="warning" size="sm" variant="flat">{t('rehearsals.excused')}</Chip>
+              <Chip color="warning" size="sm" variant="primary">{t('rehearsals.excused')}</Chip>
             )}
             {rehearsal.myAttended === false && rehearsal.myPlan !== 'DECLINED' && (
               <Chip color="danger" size="sm">{t('rehearsals.unexcused_absence')}</Chip>
             )}
             {rehearsal.myAttended === null && (
-              <Chip color="default" size="sm" variant="flat">{t('rehearsals.not_recorded')}</Chip>
+              <Chip color="default" size="sm" variant="primary">{t('rehearsals.not_recorded')}</Chip>
             )}
           </div>
         )}
@@ -143,10 +143,9 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
           <div className="flex gap-2">
             <Button
               size="sm"
-              color="success"
-              variant={rehearsal.myPlan === 'CONFIRMED' ? 'solid' : 'bordered'}
-              className={rehearsal.myPlan === 'CONFIRMED' ? '' : 'bg-content1'}
-              isLoading={loading === 'CONFIRMED'}
+              variant={rehearsal.myPlan === 'CONFIRMED' ? 'primary' : 'secondary'}
+              className={rehearsal.myPlan === 'CONFIRMED' ? '' : 'bg-surface'}
+              isPending={loading === 'CONFIRMED'}
               onPress={() => setPlan('CONFIRMED')}
               isDisabled={buttonsDisabled}
             >
@@ -154,10 +153,9 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             </Button>
             <Button
               size="sm"
-              color="danger"
-              variant={rehearsal.myPlan === 'DECLINED' ? 'solid' : 'bordered'}
-              className={rehearsal.myPlan === 'DECLINED' ? '' : 'bg-content1'}
-              isLoading={loading === 'DECLINED'}
+              variant={rehearsal.myPlan === 'DECLINED' ? 'danger' : 'danger-soft'}
+              className={rehearsal.myPlan === 'DECLINED' ? '' : 'bg-surface'}
+              isPending={loading === 'DECLINED'}
               onPress={() => setPlan('DECLINED')}
               isDisabled={buttonsDisabled}
             >
@@ -166,7 +164,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
           </div>
         )}
         {error && <p className="text-sm text-danger">{error}</p>}
-      </CardBody>
+      </Card.Content>
     </Card>
   );
 }

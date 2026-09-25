@@ -1,11 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import {
-  Navbar,
-  NavbarBrand,
-  NavbarContent,
-  NavbarItem,
-  Button,
-} from '@heroui/react';
+import { Button } from '@heroui/react';
 import { MusicalNoteIcon, InformationCircleIcon, Cog6ToothIcon, QrCodeIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
@@ -27,73 +21,75 @@ export function MemberLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-default-50">
+    <div className="min-h-screen">
       {showGuide && <IOSInstallGuide forced={guideForced} onDismiss={dismissGuide} />}
-      <Navbar isBordered>
-        <NavbarBrand>
+      <header className="sticky top-0 z-40 border-b border-separator bg-background/85 backdrop-blur-xl">
+        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6" aria-label="ChorHub">
+        <div className="flex items-center gap-2">
           <span className="font-bold text-inherit text-xl">🎵 ChorHub</span>
-        </NavbarBrand>
-        <NavbarContent className="hidden sm:flex gap-4" justify="center">
-          <NavbarItem>
+        </div>
+        <ul className="hidden items-center justify-center gap-4 sm:flex">
+          <li>
             <NavLink
               to="/proben"
               className={({ isActive }) =>
-                isActive ? 'text-primary font-medium' : 'text-default-600'
+                isActive ? 'text-accent font-medium' : 'text-muted'
               }
             >
               {t('nav.rehearsals')}
             </NavLink>
-          </NavbarItem>
-          <NavbarItem>
+          </li>
+          <li>
             <NavLink
               to="/informationen"
               className={({ isActive }) =>
-                isActive ? 'text-primary font-medium' : 'text-default-600'
+                isActive ? 'text-accent font-medium' : 'text-muted'
               }
             >
               {t('nav.information')}
             </NavLink>
-          </NavbarItem>
-          <NavbarItem>
+          </li>
+          <li>
             <NavLink
               to="/qr-checkin"
               className={({ isActive }) =>
-                isActive ? 'text-primary font-medium' : 'text-default-600'
+                isActive ? 'text-accent font-medium' : 'text-muted'
               }
             >
               {t('nav.qr_checkin')}
             </NavLink>
-          </NavbarItem>
-        </NavbarContent>
-        <NavbarContent justify="end">
-          <NavbarItem>
-            <span className="text-sm text-default-500 hidden sm:block">
+          </li>
+        </ul>
+        <ul className="flex items-center justify-end gap-1.5">
+          <li>
+            <span className="text-sm text-muted hidden sm:block">
               {memberSession?.firstName} {memberSession?.lastName}
             </span>
-          </NavbarItem>
-          <NavbarItem className="hidden sm:flex">
+          </li>
+          <li className="hidden sm:flex">
             <NotificationBell />
-          </NavbarItem>
-          <NavbarItem className="hidden sm:flex">
+          </li>
+          <li className="hidden sm:flex">
             <LanguageSwitcher />
-          </NavbarItem>
-          <NavbarItem>
+          </li>
+          <li>
             <ThemeToggle />
-          </NavbarItem>
-          <NavbarItem>
-            <Button variant="flat" size="sm" onPress={handleLogout}>
+          </li>
+          <li>
+            <Button variant="tertiary" size="sm" onPress={handleLogout}>
               {t('nav.logout')}
             </Button>
-          </NavbarItem>
-        </NavbarContent>
-      </Navbar>
+          </li>
+        </ul>
+        </nav>
+      </header>
 
       {/* Mobile bottom nav */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-divider flex" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-separator bg-background/95 backdrop-blur-xl sm:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <NavLink
           to="/proben"
           className={({ isActive }) =>
-            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
+            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-accent font-medium' : 'text-muted'}`
           }
         >
           <MusicalNoteIcon className="w-6 h-6 mb-0.5" />
@@ -102,7 +98,7 @@ export function MemberLayout() {
         <NavLink
           to="/informationen"
           className={({ isActive }) =>
-            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
+            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-accent font-medium' : 'text-muted'}`
           }
         >
           <InformationCircleIcon className="w-6 h-6 mb-0.5" />
@@ -111,7 +107,7 @@ export function MemberLayout() {
         <NavLink
           to="/qr-checkin"
           className={({ isActive }) =>
-            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
+            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-accent font-medium' : 'text-muted'}`
           }
         >
           <QrCodeIcon className="w-6 h-6 mb-0.5" />
@@ -120,7 +116,7 @@ export function MemberLayout() {
         <NavLink
           to="/einstellungen"
           className={({ isActive }) =>
-            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-primary font-medium' : 'text-default-500'}`
+            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-accent font-medium' : 'text-muted'}`
           }
         >
           <Cog6ToothIcon className="w-6 h-6 mb-0.5" />
