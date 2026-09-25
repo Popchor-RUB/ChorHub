@@ -1,22 +1,11 @@
 import { chromium } from '@playwright/test';
 import * as fs from 'fs';
-import * as path from 'path';
-import { execSync } from 'child_process';
 import { getFirstMember } from './helpers/api';
 import { clearMailHog, getLatestMagicLinkCode } from './helpers/mailhog';
-
-const AUTH_DIR = path.join(__dirname, '.auth');
-const ADMIN_STATE_PATH = path.join(AUTH_DIR, 'admin.json');
-const MEMBER_STATE_PATH = path.join(AUTH_DIR, 'member.json');
-const FRONTEND_URL = 'https://localhost:5173';
-const BACKEND_URL = 'http://localhost:3000';
-const BACKEND_DIR = path.join(__dirname, '..', 'backend');
+import { authStatePaths, backendUrl, e2eConfig } from './config';
 
 export default async function globalSetup() {
-  fs.mkdirSync(AUTH_DIR, { recursive: true });
-
-  // Reset the database to a clean, deterministic state before every test run
-  execSync('npx tsx prisma/seed.ts', { cwd: BACKEND_DIR, stdio: 'inherit' });
+  fs.mkdirSync(e2eConfig.authDir, { recursive: true });
 
   const browser = await chromium.launch();
 
@@ -27,7 +16,7 @@ export default async function globalSetup() {
   });
   const adminPage = await adminContext.newPage();
 
-  await adminPage.goto(`${FRONTEND_URL}/admin/login`);
+  await adminPage.goto(`${e2eConfig.baseUrl}/admin/login`);
   await adminPage.waitForSelector('text=Administratoren-Anmeldung');
 
   await adminPage.getByLabel('Benutzername').fill('admin');
@@ -36,11 +25,11 @@ export default async function globalSetup() {
 
   await adminPage.waitForURL('**/admin/mitglieder', { timeout: 10_000 });
 
-  await adminContext.storageState({ path: ADMIN_STATE_PATH });
+  await adminContext.storageState({ path: authStatePaths.admin });
   await adminContext.close();
 
   // Extract admin JWT from saved storage state so tests don't need to re-login
-  const savedState = JSON.parse(fs.readFileSync(ADMIN_STATE_PATH, 'utf-8'));
+  const savedState = JSON.parse(fs.readFileSync(authStatePaths.admin, 'utf-8'));
   const authEntry = savedState.origins
     ?.flatMap((o: { localStorage: { name: string; value: string }[] }) => o.localStorage)
     ?.find((e: { name: string }) => e.name === 'chorhub-auth');
@@ -49,7 +38,7 @@ export default async function globalSetup() {
     const adminJwt = parsed?.state?.adminSession?.token;
     if (adminJwt) {
       fs.writeFileSync(
-        path.join(AUTH_DIR, 'admin-token.json'),
+        authStatePaths.adminToken,
         JSON.stringify({ token: adminJwt }),
       );
     }
@@ -57,12 +46,12 @@ export default async function globalSetup() {
 
   // ── Member auth ───────────────────────────────────────────────────────────
   // Use the cached token (just written above) to avoid a second auth API call
-  const adminToken = JSON.parse(fs.readFileSync(path.join(AUTH_DIR, 'admin-token.json'), 'utf-8')).token;
+  const adminToken = JSON.parse(fs.readFileSync(authStatePaths.adminToken, 'utf-8')).token;
   const member = await getFirstMember(adminToken);
   const memberEmail = member.email;
 
   // Guard against occasional seed/list mismatches by ensuring chosen email can request a code.
-  const probe = await fetch(`${BACKEND_URL}/auth/magic-link/request`, {
+  const probe = await fetch(backendUrl('/auth/magic-link/request'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: memberEmail }),
@@ -79,7 +68,7 @@ export default async function globalSetup() {
   });
   const memberPage = await memberContext.newPage();
 
-  await memberPage.goto(`${FRONTEND_URL}/login`);
+  await memberPage.goto(`${e2eConfig.baseUrl}/login`);
   await memberPage.waitForSelector('text=Mitglieder-Anmeldung');
 
   await memberPage.getByLabel('E-Mail-Adresse').fill(memberEmail);
@@ -97,7 +86,7 @@ export default async function globalSetup() {
 
   await memberPage.waitForURL('**/proben', { timeout: 10_000 });
 
-  await memberContext.storageState({ path: MEMBER_STATE_PATH });
+  await memberContext.storageState({ path: authStatePaths.member });
   await memberContext.close();
 
   await browser.close();

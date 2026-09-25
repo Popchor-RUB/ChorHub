@@ -116,6 +116,38 @@ npm test           # Alle Unit-Tests ausführen
 npm run test:cov   # Mit Coverage-Report
 ```
 
+### End-to-End-Tests
+
+Der Standardlauf startet einen vollständig isolierten Docker-Stack mit eigener
+Datenbank, eigenem Backend, Frontend und MailHog. Dadurch können mehrere Läufe
+parallel ausgeführt werden, ohne Testdaten oder Authentifizierungsdateien zu
+teilen.
+
+```bash
+npm install
+npm run test:e2e
+
+# Playwright-Argumente werden weitergereicht
+npm run test:e2e -- e2e/auth.spec.ts
+npm run test:e2e -- --grep "Admin login"
+```
+
+Reports und Traces liegen unter `.e2e-runs/<run-id>/`. Der neueste Report oder
+ein bestimmter Lauf kann so geöffnet werden:
+
+```bash
+npm run test:e2e:report
+npm run test:e2e:report -- <run-id>
+```
+
+Für einen bereits laufenden lokalen Entwicklungs-Stack bleiben diese Befehle
+verfügbar:
+
+```bash
+npm run test:e2e:local
+npm run test:e2e:ui
+```
+
 ## Admin-CLI
 
 Das Skript `backend/scripts/admin-cli.ts` verwaltet Admin-Benutzer und kann Einladungs-E-Mails an Mitglieder versenden.

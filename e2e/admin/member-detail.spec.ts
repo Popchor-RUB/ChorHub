@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { getAdminToken, getMemberRehearsals } from '../helpers/api';
+import { backendUrl } from '../config';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -17,7 +18,7 @@ test.describe('Admin member detail page', () => {
   test.beforeAll(async () => {
     adminToken = await getAdminToken();
 
-    const members = await fetch('http://localhost:3000/admin/members', {
+    const members = await fetch(backendUrl('/admin/members'), {
       headers: { Authorization: `Bearer ${adminToken}` },
     }).then((r) => r.json()) as {
       id: string;
@@ -41,7 +42,7 @@ test.describe('Admin member detail page', () => {
     initialVoiceId = primaryMember.choirVoice?.id ?? null;
     conflictEmail = conflictMember.email;
 
-    const voices = await fetch('http://localhost:3000/choir-voices', {
+    const voices = await fetch(backendUrl('/choir-voices'), {
       headers: { Authorization: `Bearer ${adminToken}` },
     }).then((r) => r.json()) as { id: string; name: string }[];
 
@@ -53,7 +54,7 @@ test.describe('Admin member detail page', () => {
   });
 
   test.afterAll(async () => {
-    await fetch(`http://localhost:3000/admin/members/${memberId}`, {
+    await fetch(backendUrl(`/admin/members/${memberId}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({
@@ -138,7 +139,10 @@ test.describe('Admin member detail page', () => {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const target = before.find((r) => new Date(r.date) >= startOfToday);
-    test.skip(!target, 'No rehearsals available for this member');
+    if (!target) {
+      test.skip(true, 'No rehearsals available for this member');
+      return;
+    }
     const selector = `member-detail-upcoming-row-${target.id}`;
 
     await page.goto(`/admin/mitglieder/${memberId}`);
@@ -154,7 +158,7 @@ test.describe('Admin member detail page', () => {
     const afterReload = await getMemberRehearsals(adminToken, memberId);
     expect(afterReload.find((r) => r.id === target.id)?.plan).not.toBe(target.plan);
 
-    await fetch(`http://localhost:3000/admin/members/${memberId}/attendance-plans/${target.id}`, {
+    await fetch(backendUrl(`/admin/members/${memberId}/attendance-plans/${target.id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ response: target.plan }),
@@ -168,7 +172,7 @@ test.describe('Admin member detail page', () => {
 
   test('shows conflict error when using duplicate email and keeps form values', async ({ page }) => {
     await page.goto(`/admin/mitglieder/${memberId}`);
-    const beforeEmail = await fetch(`http://localhost:3000/admin/members/${memberId}`, {
+    const beforeEmail = await fetch(backendUrl(`/admin/members/${memberId}`), {
       headers: { Authorization: `Bearer ${adminToken}` },
     }).then((r) => r.json()) as { email: string };
 
@@ -178,7 +182,7 @@ test.describe('Admin member detail page', () => {
     await expect(page.getByTestId('member-detail-email')).toHaveValue(conflictEmail);
 
     await expect.poll(async () => {
-      const current = await fetch(`http://localhost:3000/admin/members/${memberId}`, {
+      const current = await fetch(backendUrl(`/admin/members/${memberId}`), {
         headers: { Authorization: `Bearer ${adminToken}` },
       }).then((r) => r.json()) as { email: string };
       return current.email;

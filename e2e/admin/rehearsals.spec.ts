@@ -6,7 +6,7 @@ import {
   getMostRecentPastRehearsal,
 } from '../helpers/api';
 
-// Runs in the 'admin-auth' project — storageState: e2e/.auth/admin.json
+// Runs in the 'admin-auth' project with the configured admin storage state.
 let upcomingRehearsalTitle: string;
 let pastRehearsalTitle: string;
 

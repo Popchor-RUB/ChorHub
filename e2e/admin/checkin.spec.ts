@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { getAdminToken, getMostRecentPastRehearsal, formatDateShort } from '../helpers/api';
 
-// Runs in the 'admin-auth' project — storageState: e2e/.auth/admin.json
+// Runs in the 'admin-auth' project with the configured admin storage state.
 
 let optionText: string;
 

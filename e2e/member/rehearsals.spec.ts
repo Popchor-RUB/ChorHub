@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { getAdminToken, getFirstMember, getFirstUpcomingRehearsal } from '../helpers/api';
+import { authStatePaths } from '../config';
 
-// Runs in the 'member-auth' project — storageState: e2e/.auth/member.json
+// Runs in the 'member-auth' project with the configured member storage state.
 
 let upcomingRehearsalTitle: string;
-let memberFullName: string; // "LastName, FirstName" as shown in member tables
+let memberFullName: string;
+let memberVoiceName: string;
 
 test.beforeAll(async () => {
   const token = await getAdminToken();
@@ -14,6 +16,7 @@ test.beforeAll(async () => {
   ]);
   upcomingRehearsalTitle = rehearsal.title;
   memberFullName = `${member.firstName} ${member.lastName}`;
+  memberVoiceName = member.choirVoice?.name ?? 'Ohne Stimmzuordnung';
 });
 
 test.describe.configure({ mode: 'serial' });
@@ -131,7 +134,7 @@ test.describe('Member rehearsal page', () => {
 
     // Step 2: Open admin context
     const adminContext = await browser.newContext({
-      storageState: 'e2e/.auth/admin.json',
+      storageState: authStatePaths.admin,
       locale: 'de-DE',
     });
     const adminPage = await adminContext.newPage();
@@ -148,12 +151,13 @@ test.describe('Member rehearsal page', () => {
 
       const rehearsalDialog = adminPage.getByRole('dialog');
 
-      // Voice sections are collapsed by default — expand all of them first
-      const collapsedHeaders = rehearsalDialog.getByRole('button').filter({ hasText: '▸' });
-      const collapsedCount = await collapsedHeaders.count();
-      for (let i = 0; i < collapsedCount; i++) {
-        await collapsedHeaders.first().click();
-      }
+      // Wait for attendance data, then expand the authenticated member's voice group.
+      const memberVoiceHeader = rehearsalDialog
+        .getByRole('button')
+        .filter({ hasText: memberVoiceName })
+        .first();
+      await expect(memberVoiceHeader).toBeVisible();
+      await memberVoiceHeader.click();
 
       await expect(rehearsalDialog.getByText(memberFullName, { exact: true })).toBeVisible();
       // Assert status on the row container (not just the immediate parent span).
@@ -168,8 +172,7 @@ test.describe('Member rehearsal page', () => {
       ).toBeVisible();
 
       // Search for the member and open their modal
-      const [lastName] = memberFullName.split(', ');
-      await adminPage.getByPlaceholder('Name suchen…').fill(lastName);
+      await adminPage.getByPlaceholder('Name suchen…').fill(memberFullName);
       await adminPage.getByText(memberFullName, { exact: true }).click();
 
       const memberDialog = adminPage.getByRole('dialog');

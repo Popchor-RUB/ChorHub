@@ -1,4 +1,4 @@
-const MAILHOG_BASE = 'http://localhost:8025';
+import { mailhogUrl } from '../config';
 
 interface MailHogAddress {
   Mailbox: string;
@@ -19,9 +19,9 @@ interface MailHogMessagesResponse {
 }
 
 async function fetchMessages(recipientEmail: string): Promise<MailHogMessage[]> {
-  const res = await fetch(`${MAILHOG_BASE}/api/v2/messages`);
+  const res = await fetch(mailhogUrl('/api/v2/messages'));
   if (!res.ok) throw new Error(`MailHog API unreachable: ${res.status}`);
-  const data: MailHogMessagesResponse = await res.json();
+  const data = await res.json() as MailHogMessagesResponse;
 
   const [mailbox, domain] = recipientEmail.toLowerCase().split('@');
   return (data.items ?? [])
@@ -81,7 +81,7 @@ export async function getLatestMagicLinkCode(
 }
 
 export async function clearMailHog(): Promise<void> {
-  const res = await fetch(`${MAILHOG_BASE}/api/v1/messages`, {
+  const res = await fetch(mailhogUrl('/api/v1/messages'), {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error(`Failed to clear MailHog: ${res.status}`);

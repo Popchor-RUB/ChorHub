@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// Runs in the 'admin-auth' project — storageState: e2e/.auth/admin.json
+// Runs in the 'admin-auth' project with the configured admin storage state.
 
 test.describe('Admin push notifications page', () => {
   test.beforeEach(async ({ page }) => {

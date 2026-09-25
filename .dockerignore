@@ -1,2 +1,4 @@
 **/node_modules
-
+.e2e-runs
+playwright-report
+test-results

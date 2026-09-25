@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { getAdminToken, createMember, deleteMember, getMemberRehearsals, getAllRehearsals } from '../helpers/api';
+import { backendUrl } from '../config';
 
-// Runs in the 'admin-auth' project — storageState: e2e/.auth/admin.json
+// Runs in the 'admin-auth' project with the configured admin storage state.
 // Serial mode prevents parallel create/delete tests from interfering with row-count assertions
 test.describe.configure({ mode: 'serial' });
 
@@ -10,7 +11,7 @@ const TEST_EMAILS = ['eva.braun.e2e@test.de', 'plan.test.e2e@test.de'];
 // Clean up any leftover test members before the suite runs (handles previous failed runs)
 test.beforeAll(async () => {
   const token = await getAdminToken();
-  const members = await fetch('http://localhost:3000/admin/members', {
+  const members = await fetch(backendUrl('/admin/members'), {
     headers: { Authorization: `Bearer ${token}` },
   }).then((r) => r.json()) as { id: string; email: string }[];
   for (const m of members) {
@@ -232,7 +233,7 @@ test.describe('Create member modal', () => {
     await expect(page.getByRole('row')).toHaveCount(initialRowCount + 1, { timeout: 10_000 });
 
     // Fetch the created id for cleanup
-    const members = await fetch('http://localhost:3000/admin/members', {
+    const members = await fetch(backendUrl('/admin/members'), {
       headers: { Authorization: `Bearer ${adminToken}` },
     }).then((r) => r.json()) as { id: string; email: string }[];
     const created = members.find((m) => m.email === 'eva.braun.e2e@test.de');
@@ -241,7 +242,7 @@ test.describe('Create member modal', () => {
 
   test('shows error when email is already taken', async ({ page }) => {
     // Get an existing member's email
-    const members = await fetch('http://localhost:3000/admin/members', {
+    const members = await fetch(backendUrl('/admin/members'), {
       headers: { Authorization: `Bearer ${adminToken}` },
     }).then((r) => r.json()) as { email: string }[];
     const existingEmail = members[0].email;

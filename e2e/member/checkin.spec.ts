@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// Runs in the 'member-auth' project — storageState: e2e/.auth/member.json
+// Runs in the 'member-auth' project with the configured member storage state.
 
 test.describe('Member QR check-in page', () => {
   test('loads and shows the member QR code', async ({ page }) => {

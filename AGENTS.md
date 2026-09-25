@@ -1,5 +1,26 @@
 # AGENTS.md
 
+@/Users/philipp/.codex/RTK.md
+
+
+# BEFORE ANYTHING ELSE
+1. read initial instructions for Serena
+2. activate the project in Serena
+
+# GLOBAL INSTRUCTIONS
+1. Use the Serena mcp tools where possible.
+2. ALWAYS use the caveman skill
+3. ALWAYS use rtk
+4. To debug the frontend of web applications use the playwright MCP
+
+# GLOBAL CODING GUIDELINES
+- Write modular applications consisting out of small files!
+    - Create a separate file per class/component
+- Do not write code that archives the same function twice
+
+
+---
+
 Agent-focused instructions for this repository. Keep changes small, accurate, and aligned with existing patterns.
 
 ## Project overview
