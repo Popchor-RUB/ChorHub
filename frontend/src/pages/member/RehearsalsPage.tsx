@@ -228,25 +228,27 @@ export function RehearsalsPage() {
           <Modal.Dialog>
           <Modal.CloseTrigger />
           <Modal.Header><Modal.Heading>{t('rehearsals.calendar_title')}</Modal.Heading></Modal.Header>
-          <Modal.Body className="gap-3">
+          <Modal.Body className="flex flex-col gap-4">
             <p className="text-sm text-muted">{t('rehearsals.calendar_hint')}</p>
-            <Button
-              fullWidth
-              isDisabled={!primaryCalendarUrl}
-              onPress={() => {
-                if (!primaryCalendarUrl) return;
-                window.open(primaryCalendarUrl, '_blank', 'noopener,noreferrer');
-              }}
-            >
-              {isAppleDevice
-                ? t('rehearsals.calendar_subscribe')
-                : t('rehearsals.calendar_add_google')}
-            </Button>
-            <p className="text-xs text-muted">
-              {isAppleDevice
-                ? t('rehearsals.calendar_recommended_apple')
-                : t('rehearsals.calendar_recommended_google')}
-            </p>
+            <div className="flex flex-col gap-1">
+              <Button
+                fullWidth
+                isDisabled={!primaryCalendarUrl}
+                onPress={() => {
+                  if (!primaryCalendarUrl) return;
+                  window.open(primaryCalendarUrl, '_blank', 'noopener,noreferrer');
+                }}
+              >
+                {isAppleDevice
+                  ? t('rehearsals.calendar_subscribe')
+                  : t('rehearsals.calendar_add_google')}
+              </Button>
+              <p className="text-xs text-muted">
+                {isAppleDevice
+                  ? t('rehearsals.calendar_recommended_apple')
+                  : t('rehearsals.calendar_recommended_google')}
+              </p>
+            </div>
             <Button
               variant="tertiary"
               size="sm"

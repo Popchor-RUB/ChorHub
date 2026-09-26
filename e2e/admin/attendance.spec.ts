@@ -55,7 +55,7 @@ test.describe('Admin attendance page', () => {
     // Seed data has Sopran as the first voice group — its section button is visible
     // Voice section header button — scoped to the member table to avoid matching filter chips
     await expect(
-      page.getByRole('button', { name: /Sopran/ }).first(),
+      page.getByRole('button', { name: /Sopran \(\d+\)/ }),
     ).toBeVisible();
   });
 
@@ -106,7 +106,7 @@ test.describe('Admin attendance page', () => {
   test('clicking a voice section header collapses the group', async ({ page }) => {
     await selectPastRehearsal(page);
 
-    const sopranHeader = page.getByRole('button', { name: /Sopran/ }).first();
+    const sopranHeader = page.getByRole('button', { name: /Sopran \(\d+\)/ });
 
     // Get number of visible rows before collapse
     const countBefore = await page.getByTestId('attendance-member-row').count();

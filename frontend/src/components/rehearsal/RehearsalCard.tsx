@@ -40,13 +40,16 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
     ? `${dayLabel}, ${formatDateTimeNoWeekday(rehearsal.date, dateLocale)}`
     : formatDateTimeShort(rehearsal.date, dateLocale);
   const location = rehearsal.location?.trim();
-  const statusTintClass = rehearsal.myAttended === true
-    ? 'bg-success-soft border-success/25'
+  const statusColor = rehearsal.myAttended === true
+    ? { tint: 'bg-success-soft', border: 'border-success/80' }
     : rehearsal.myAttended === false && rehearsal.myPlan === 'DECLINED'
-      ? 'bg-warning-soft border-warning/25'
+      ? { tint: 'bg-warning-soft', border: 'border-warning/25' }
       : rehearsal.myAttended === false
-        ? 'bg-danger-soft border-danger/25'
-        : '';
+        ? { tint: 'bg-danger-soft', border: 'border-danger/25' }
+        : null;
+  const cardColor = statusColor ?? (rehearsal.isOptional
+    ? { tint: 'bg-accent-soft/60', border: 'border-accent/80 dark:border-accent/80' }
+    : null);
 
   const setPlan = async (response: AttendanceResponse) => {
     if (buttonsDisabled) return;
@@ -69,14 +72,13 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
 
   return (
     <Card
-      className={`w-full ${readOnly ? 'opacity-80' : ''} ${statusTintClass} ${
-        rehearsal.isOptional && !statusTintClass
-          ? 'bg-accent-soft/55 border border-accent/80 dark:border-accent/80'
-          : ''
-      }`}
+      className={`isolate w-full border bg-surface ${readOnly ? 'opacity-80' : ''} ${cardColor?.border ?? ''}`}
       data-testid="rehearsal-card"
     >
-      <Card.Header className="flex flex-col items-start gap-1">
+      {cardColor && (
+        <div aria-hidden="true" className={`pointer-events-none absolute inset-px rounded-[inherit] ${cardColor.tint}`} />
+      )}
+      <Card.Header className="relative z-10 flex flex-col items-start gap-1">
         <div className="flex items-center gap-2 w-full">
           <h3 className="text-lg font-semibold flex-1">{rehearsal.title}</h3>
           {rehearsal.isOptional && (
@@ -100,7 +102,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
           </p>
         )}
       </Card.Header>
-      <Card.Content className="flex flex-col gap-2 pt-0">
+      <Card.Content className="relative z-10 flex flex-col gap-2 pt-0">
         {rehearsal.description && (
           <div className="prose max-w-none text-sm text-foreground leading-relaxed pb-1">
             <ReactMarkdown
@@ -144,7 +146,6 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             <Button
               size="sm"
               variant={rehearsal.myPlan === 'CONFIRMED' ? 'primary' : 'secondary'}
-              className={rehearsal.myPlan === 'CONFIRMED' ? '' : 'bg-surface'}
               isPending={loading === 'CONFIRMED'}
               onPress={() => setPlan('CONFIRMED')}
               isDisabled={buttonsDisabled}
@@ -154,7 +155,6 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             <Button
               size="sm"
               variant={rehearsal.myPlan === 'DECLINED' ? 'danger' : 'danger-soft'}
-              className={rehearsal.myPlan === 'DECLINED' ? '' : 'bg-surface'}
               isPending={loading === 'DECLINED'}
               onPress={() => setPlan('DECLINED')}
               isDisabled={buttonsDisabled}

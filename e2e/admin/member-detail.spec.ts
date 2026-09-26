@@ -86,9 +86,9 @@ test.describe('Admin member detail page', () => {
   test('loads member data and rehearsal sections', async ({ page }) => {
     await page.goto(`/admin/mitglieder/${memberId}`);
 
-    await expect(page.getByTestId('member-detail-first-name')).toHaveValue(initialFirstName);
-    await expect(page.getByTestId('member-detail-last-name')).toHaveValue(initialLastName);
-    await expect(page.getByTestId('member-detail-email')).toHaveValue(memberEmail);
+    await expect(page.getByTestId('member-detail-first-name').locator('input')).toHaveValue(initialFirstName);
+    await expect(page.getByTestId('member-detail-last-name').locator('input')).toHaveValue(initialLastName);
+    await expect(page.getByTestId('member-detail-email').locator('input')).toHaveValue(memberEmail);
 
     const hasUpcoming = await page.getByTestId('member-detail-upcoming-section').isVisible().catch(() => false);
     const hasPast = await page.getByTestId('member-detail-past-section').isVisible().catch(() => false);
@@ -100,12 +100,12 @@ test.describe('Admin member detail page', () => {
     const updatedEmail = `detail.updated.${Date.now()}.${memberEmail}`;
 
     await page.goto(`/admin/mitglieder/${memberId}`);
-    await page.getByTestId('member-detail-first-name').fill('DetailNeu');
-    await page.getByTestId('member-detail-last-name').fill('TestNeu');
-    await page.getByTestId('member-detail-email').fill(updatedEmail);
+    await page.getByTestId('member-detail-first-name').locator('input').fill('DetailNeu');
+    await page.getByTestId('member-detail-last-name').locator('input').fill('TestNeu');
+    await page.getByTestId('member-detail-email').locator('input').fill(updatedEmail);
 
     if (alternateVoiceName && alternateVoiceId && alternateVoiceId !== initialVoiceId) {
-      await page.getByTestId('member-detail-voice').click();
+      await page.getByTestId('member-detail-voice').getByRole('button').click();
       await page.getByRole('option', { name: alternateVoiceName }).first().click();
     }
 
@@ -113,9 +113,9 @@ test.describe('Admin member detail page', () => {
     await expect(page.getByText('Gespeichert ✓')).toBeVisible();
 
     await page.reload();
-    await expect(page.getByTestId('member-detail-first-name')).toHaveValue('DetailNeu');
-    await expect(page.getByTestId('member-detail-last-name')).toHaveValue('TestNeu');
-    await expect(page.getByTestId('member-detail-email')).toHaveValue(updatedEmail);
+    await expect(page.getByTestId('member-detail-first-name').locator('input')).toHaveValue('DetailNeu');
+    await expect(page.getByTestId('member-detail-last-name').locator('input')).toHaveValue('TestNeu');
+    await expect(page.getByTestId('member-detail-email').locator('input')).toHaveValue(updatedEmail);
 
     memberEmail = updatedEmail;
   });
@@ -176,10 +176,10 @@ test.describe('Admin member detail page', () => {
       headers: { Authorization: `Bearer ${adminToken}` },
     }).then((r) => r.json()) as { email: string };
 
-    await page.getByTestId('member-detail-email').fill(conflictEmail);
+    await page.getByTestId('member-detail-email').locator('input').fill(conflictEmail);
     await page.getByTestId('member-detail-save').click();
 
-    await expect(page.getByTestId('member-detail-email')).toHaveValue(conflictEmail);
+    await expect(page.getByTestId('member-detail-email').locator('input')).toHaveValue(conflictEmail);
 
     await expect.poll(async () => {
       const current = await fetch(backendUrl(`/admin/members/${memberId}`), {
