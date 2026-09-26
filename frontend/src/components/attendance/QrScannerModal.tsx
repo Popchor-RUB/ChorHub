@@ -16,11 +16,12 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   onScanSuccess: (result: QrScanResult) => void;
+  verificationScope?: 'admin' | 'voice-admin';
 };
 
 const CAMERA_DEVICE_STORAGE_KEY = 'chorhub:qr-scanner-camera-device-id';
 
-export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
+export function QrScannerModal({ isOpen, onClose, onScanSuccess, verificationScope = 'admin' }: Props) {
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
@@ -89,7 +90,7 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
       setKeyLoading(true);
 
       try {
-        await getCheckinVerificationKey();
+        await getCheckinVerificationKey(false, verificationScope);
       } catch (error) {
         if (!closed) setKeyError(`${t('checkin.admin_key_error')} (${describeError(error)})`);
       } finally {
@@ -132,7 +133,7 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
 
           void (async () => {
             try {
-              const verificationKey = await getCheckinVerificationKey();
+              const verificationKey = await getCheckinVerificationKey(false, verificationScope);
               const verified = await verifyCheckinToken(text, verificationKey);
               if (!closed) {
                 hasRecognizedRef.current = true;
@@ -181,7 +182,7 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
       controlsRef.current?.stop();
       controlsRef.current = null;
     };
-  }, [isOpen, selectedCameraId, t]);
+  }, [isOpen, selectedCameraId, t, verificationScope]);
 
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return;
@@ -240,7 +241,7 @@ export function QrScannerModal({ isOpen, onClose, onScanSuccess }: Props) {
             onPress={() => {
               setKeyError(null);
               setScannerError(null);
-              void getCheckinVerificationKey(true).catch((error: unknown) => {
+              void getCheckinVerificationKey(true, verificationScope).catch((error: unknown) => {
                 const detail = error instanceof Error ? error.message : String(error);
                 setKeyError(`${t('checkin.admin_key_error')} (${detail})`);
               });

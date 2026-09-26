@@ -4,6 +4,8 @@
     "information": "Informationen",
     "members": "Mitglieder",
     "attendance": "Anwesenheit",
+    "voice_admin": "Anwesenheit",
+    "voice_admin_short": "Anwesenheit",
     "notifications": "Benachrichtigungen",
     "settings": "Einstellungen",
     "info_short": "Infos",
@@ -15,6 +17,7 @@
     "admin_badge": "Admin"
   },
   "common": {
+    "all": "Alle",
     "save": "Speichern",
     "cancel": "Abbrechen",
     "delete": "Löschen",
@@ -186,6 +189,8 @@
     "create_error_email_taken": "Diese E-Mail-Adresse ist bereits vergeben.",
     "detail_title": "Mitglied bearbeiten",
     "detail_rehearsals_title": "Probenstatus & Planung",
+    "voice_admin_grants_title": "Stimmgruppen verwalten",
+    "voice_admin_grants_description": "Mitglied kann Anwesenheit und Probenplanung dieser Stimmlagen bearbeiten.",
     "detail_mail_actions": "E-Mail senden",
     "detail_send_invite": "Einladung senden",
     "detail_send_login": "Neuen Login senden"

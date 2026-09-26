@@ -1,18 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Select,
-  CloseButton,
-  Header,
-  Input,
-  Button,
-  Label,
-  ListBox,
-  Separator,
-  Spinner,
-  TextField,
-  useOverlayState,
-} from '@heroui/react';
-import { MagnifyingGlassIcon, QrCodeIcon } from '@heroicons/react/24/outline';
+import { Button, useOverlayState } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, attendanceApi, adminMembersApi } from '../../services/api';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
@@ -25,8 +12,8 @@ import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
 import { useCollapsedVoices } from '../../hooks/useCollapsedVoices';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
 import { useAttendanceKeyboard } from '../../hooks/useAttendanceKeyboard';
-import { useDateLocale } from '../../hooks/useDateLocale';
-import { formatDateLong, formatDateNumeric } from '../../utils/dateFormatting';
+import { AttendanceMemberRow } from '../../components/attendance/AttendanceMemberRow';
+import { AttendanceEditor } from '../../components/attendance/AttendanceEditor';
 
 const NO_VOICE_KEY = '__no_voice__';
 
@@ -76,7 +63,6 @@ export function AttendancePage() {
   const [emailByMemberId, setEmailByMemberId] = useState<Record<string, string>>({});
 
   const { t, i18n } = useTranslation();
-  const dateLocale = useDateLocale();
 
   // Stable refs to avoid stale closures
   const recordsRef = useRef(records);
@@ -122,18 +108,6 @@ export function AttendancePage() {
     }, 5000);
     return () => clearInterval(interval);
   }, [selectedRehearsalId]);
-
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const pastRehearsals = rehearsals
-    .filter((r) => !r.isOptional && new Date(r.date) < startOfToday)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const futureRehearsals = rehearsals
-    .filter((r) => !r.isOptional && new Date(r.date) >= startOfToday)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const selectedRehearsal = rehearsals.find((r) => r.id === selectedRehearsalId);
-  const attendedCount = records.filter((r) => r.attended).length;
 
   const filteredRecords = records.filter((r) => {
     const q = nameFilter.toLowerCase();
@@ -303,68 +277,25 @@ export function AttendancePage() {
     const isSaving = saving === member.id;
     const visibleIdx = visibleMembers.findIndex((m) => m.id === member.id);
     const shortcutNum = ctrlHeld && visibleIdx >= 0 && visibleIdx < 9 ? visibleIdx + 1 : null;
-    const hasNoPlan = member.plan === null;
     const unexcusedAbsenceCount = unexcusedByMemberId[member.id];
-    const hasHighUnexcusedAbsences = typeof unexcusedAbsenceCount === 'number' && unexcusedAbsenceCount > 3;
     return {
       key: member.id,
       content: (
-        <div
-          data-testid="attendance-member-row"
-          data-member-id={member.id}
-          ref={(el) => {
+        <AttendanceMemberRow
+          member={member}
+          saving={isSaving}
+          formatLastAttended={formatLastAttended}
+          onToggle={() => void toggleAttendance(member.id, member.attended)}
+          onOpenDetail={() => openMemberDetail(member)}
+          focused={isFocused}
+          shortcutNum={shortcutNum}
+          unexcusedAbsenceCount={unexcusedAbsenceCount}
+          rowRef={(el) => {
             if (el) rowRefs.current.set(member.id, el);
             else rowRefs.current.delete(member.id);
           }}
-          className={[
-            'grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_160px_110px] items-center px-4 py-3 transition-colors',
-            member.attended ? 'bg-success-soft dark:bg-success-900/20' : 'bg-surface',
-            isFocused ? 'ring-2 ring-inset ring-primary' : '',
-          ].filter(Boolean).join(' ')}
-          onClick={() => setFocusedMemberId(member.id)}
-        >
-          <div className="min-w-0">
-            <p
-              className="font-medium text-sm cursor-pointer transition-colors text-accent inline-flex items-center gap-1 max-w-full"
-              onClick={(e) => { e.stopPropagation(); openMemberDetail(member); }}
-            >
-              <span className="truncate">{member.firstName} {member.lastName}</span>
-              <MagnifyingGlassIcon className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
-            </p>
-            {hasNoPlan && (
-              <p className="text-xs text-danger mt-0.5">
-                {t('attendance.no_plan_notice')}
-              </p>
-            )}
-            {hasHighUnexcusedAbsences && (
-              <p className="text-xs text-danger mt-0.5">
-                {t('attendance.unexcused_warning', { count: unexcusedAbsenceCount })}
-              </p>
-            )}
-            <p className="text-xs text-muted sm:hidden mt-0.5">
-              {formatLastAttended(member.lastAttendedRehearsalsAgo)}
-            </p>
-          </div>
-          <p className="hidden sm:block text-sm text-muted">
-            {formatLastAttended(member.lastAttendedRehearsalsAgo)}
-          </p>
-          <div className="flex justify-end items-center gap-1.5">
-            {shortcutNum !== null && (
-              <span className="hidden sm:block text-xs font-mono text-muted w-4 text-center">
-                {shortcutNum}
-              </span>
-            )}
-            <Button
-              size="sm"
-              variant={member.attended ? 'primary' : 'secondary'}
-              isPending={isSaving}
-              onPress={() => toggleAttendance(member.id, member.attended)}
-              className="min-w-[90px]"
-            >
-              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{member.attended ? t('attendance.btn_present') : t('attendance.btn_record')}</>}
-            </Button>
-          </div>
-        </div>
+          onFocus={() => setFocusedMemberId(member.id)}
+        />
       ),
     };
   };
@@ -400,107 +331,42 @@ export function AttendancePage() {
     <div className="flex flex-col gap-4 max-w-2xl">
       <h1 className="text-2xl font-bold">{t('attendance.record_title')}</h1>
 
-      <div className="flex flex-col gap-2">
-        <Select
-          placeholder={t('attendance.select_rehearsal')}
-          value={selectedRehearsalId || null}
-          onChange={(key) => setSelectedRehearsalId(typeof key === 'string' ? key : '')}
-        >
-          <Label>{t('attendance.rehearsal_label')}</Label>
-          <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-          <Select.Popover>
-            <ListBox>
-              <ListBox.Section>
-                <Header>{t('attendance.upcoming_rehearsals')}</Header>
-                {futureRehearsals.map((rehearsal) => {
-                  const textValue = `${formatDateNumeric(rehearsal.date, dateLocale)} – ${rehearsal.title}`;
-                  return <ListBox.Item key={rehearsal.id} id={rehearsal.id} textValue={textValue}>{textValue}<ListBox.ItemIndicator /></ListBox.Item>;
-                })}
-                <Separator />
-              </ListBox.Section>
-              <ListBox.Section>
-                <Header>{t('attendance.past_rehearsals')}</Header>
-                {pastRehearsals.map((rehearsal) => {
-                  const textValue = `${formatDateNumeric(rehearsal.date, dateLocale)} – ${rehearsal.title}`;
-                  return <ListBox.Item key={rehearsal.id} id={rehearsal.id} textValue={textValue}>{textValue}<ListBox.ItemIndicator /></ListBox.Item>;
-                })}
-              </ListBox.Section>
-            </ListBox>
-          </Select.Popover>
-        </Select>
-
-        {selectedRehearsal && !loadingRecords && (
-          <p className="text-sm text-muted px-1">
-            {formatDateLong(selectedRehearsal.date, dateLocale)} ·{' '}
-            {t('attendance.present_of', { attended: attendedCount, total: records.length })}
-          </p>
+      <AttendanceEditor
+        rehearsals={rehearsals}
+        selectedRehearsalId={selectedRehearsalId}
+        onSelectRehearsal={setSelectedRehearsalId}
+        records={records}
+        loadingRecords={loadingRecords}
+        search={nameFilter}
+        onSearchChange={setNameFilter}
+        searchRef={searchInputRef}
+        onOpenScanner={onScannerOpen}
+        extraActions={<Button size="sm" onPress={onCreateOpen}>{t('members.create_new')}</Button>}
+        belowSearch={(
+          <VoiceFilterChips voices={voiceNames} selected={voiceFilter} onChange={setVoiceFilter} />
         )}
-        {loadingRecords && <Spinner size="sm" />}
-      </div>
-
-      {selectedRehearsalId && !loadingRecords && (
-        <>
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <TextField
-                className="flex-1"
-                value={nameFilter}
-                onChange={setNameFilter}
-                aria-label={t('attendance.filter_name')}
-              >
-                <div className="flex items-center gap-1">
-                  <Input ref={searchInputRef} placeholder={t('attendance.filter_name')} />
-                  {nameFilter && <CloseButton aria-label={t('attendance.filter_name')} onPress={() => setNameFilter('')} />}
+        statusMessage={saveError && <p className="text-sm text-danger text-center">{saveError}</p>}
+        renderRecords={() => (
+          <>
+            <VoiceGroupList
+              groups={voiceGroupData}
+              collapsedVoices={collapsedVoices}
+              onToggle={toggleVoiceCollapse}
+              header={
+                <div className="hidden sm:grid sm:grid-cols-[1fr_160px_110px] px-4 py-2 bg-surface-secondary border-b border-separator text-xs font-semibold text-muted uppercase tracking-wide">
+                  <span>{t('members.col_name')}</span>
+                  <span>{t('attendance.col_last_rehearsal')}</span>
+                  <span className="text-right">{t('attendance.col_attendance')}</span>
                 </div>
-              </TextField>
-              <Button
-                size="sm"
-                variant="tertiary"
-                isIconOnly
-                aria-label={t('checkin.admin_scan_button')}
-                data-testid="attendance-open-qr-scanner"
-                onPress={onScannerOpen}
-              >
-                <QrCodeIcon className="w-5 h-5" />
-              </Button>
-              <Button size="sm" onPress={onCreateOpen}>
-                {t('members.create_new')}
-              </Button>
-            </div>
-            <VoiceFilterChips
-              voices={voiceNames}
-              selected={voiceFilter}
-              onChange={setVoiceFilter}
+              }
+              emptyState={
+                <p className="text-center text-muted py-10 text-sm">{t('attendance.no_members')}</p>
+              }
             />
-          </div>
-
-          {saveError && (
-            <p className="text-sm text-danger text-center">{saveError}</p>
-          )}
-
-          <VoiceGroupList
-            groups={voiceGroupData}
-            collapsedVoices={collapsedVoices}
-            onToggle={toggleVoiceCollapse}
-            header={
-              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_110px] px-4 py-2 bg-surface-secondary border-b border-separator text-xs font-semibold text-muted uppercase tracking-wide">
-                <span>{t('members.col_name')}</span>
-                <span>{t('attendance.col_last_rehearsal')}</span>
-                <span className="text-right">{t('attendance.col_attendance')}</span>
-              </div>
-            }
-            emptyState={
-              <p className="text-center text-muted py-10 text-sm">
-                {t('attendance.no_members')}
-              </p>
-            }
-          />
-
-          <p className="hidden sm:block text-xs text-muted text-center">
-            {t('attendance.keyboard_hint')}
-          </p>
-        </>
-      )}
+            <p className="hidden sm:block text-xs text-muted text-center">{t('attendance.keyboard_hint')}</p>
+          </>
+        )}
+      />
 
       <CreateMemberModal
         isOpen={isCreateOpen}

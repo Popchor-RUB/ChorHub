@@ -65,8 +65,8 @@ test.describe('Admin QR check-in flow', () => {
     expect(memberId).toBeTruthy();
 
     const targetRow = page.locator(`[data-member-id="${memberId}"]`);
-    const memberName = (await targetRow.locator('p').first().innerText()).trim();
-    const rowButton = targetRow.locator('button').first();
+    const memberName = (await targetRow.locator('button').first().innerText()).trim();
+    const rowButton = targetRow.getByRole('button', { name: /Erfassen|Anwesend/ });
     const initialLabel = (await rowButton.innerText()).trim();
     expect(['+ Erfassen', '✓ Anwesend']).toContain(initialLabel);
 
@@ -89,7 +89,7 @@ test.describe('Admin QR check-in flow', () => {
     const targetRow = page.getByTestId('attendance-member-row').first();
     const memberId = await targetRow.getAttribute('data-member-id');
     expect(memberId).toBeTruthy();
-    const memberName = (await targetRow.locator('p').first().innerText()).trim();
+    const memberName = (await targetRow.locator('button').first().innerText()).trim();
 
     const resultDialog = await openScanResultForMember(page, memberId!, memberName);
     await resultDialog.getByRole('button', { name: 'Nächsten QR-Code scannen' }).click();

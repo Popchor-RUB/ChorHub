@@ -22,6 +22,8 @@ type Props = {
   className?: string;
   testIdPrefix?: string;
   showEditToggle?: boolean;
+  saveAttendancePlan?: (memberId: string, rehearsalId: string, response: 'CONFIRMED' | 'DECLINED' | null) => Promise<unknown>;
+  saveAttendanceRecord?: (memberId: string, rehearsalId: string, attended: boolean) => Promise<unknown>;
 };
 
 export function MemberRehearsalOverview({
@@ -40,6 +42,8 @@ export function MemberRehearsalOverview({
   className,
   testIdPrefix,
   showEditToggle = true,
+  saveAttendancePlan,
+  saveAttendanceRecord,
 }: Props) {
   const { t } = useTranslation();
   const cyclePlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | 'DECLINED' | null => {
@@ -55,7 +59,7 @@ export function MemberRehearsalOverview({
     setRehearsals((prev) => prev.map((x) => (x.id === rehearsal.id ? { ...x, plan: nextPlan } : x)));
     setSavingId(rehearsal.id);
     try {
-      await adminMembersApi.setAttendancePlan(memberId, rehearsal.id, nextPlan);
+      await (saveAttendancePlan ?? adminMembersApi.setAttendancePlan)(memberId, rehearsal.id, nextPlan);
     } catch {
       setRehearsals((prev) => prev.map((x) => (x.id === rehearsal.id ? { ...x, plan: rehearsal.plan } : x)));
       onSaveError?.();
@@ -72,17 +76,23 @@ export function MemberRehearsalOverview({
 
   const handleTogglePastAttendance = async (rehearsal: MemberRehearsalEntry) => {
     if (savingId) return;
-    const nextState = getNextPastState(rehearsal);
+    const nextState = rehearsal.isOptional
+      ? { attended: rehearsal.attended, plan: cyclePlan(rehearsal.plan) }
+      : getNextPastState(rehearsal);
 
     setRehearsals((prev) =>
       prev.map((x) => (x.id === rehearsal.id ? { ...x, attended: nextState.attended, plan: nextState.plan } : x)),
     );
     setSavingId(rehearsal.id);
     try {
-      await Promise.all([
-        attendanceApi.setRecord(rehearsal.id, memberId, nextState.attended),
-        adminMembersApi.setAttendancePlan(memberId, rehearsal.id, nextState.plan),
-      ]);
+      if (rehearsal.isOptional) {
+        await (saveAttendancePlan ?? adminMembersApi.setAttendancePlan)(memberId, rehearsal.id, nextState.plan);
+      } else {
+        await Promise.all([
+          (saveAttendanceRecord ?? ((id, rehearsalId, attended) => attendanceApi.setRecord(rehearsalId, id, attended)))(memberId, rehearsal.id, nextState.attended),
+          (saveAttendancePlan ?? adminMembersApi.setAttendancePlan)(memberId, rehearsal.id, nextState.plan),
+        ]);
+      }
     } catch {
       setRehearsals((prev) =>
         prev.map((x) => (x.id === rehearsal.id ? { ...x, attended: rehearsal.attended, plan: rehearsal.plan } : x)),

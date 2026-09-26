@@ -14,11 +14,16 @@ export class MembersService {
         lastName: true,
         email: true,
         choirVoice: { select: { id: true, name: true, sortOrder: true } },
+        voiceAdminGrants: { select: { choirVoice: { select: { id: true, name: true } } } },
         createdAt: true,
       },
     });
     if (!member) throw new NotFoundException('Mitglied nicht gefunden');
-    return member;
+    const { voiceAdminGrants, ...memberFields } = member;
+    return {
+      ...memberFields,
+      voiceAdminVoices: voiceAdminGrants.map((grant) => grant.choirVoice),
+    };
   }
 
   async updateVoice(memberId: string, voiceId: string | null) {

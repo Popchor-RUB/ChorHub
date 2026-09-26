@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
+  Checkbox,
   Dropdown,
   Input,
   Label,
@@ -48,6 +49,9 @@ export function AdminMemberDetailPage() {
   const [mailSending, setMailSending] = useState<'invite' | 'login' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [voiceAdminVoiceIds, setVoiceAdminVoiceIds] = useState<string[]>([]);
+  const [voiceAdminSaving, setVoiceAdminSaving] = useState(false);
+  const [voiceAdminSaved, setVoiceAdminSaved] = useState(false);
 
   const [form, setForm] = useState<FormState>({
     firstName: '',
@@ -76,6 +80,7 @@ export function AdminMemberDetailPage() {
         setMember(memberData);
         setRehearsals(rehearsalsRes.data as MemberRehearsalEntry[]);
         setVoices(voicesRes.data as ChoirVoice[]);
+        setVoiceAdminVoiceIds((memberData.voiceAdminVoices ?? []).map((voice) => voice.id));
         const nextForm = {
           firstName: memberData.firstName,
           lastName: memberData.lastName,
@@ -152,6 +157,24 @@ export function AdminMemberDetailPage() {
       setError(getErrorMessage(e, t('common.error_generic')));
     } finally {
       setMailSending(null);
+    }
+  };
+
+  const saveVoiceAdminGrants = async () => {
+    if (!member || voiceAdminSaving) return;
+    setVoiceAdminSaving(true);
+    setVoiceAdminSaved(false);
+    setError(null);
+    try {
+      const response = await adminMembersApi.setVoiceAdminVoices(member.id, voiceAdminVoiceIds);
+      setMember({ ...member, voiceAdminVoices: response.data.voiceAdminVoices });
+      setVoiceAdminVoiceIds(response.data.voiceAdminVoices.map((voice) => voice.id));
+      setVoiceAdminSaved(true);
+      setTimeout(() => setVoiceAdminSaved(false), 2200);
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, t('common.error_generic')));
+    } finally {
+      setVoiceAdminSaving(false);
     }
   };
 
@@ -262,6 +285,43 @@ export function AdminMemberDetailPage() {
             </Button>
             {saved && <span className="text-success text-sm">{t('common.saved')}</span>}
             {error && <span className="text-danger text-sm">{error}</span>}
+          </div>
+        </Card.Content>
+      </Card>
+
+      <Card data-testid="voice-admin-grants">
+        <Card.Header>
+          <Card.Title>{t('members.voice_admin_grants_title')}</Card.Title>
+          <Card.Description>{t('members.voice_admin_grants_description')}</Card.Description>
+        </Card.Header>
+        <Card.Content className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            {voices.map((voice) => (
+              <Checkbox
+                key={voice.id}
+                variant='secondary'
+                isSelected={voiceAdminVoiceIds.includes(voice.id)}
+                onChange={(selected) => setVoiceAdminVoiceIds((current) => selected
+                  ? [...current, voice.id]
+                  : current.filter((id) => id !== voice.id))}
+              >
+                <Checkbox.Content>
+                  <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+                  {voice.name}
+                </Checkbox.Content>
+              </Checkbox>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onPress={() => void saveVoiceAdminGrants()}
+              isPending={voiceAdminSaving}
+              isDisabled={voiceAdminSaving}
+              data-testid="voice-admin-grants-save"
+            >
+              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('common.save')}</>}
+            </Button>
+            {voiceAdminSaved && <span className="text-success text-sm">{t('common.saved')}</span>}
           </div>
         </Card.Content>
       </Card>

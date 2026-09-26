@@ -30,6 +30,7 @@ model Member {
   attendanceRecords AttendanceRecord[]
   pushSubscriptions PushSubscription[]
   personalInfo      PersonalInfoEntry?
+  voiceAdminGrants  VoiceAdminGrant[]
 
   @@map("members")
 }
@@ -173,6 +174,17 @@ model ChoirVoice {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   members   Member[]
+  voiceAdminGrants VoiceAdminGrant[]
 
   @@map("choir_voices")
+}
+
+model VoiceAdminGrant {
+  memberId     String
+  choirVoiceId String
+  member       Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  choirVoice   ChoirVoice @relation(fields: [choirVoiceId], references: [id], onDelete: Cascade)
+
+  @@id([memberId, choirVoiceId])
+  @@map("voice_admin_grants")
 }

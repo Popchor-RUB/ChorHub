@@ -13,6 +13,7 @@ const InformationenPage = lazy(() => import('./pages/member/DashboardPage').then
 const RehearsalsPage = lazy(() => import('./pages/member/RehearsalsPage').then((module) => ({ default: module.RehearsalsPage })));
 const MemberSettingsPage = lazy(() => import('./pages/member/MemberSettingsPage').then((module) => ({ default: module.MemberSettingsPage })));
 const MemberQrCheckinPage = lazy(() => import('./pages/member/MemberQrCheckinPage').then((module) => ({ default: module.MemberQrCheckinPage })));
+const VoiceAdminAttendancePage = lazy(() => import('./pages/member/VoiceAdminAttendancePage').then((module) => ({ default: module.VoiceAdminAttendancePage })));
 
 const MagicLinkRequestPage = lazy(() => import('./pages/auth/MagicLinkRequestPage').then((module) => ({ default: module.MagicLinkRequestPage })));
 const MagicLinkVerifyPage = lazy(() => import('./pages/auth/MagicLinkVerifyPage').then((module) => ({ default: module.MagicLinkVerifyPage })));
@@ -52,6 +53,7 @@ const router = createBrowserRouter(
         { index: true, element: <Navigate to="/proben" replace /> },
         { path: 'proben', element: <LazyPage><RehearsalsPage /></LazyPage> },
         { path: 'qr-checkin', element: <LazyPage><MemberQrCheckinPage /></LazyPage> },
+        { path: 'anwesenheit', element: <LazyPage><VoiceAdminAttendancePage /></LazyPage> },
         { path: 'informationen', element: <LazyPage><InformationenPage /></LazyPage> },
         { path: 'einstellungen', element: <LazyPage><MemberSettingsPage /></LazyPage> },
       ],

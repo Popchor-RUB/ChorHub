@@ -124,6 +124,9 @@ npm run test:e2e:report
 - Frontend persists member token in Zustand (`chorhub-auth`) and sends it via `X-Member-Token`.
 - `MemberTokenGuard` also accepts `Authorization: Bearer <token>`.
 
+- Choir voice admin access is granted to existing members through `VoiceAdminGrant` rows, independently of their own choir voice. Admins replace grants through `PUT /admin/members/:id/voice-admin-voices`; `GET /members/me` returns the member's granted voices.
+- Voice admin attendance and QR endpoints live under `/attendance/voice-admin/**`. Every member-data read and write checks current grants against the target member's current choir voice. Scoped responses must never include another member's email.
+
 - Admin auth is JWT-based.
 - Password via local strategy, JWT via `JwtAdminGuard`.
 - Successful admin logins are written to `AdminAuditLog` (append-only audit trail with username + IP).

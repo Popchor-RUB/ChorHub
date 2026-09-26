@@ -13,5 +13,6 @@ import { MailModule } from '../mail/mail.module';
   ],
   providers: [AdminService],
   controllers: [AdminController],
+  exports: [AdminService],
 })
 export class AdminModule {}

@@ -159,6 +159,42 @@ describe('AttendanceService', () => {
     });
   });
 
+  describe('getVoiceAdminRecordsForRehearsal', () => {
+    it('filters by all granted voices and selects no email field', async () => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue(mockRehearsal);
+      prismaMock.rehearsal.findMany.mockResolvedValue([] as any);
+      prismaMock.member.findMany.mockResolvedValue([
+        {
+          id: 'member-1',
+          firstName: 'Anna',
+          lastName: 'Müller',
+          email: 'private@example.test',
+          choirVoice: { id: 'voice-a', name: 'Sopran' },
+          attendanceRecords: [{ id: 'record-1' }],
+          attendancePlans: [{ response: 'CONFIRMED' }],
+        },
+      ] as any);
+
+      const result = await service.getVoiceAdminRecordsForRehearsal('rehearsal-1', ['voice-a', 'voice-b']);
+
+      expect(prismaMock.member.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: { choirVoiceId: { in: ['voice-a', 'voice-b'] } },
+        select: expect.not.objectContaining({ email: true }),
+      }));
+      expect(prismaMock.attendanceRecord.findMany).not.toHaveBeenCalled();
+      expect(result).toEqual([{
+        id: 'member-1',
+        firstName: 'Anna',
+        lastName: 'Müller',
+        choirVoice: { id: 'voice-a', name: 'Sopran' },
+        attended: true,
+        plan: 'CONFIRMED',
+        lastAttendedRehearsalsAgo: null,
+      }]);
+      expect(result[0]).not.toHaveProperty('email');
+    });
+  });
+
   describe('setAttendanceRecord', () => {
     it('throws NotFoundException when rehearsal does not exist', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue(null);

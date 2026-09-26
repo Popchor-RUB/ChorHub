@@ -359,6 +359,7 @@ export class AdminService {
           lastName: true,
           email: true,
           choirVoice: { select: { id: true, name: true, sortOrder: true } },
+          voiceAdminGrants: { select: { choirVoice: { select: { id: true, name: true } } } },
           createdAt: true,
           attendanceRecords: {
             where: { rehearsal: { date: { lt: startOfToday }, isOptional: false } },
@@ -388,10 +389,37 @@ export class AdminService {
       lastName: member.lastName,
       email: member.email,
       choirVoice: member.choirVoice,
+      voiceAdminVoices: (member.voiceAdminGrants ?? []).map((grant) => grant.choirVoice),
       createdAt: member.createdAt,
       attendanceCount: attendedPastIds.size,
       unexcusedAbsenceCount,
     };
+  }
+
+  async replaceVoiceAdminVoices(memberId: string, voiceIds: string[]) {
+    return this.prisma.$transaction(async (tx) => {
+      const member = await tx.member.findUnique({ where: { id: memberId }, select: { id: true } });
+      if (!member) throw new NotFoundException('Mitglied nicht gefunden');
+
+      const voices = voiceIds.length
+        ? await tx.choirVoice.findMany({
+            where: { id: { in: voiceIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+      if (voices.length !== voiceIds.length) {
+        throw new NotFoundException('Stimmlage nicht gefunden');
+      }
+
+      await tx.voiceAdminGrant.deleteMany({ where: { memberId } });
+      if (voiceIds.length) {
+        await tx.voiceAdminGrant.createMany({
+          data: voiceIds.map((choirVoiceId) => ({ memberId, choirVoiceId })),
+        });
+      }
+
+      return { voiceAdminVoices: voices };
+    });
   }
 
   async updateMember(memberId: string, dto: UpdateMemberDto) {

@@ -8,6 +8,8 @@ type Props = {
   isOpen: boolean;
   scanResult: QrScanResult | null;
   memberEmail: string;
+  memberName?: string;
+  showEmail?: boolean;
   relativeIssuedAt: string;
   lastAttendedText: string;
   lastAttendedRehearsalsAgo: number | null;
@@ -29,6 +31,8 @@ export function QrScanResultModal({
   isOpen,
   scanResult,
   memberEmail,
+  memberName,
+  showEmail = true,
   relativeIssuedAt,
   lastAttendedText,
   lastAttendedRehearsalsAgo,
@@ -92,13 +96,13 @@ export function QrScanResultModal({
                     }
                   } : undefined}
                 >
-                  {scanResult.payload.name}
+                  {memberName ?? scanResult.payload.name}
                 </span>
               </p>
-              <p>
+              {showEmail && <p>
                 <span className="text-muted">{t('checkin.admin_email')}:</span>{' '}
                 <span className="font-medium">{memberEmail}</span>
-              </p>
+              </p>}
               <p>
                 <span className="text-muted">{t('checkin.admin_last_attended')}:</span>{' '}
                 <span className={lastAttendedClassName}>{lastAttendedText}</span>

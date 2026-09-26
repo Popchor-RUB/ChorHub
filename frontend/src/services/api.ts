@@ -7,6 +7,10 @@ import type {
   PersonalInfoConfig,
   PersonalInfoMemberRow,
   PersonalInfoSendStatus,
+  MemberProfile,
+  VoiceAttendanceRecord,
+  MemberRehearsalEntry,
+  VoiceAdminVoice,
 } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { withBasePath } from '../utils/basePath';
@@ -206,8 +210,22 @@ export const adminMembersApi = {
   sendInvite: (id: string) => api.post(`/admin/members/${id}/send-invite`),
   sendLogin: (id: string) => api.post(`/admin/members/${id}/send-login`),
   delete: (id: string) => api.delete(`/admin/members/${id}`),
+  setVoiceAdminVoices: (id: string, voiceIds: string[]) =>
+    api.put<{ voiceAdminVoices: VoiceAdminVoice[] }>(`/admin/members/${id}/voice-admin-voices`, { voiceIds }),
   setAttendancePlan: (memberId: string, rehearsalId: string, response: 'CONFIRMED' | 'DECLINED' | null) =>
     api.put(`/admin/members/${memberId}/attendance-plans/${rehearsalId}`, { response }),
+};
+
+export const voiceAdminAttendanceApi = {
+  getRecords: (rehearsalId: string) =>
+    api.get<VoiceAttendanceRecord[]>(`/attendance/voice-admin/records/${rehearsalId}`),
+  setRecord: (rehearsalId: string, memberId: string, attended: boolean) =>
+    api.put(`/attendance/voice-admin/records/${rehearsalId}`, { memberId, attended }),
+  getMemberRehearsals: (memberId: string) =>
+    api.get<MemberRehearsalEntry[]>(`/attendance/voice-admin/members/${memberId}/rehearsals`),
+  setMemberAttendancePlan: (memberId: string, rehearsalId: string, response: 'CONFIRMED' | 'DECLINED' | null) =>
+    api.put(`/attendance/voice-admin/members/${memberId}/attendance-plans/${rehearsalId}`, { response }),
+  getCheckinPublicKey: () => api.get<{ publicKey: string }>('/attendance/voice-admin/checkin/public-key'),
 };
 
 export const generalInfoApi = {
@@ -288,13 +306,15 @@ export const choirVoicesApi = {
 };
 
 export const membersApi = {
-  me: () => api.get('/members/me'),
+  me: () => api.get<MemberProfile>('/members/me'),
   updateVoice: (voiceId: string | null) => api.patch('/members/me/voice', { voiceId }),
 };
 
 export const checkinApi = {
   getMemberQr: () => api.get<MemberCheckinQr>('/members/me/checkin-qr'),
-  getPublicKey: () => api.get<{ publicKey: string }>('/attendance/checkin/public-key'),
+  getPublicKey: (scope: 'admin' | 'voice-admin' = 'admin') => scope === 'voice-admin'
+    ? voiceAdminAttendanceApi.getCheckinPublicKey()
+    : api.get<{ publicKey: string }>('/attendance/checkin/public-key'),
 };
 
 export async function validateStoredSessionToken(

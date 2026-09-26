@@ -22,6 +22,7 @@ import { CreateMemberDto } from './dto/create-member.dto';
 import { AdminSetAttendancePlanDto } from './dto/admin-set-attendance-plan.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberActivityStatsDto } from './dto/member-activity-stats.dto';
+import { ReplaceVoiceAdminGrantsDto } from './dto/replace-voice-admin-grants.dto';
 
 @Controller('admin')
 @UseGuards(JwtAdminGuard)
@@ -76,6 +77,11 @@ export class AdminController {
   @Get('members/:id')
   getMember(@Param('id') id: string) {
     return this.adminService.getMemberById(id);
+  }
+
+  @Put('members/:id/voice-admin-voices')
+  replaceVoiceAdminVoices(@Param('id') id: string, @Body() dto: ReplaceVoiceAdminGrantsDto) {
+    return this.adminService.replaceVoiceAdminVoices(id, dto.voiceIds);
   }
 
   @Patch('members/:id')

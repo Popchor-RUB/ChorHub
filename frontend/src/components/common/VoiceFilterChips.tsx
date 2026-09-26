@@ -1,5 +1,6 @@
 import { Button } from '@heroui/react';
 import type { HTMLAttributes } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> {
   voices: string[];
@@ -8,6 +9,7 @@ interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> {
 }
 
 export function VoiceFilterChips({ voices, selected, onChange, ...divProps }: Props) {
+  const { t } = useTranslation();
   if (voices.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5" {...divProps}>
@@ -17,7 +19,7 @@ export function VoiceFilterChips({ voices, selected, onChange, ...divProps }: Pr
         className="rounded-full"
         onPress={() => onChange(null)}
       >
-        Alle
+        {t('common.all')}
       </Button>
       {voices.map((voice) => (
         <Button

@@ -1,6 +1,6 @@
 import { checkinApi } from './api';
 
-let cachedVerificationKeyPromise: Promise<CryptoKey> | null = null;
+const cachedVerificationKeyPromises: Partial<Record<'admin' | 'voice-admin', Promise<CryptoKey>>> = {};
 
 function describeError(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -33,12 +33,12 @@ function asArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-export async function getCheckinVerificationKey(forceReload = false): Promise<CryptoKey> {
-  if (forceReload || !cachedVerificationKeyPromise) {
-    cachedVerificationKeyPromise = (async () => {
+export async function getCheckinVerificationKey(forceReload = false, scope: 'admin' | 'voice-admin' = 'admin'): Promise<CryptoKey> {
+  if (forceReload || !cachedVerificationKeyPromises[scope]) {
+    cachedVerificationKeyPromises[scope] = (async () => {
       let publicKeyBase64: string;
       try {
-        const res = await checkinApi.getPublicKey();
+        const res = await checkinApi.getPublicKey(scope);
         publicKeyBase64 = res.data.publicKey;
       } catch (error) {
         throw new Error(`Could not fetch public key: ${describeError(error)}`);
@@ -53,5 +53,5 @@ export async function getCheckinVerificationKey(forceReload = false): Promise<Cr
     })();
   }
 
-  return cachedVerificationKeyPromise;
+  return cachedVerificationKeyPromises[scope]!;
 }

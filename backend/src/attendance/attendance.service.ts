@@ -39,7 +39,6 @@ export class AttendanceService {
       orderBy: { date: 'desc' },
       select: { id: true },
     });
-    const agoByRehearsalId = new Map(pastRehearsals.map((r, i) => [r.id, i + 1]));
 
     const members = await this.prisma.member.findMany({
       orderBy: [{ choirVoice: { sortOrder: 'asc' } }, { firstName: 'asc' }, { lastName: 'asc' }],
@@ -57,25 +56,19 @@ export class AttendanceService {
     });
 
     // Bulk fetch all past attendance records and find the most recent per member
-    const lastAttendedMap = new Map<string, number>();
-    if (pastRehearsals.length > 0) {
-      const pastAttendances = await this.prisma.attendanceRecord.findMany({
+    const pastAttendances = pastRehearsals.length > 0
+      ? await this.prisma.attendanceRecord.findMany({
         where: {
           rehearsalId: { in: pastRehearsals.map((r) => r.id) },
           rehearsal: { isOptional: false },
         },
         select: { memberId: true, rehearsalId: true },
-      });
-      for (const rec of pastAttendances) {
-        const ago = agoByRehearsalId.get(rec.rehearsalId);
-        if (ago !== undefined) {
-          const current = lastAttendedMap.get(rec.memberId);
-          if (current === undefined || ago < current) {
-            lastAttendedMap.set(rec.memberId, ago);
-          }
-        }
-      }
-    }
+      })
+      : [];
+    const lastAttendedMap = this.getLastAttendedMap(
+      pastRehearsals.map((past) => past.id),
+      pastAttendances,
+    );
 
     return members.map((m) => ({
       id: m.id,
@@ -86,6 +79,52 @@ export class AttendanceService {
       attended: m.attendanceRecords.length > 0,
       plan: m.attendancePlans[0]?.response ?? null,
       lastAttendedRehearsalsAgo: lastAttendedMap.get(m.id) ?? null,
+    }));
+  }
+
+  async getVoiceAdminRecordsForRehearsal(rehearsalId: string, choirVoiceIds: string[]) {
+    const rehearsal = await this.ensureRehearsalExists(rehearsalId);
+    const pastRehearsals = await this.prisma.rehearsal.findMany({
+      where: { date: { lt: rehearsal.date }, isOptional: false },
+      orderBy: { date: 'desc' },
+      select: { id: true },
+    });
+    const members = await this.prisma.member.findMany({
+      where: { choirVoiceId: { in: choirVoiceIds } },
+      orderBy: [{ choirVoice: { sortOrder: 'asc' } }, { firstName: 'asc' }, { lastName: 'asc' }],
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        choirVoice: { select: { id: true, name: true } },
+        attendanceRecords: { where: { rehearsalId }, select: { id: true } },
+        attendancePlans: { where: { rehearsalId }, select: { response: true } },
+      },
+    });
+
+    const records = pastRehearsals.length > 0
+      ? await this.prisma.attendanceRecord.findMany({
+        where: {
+          rehearsalId: { in: pastRehearsals.map((past) => past.id) },
+          rehearsal: { isOptional: false },
+          member: { choirVoiceId: { in: choirVoiceIds } },
+        },
+        select: { memberId: true, rehearsalId: true },
+      })
+      : [];
+    const lastAttendedMap = this.getLastAttendedMap(
+      pastRehearsals.map((past) => past.id),
+      records,
+    );
+
+    return members.map((member) => ({
+      id: member.id,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      choirVoice: member.choirVoice,
+      attended: member.attendanceRecords.length > 0,
+      plan: member.attendancePlans[0]?.response ?? null,
+      lastAttendedRehearsalsAgo: lastAttendedMap.get(member.id) ?? null,
     }));
   }
 
@@ -188,6 +227,22 @@ export class AttendanceService {
       result[voice] = (result[voice] ?? 0) + 1;
     }
     return result;
+  }
+
+  private getLastAttendedMap(
+    pastRehearsalIds: string[],
+    records: { memberId: string; rehearsalId: string }[],
+  ): Map<string, number> {
+    const agoByRehearsalId = new Map(pastRehearsalIds.map((id, index) => [id, index + 1]));
+    const lastAttendedMap = new Map<string, number>();
+    for (const record of records) {
+      const ago = agoByRehearsalId.get(record.rehearsalId);
+      const current = lastAttendedMap.get(record.memberId);
+      if (ago !== undefined && (current === undefined || ago < current)) {
+        lastAttendedMap.set(record.memberId, ago);
+      }
+    }
+    return lastAttendedMap;
   }
 
   private async ensureRehearsalExists(rehearsalId: string) {

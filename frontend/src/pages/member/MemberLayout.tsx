@@ -1,6 +1,6 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@heroui/react';
-import { MusicalNoteIcon, InformationCircleIcon, Cog6ToothIcon, QrCodeIcon } from '@heroicons/react/24/outline';
+import { MusicalNoteIcon, InformationCircleIcon, Cog6ToothIcon, QrCodeIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import { ThemeToggle } from '../../components/ThemeToggle';
@@ -8,12 +8,29 @@ import { NotificationBell } from '../../components/NotificationBell';
 import { IOSInstallGuide } from '../../components/IOSInstallGuide';
 import { useIOSInstallGuide } from '../../hooks/useIOSInstallGuide';
 import { LanguageSwitcher } from '../../components/LanguageSwitcher';
+import { membersApi } from '../../services/api';
+import type { VoiceAdminVoice } from '../../types';
+import { useEffect, useState } from 'react';
 
 export function MemberLayout() {
   const { memberSession, logoutMember } = useAuthStore();
+  const [grantSnapshot, setGrantSnapshot] = useState<{ pathname: string; voices: VoiceAdminVoice[] } | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const { visible: showGuide, forced: guideForced, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-member');
+
+  useEffect(() => {
+    let active = true;
+    membersApi.me().then((response) => {
+      if (active) setGrantSnapshot({ pathname: location.pathname, voices: response.data.voiceAdminVoices ?? [] });
+    }).catch(() => {
+      if (active) setGrantSnapshot({ pathname: location.pathname, voices: [] });
+    });
+    return () => { active = false; };
+  }, [location.pathname]);
+
+  const voiceAdminVoices = grantSnapshot?.pathname === location.pathname ? grantSnapshot.voices : [];
 
   const handleLogout = () => {
     logoutMember();
@@ -59,6 +76,15 @@ export function MemberLayout() {
               {t('nav.qr_checkin')}
             </NavLink>
           </li>
+          {voiceAdminVoices.length > 0 && <li>
+            <NavLink
+              to="/anwesenheit"
+              data-testid="voice-admin-nav"
+              className={({ isActive }) => isActive ? 'text-accent font-medium' : 'text-muted'}
+            >
+              {t('nav.voice_admin')}
+            </NavLink>
+          </li>}
         </ul>
         <ul className="flex items-center justify-end gap-1.5">
           <li>
@@ -113,6 +139,16 @@ export function MemberLayout() {
           <QrCodeIcon className="w-6 h-6 mb-0.5" />
           <span>{t('nav.qr_short')}</span>
         </NavLink>
+        {voiceAdminVoices.length > 0 && <NavLink
+          to="/anwesenheit"
+          data-testid="voice-admin-nav"
+          className={({ isActive }) =>
+            `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-accent font-medium' : 'text-muted'}`
+          }
+        >
+          <ClipboardDocumentCheckIcon className="w-6 h-6 mb-0.5" />
+          <span>{t('nav.voice_admin_short')}</span>
+        </NavLink>}
         <NavLink
           to="/einstellungen"
           className={({ isActive }) =>

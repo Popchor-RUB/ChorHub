@@ -65,7 +65,28 @@ export interface MemberActivityStats {
   byVoice: MemberActivityVoiceStats[];
 }
 
-export type AdminMemberDetail = MemberOverview;
+export interface VoiceAdminVoice {
+  id: string;
+  name: string;
+}
+
+export interface AdminMemberDetail extends MemberOverview {
+  voiceAdminVoices: VoiceAdminVoice[];
+}
+
+export interface VoiceAttendanceRecord {
+  id: string;
+  firstName: string;
+  lastName: string;
+  choirVoice: ChoirVoice | null;
+  attended: boolean;
+  plan: AttendanceResponse | null;
+  lastAttendedRehearsalsAgo: number | null;
+}
+
+export interface MemberProfile extends Member {
+  voiceAdminVoices: VoiceAdminVoice[];
+}
 
 export interface MemberRehearsalEntry {
   id: string;
