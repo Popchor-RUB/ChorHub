@@ -408,7 +408,7 @@ describe('PersonalInfoService', () => {
     loggerErrorSpy.mockRestore();
   });
 
-  it('supports selecting all members as recipients', async () => {
+  it('selects only active members as all-mode recipients', async () => {
     prismaMock.member.findMany.mockResolvedValue([
       { id: 'm-1', firstName: 'Anna', lastName: 'Müller', email: 'anna@choir.de' },
       { id: 'm-2', firstName: 'Max', lastName: 'Schmidt', email: 'max@choir.de' },
@@ -424,8 +424,58 @@ describe('PersonalInfoService', () => {
     });
 
     expect(prismaMock.member.findMany).toHaveBeenCalledWith({
+      where: { isDisabled: false },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     });
     expect(prismaMock.personalInfoEntry.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('emails only active members in all mode', async () => {
+    const activeMember = {
+      id: 'm-1',
+      firstName: 'Anna',
+      lastName: 'Müller',
+      email: 'anna@choir.de',
+    };
+    prismaMock.member.findMany.mockResolvedValue([activeMember] as any);
+
+    await service.publish({
+      markdownTemplate: 'Hi {{firstname}}',
+      emailSubject: 'Personal info',
+      sendEmail: true,
+      recipientMode: 'all',
+      placeholderNamesJson: JSON.stringify([]),
+      placeholderFiles: [],
+    });
+
+    expect(prismaMock.member.findMany).toHaveBeenCalledWith({
+      where: { isDisabled: false },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    });
+    expect(mailService.sendPersonalInfo).toHaveBeenCalledTimes(1);
+    expect(mailService.sendPersonalInfo).toHaveBeenCalledWith(
+      activeMember,
+      'Personal info',
+      'Hi Anna',
+    );
+  });
+
+  it('excludes disabled members from the personal information member list', async () => {
+    prismaMock.member.findMany.mockResolvedValue([
+      {
+        id: 'm-1',
+        firstName: 'Anna',
+        lastName: 'Müller',
+        email: 'anna@choir.de',
+        personalInfo: null,
+      },
+    ] as any);
+
+    const rows = await service.listMemberRows();
+
+    expect(prismaMock.member.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { isDisabled: false } }),
+    );
+    expect(rows.map((row) => row.id)).toEqual(['m-1']);
   });
 });

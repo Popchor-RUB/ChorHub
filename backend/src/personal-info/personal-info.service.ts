@@ -205,6 +205,7 @@ export class PersonalInfoService {
 
   async listMemberRows() {
     const members = await this.prisma.member.findMany({
+      where: { isDisabled: false },
       select: {
         id: true,
         firstName: true,
@@ -438,6 +439,7 @@ export class PersonalInfoService {
     const mode = this.normalizeRecipientMode(recipientMode);
     if (mode === 'all') {
       const members = await this.prisma.member.findMany({
+        where: { isDisabled: false },
         orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
       });
       if (members.length === 0) {
