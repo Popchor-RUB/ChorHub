@@ -23,6 +23,8 @@ const MemberOverviewPage = lazy(() => import('./pages/admin/MemberOverviewPage')
 const AdminMemberDetailPage = lazy(() => import('./pages/admin/AdminMemberDetailPage').then((module) => ({ default: module.AdminMemberDetailPage })));
 const ImportMembersPage = lazy(() => import('./pages/admin/ImportMembersPage').then((module) => ({ default: module.ImportMembersPage })));
 const GeneralInfoPage = lazy(() => import('./pages/admin/GeneralInfoPage').then((module) => ({ default: module.GeneralInfoPage })));
+const PersonalInfoPage = lazy(() => import('./pages/admin/PersonalInfoPage').then((module) => ({ default: module.PersonalInfoPage })));
+const EmailInfoPage = lazy(() => import('./pages/admin/EmailInfoPage').then((module) => ({ default: module.EmailInfoPage })));
 const AttendancePage = lazy(() => import('./pages/admin/AttendancePage').then((module) => ({ default: module.AttendancePage })));
 const RehearsalOverviewPage = lazy(() => import('./pages/admin/RehearsalOverviewPage').then((module) => ({ default: module.RehearsalOverviewPage })));
 const PushNotificationsPage = lazy(() => import('./pages/admin/PushNotificationsPage').then((module) => ({ default: module.PushNotificationsPage })));
@@ -78,6 +80,8 @@ const router = createBrowserRouter(
         { path: 'proben', element: <LazyPage><RehearsalOverviewPage /></LazyPage> },
         { path: 'anwesenheit', element: <LazyPage><AttendancePage /></LazyPage> },
         { path: 'informationen', element: <LazyPage><GeneralInfoPage /></LazyPage> },
+        { path: 'informationen/persoenlich', element: <LazyPage><PersonalInfoPage /></LazyPage> },
+        { path: 'informationen/email', element: <LazyPage><EmailInfoPage /></LazyPage> },
         { path: 'benachrichtigungen', element: <LazyPage><PushNotificationsPage /></LazyPage> },
         { path: 'einstellungen', element: <LazyPage><OptionsPage /></LazyPage> },
       ],

@@ -2,6 +2,8 @@
   "nav": {
     "rehearsals": "Rehearsals",
     "information": "Information",
+    "push_notifications": "Push Notifications",
+    "email": "Email",
     "members": "Members",
     "attendance": "Attendance",
     "voice_admin": "Attendance",

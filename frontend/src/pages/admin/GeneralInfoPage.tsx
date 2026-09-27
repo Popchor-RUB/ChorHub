@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Checkbox, Spinner, Tabs } from '@heroui/react';
+import { Checkbox, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { generalInfoApi } from '../../services/api';
 import { MarkdownEditor } from '../../components/info/MarkdownEditor';
-import { AdminPersonalInfoPanel } from '../../components/info/AdminPersonalInfoPanel';
 
 export function GeneralInfoPage() {
   const [content, setContent] = useState('');
@@ -11,7 +10,6 @@ export function GeneralInfoPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [sendPush, setSendPush] = useState(false);
-  const [selectedTab, setSelectedTab] = useState('general');
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -40,50 +38,25 @@ export function GeneralInfoPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">{t('info.admin_title')}</h1>
-      <Tabs
-        selectedKey={selectedTab}
-        onSelectionChange={(key) => setSelectedTab(String(key))}
-        variant="secondary"
-      >
-        <Tabs.ListContainer>
-          <Tabs.List aria-label={t('info.admin_segment_aria')}>
-            <Tabs.Tab id="general">
-              {t('info.member_general_tab')}
-              <Tabs.Indicator />
-            </Tabs.Tab>
-            <Tabs.Tab id="personal">
-              {t('info.member_personal_tab')}
-              <Tabs.Indicator />
-            </Tabs.Tab>
-          </Tabs.List>
-        </Tabs.ListContainer>
-        <Tabs.Panel id="general">
-          <div className="mt-2 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted">{t('info.description')}</p>
-              {saved && <span className="text-success text-sm font-medium">{t('common.saved')}</span>}
-            </div>
-            <MarkdownEditor
-              value={content}
-              onChange={setContent}
-              onSave={handleSave}
-              saving={saving}
-            />
-            <Checkbox isSelected={sendPush} onChange={setSendPush}>
-              <Checkbox.Content>
-                <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
-                {t('info.send_push')}
-              </Checkbox.Content>
-            </Checkbox>
-          </div>
-        </Tabs.Panel>
-        <Tabs.Panel id="personal">
-          <div className="mt-2">
-            <AdminPersonalInfoPanel />
-          </div>
-        </Tabs.Panel>
-      </Tabs>
+      <h1 className="text-2xl font-bold">{t('info.title')}</h1>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted">{t('info.description')}</p>
+          {saved && <span className="text-success text-sm font-medium">{t('common.saved')}</span>}
+        </div>
+        <MarkdownEditor
+          value={content}
+          onChange={setContent}
+          onSave={handleSave}
+          saving={saving}
+        />
+        <Checkbox isSelected={sendPush} onChange={setSendPush}>
+          <Checkbox.Content>
+            <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
+            {t('info.send_push')}
+          </Checkbox.Content>
+        </Checkbox>
+      </div>
     </div>
   );
 }

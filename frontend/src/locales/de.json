@@ -2,6 +2,8 @@
   "nav": {
     "rehearsals": "Proben",
     "information": "Informationen",
+    "push_notifications": "Push-Notifications",
+    "email": "E-Mail",
     "members": "Mitglieder",
     "attendance": "Anwesenheit",
     "voice_admin": "Anwesenheit",
