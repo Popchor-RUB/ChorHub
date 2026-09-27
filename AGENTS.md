@@ -150,6 +150,9 @@ npm run test:e2e:report
 ### Email templates
 - Mail templates are in `backend/src/mail/templates/`.
 - `backend/nest-cli.json` copies templates into `dist/src` during build.
+- Admin sends choir information mail through `POST /admin/emails` as one message: `TO CHOIR_ADMIN_EMAIL`, `BCC` distinct active-member addresses (admin excluded), subject prefixed with `[Popchor Mitglieder]`.
+- Only successfully sent messages appear in admin and member email archives. Every active member can read the full archive, including messages sent before they joined; attachment downloads use authenticated routes.
+- Email attachments are stored with their sent message. Upload limits: 10 files, 5 MB per file, 20 MB total.
 
 ## Project structure hints
 - Backend auth: `backend/src/auth/**`

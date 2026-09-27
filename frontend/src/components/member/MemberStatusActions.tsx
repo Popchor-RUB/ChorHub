@@ -81,7 +81,7 @@ export function MemberStatusActions({ memberId, status, onUpdated }: Props) {
             <Modal.Header><Modal.Heading>{t('members.disable_account')}</Modal.Heading></Modal.Header>
             <Modal.Body className="flex flex-col gap-3">
               <p className="text-sm text-muted">{t('members.disable_reason_optional')}</p>
-              <TextField className="w-full" value={reason} onChange={setReason}>
+              <TextField className="w-full" value={reason} onChange={setReason} variant='secondary'>
                 <Label>{t('members.disable_reason')}</Label>
                 <TextArea rows={3} data-testid="member-disable-reason" />
               </TextField>

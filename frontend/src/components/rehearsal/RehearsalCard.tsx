@@ -145,7 +145,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
           <div className="flex gap-2">
             <Button
               size="sm"
-              variant={rehearsal.myPlan === 'CONFIRMED' ? 'primary' : 'secondary'}
+              className={rehearsal.myPlan === 'CONFIRMED' ? 'bg-success border' : 'bg-success-soft text-success-soft-foreground border'}
               isPending={loading === 'CONFIRMED'}
               onPress={() => setPlan('CONFIRMED')}
               isDisabled={buttonsDisabled}
@@ -154,7 +154,7 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
             </Button>
             <Button
               size="sm"
-              variant={rehearsal.myPlan === 'DECLINED' ? 'danger' : 'danger-soft'}
+              className={rehearsal.myPlan === 'DECLINED' ? 'bg-danger border' : 'bg-danger-soft text-danger-soft-foreground border'}
               isPending={loading === 'DECLINED'}
               onPress={() => setPlan('DECLINED')}
               isDisabled={buttonsDisabled}

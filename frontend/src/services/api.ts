@@ -7,6 +7,7 @@ import type {
   PersonalInfoConfig,
   PersonalInfoMemberRow,
   PersonalInfoSendStatus,
+  SentEmail,
   MemberProfile,
   VoiceAttendanceRecord,
   MemberRehearsalEntry,
@@ -238,6 +239,27 @@ export const generalInfoApi = {
 
 export const personalInfoApi = {
   getMe: () => api.get<PersonalInfo>('/personal-info/me'),
+};
+
+export const sentEmailsApi = {
+  listAdmin: () => api.get<SentEmail[]>('/admin/emails'),
+  getAdmin: (id: string) => api.get<SentEmail>(`/admin/emails/${id}`),
+  send: (input: { subject: string; markdownContent: string; signatureMarkdown: string; attachments: File[] }) => {
+    const formData = new FormData();
+    formData.append('subject', input.subject);
+    formData.append('markdownContent', input.markdownContent);
+    formData.append('signatureMarkdown', input.signatureMarkdown);
+    for (const attachment of input.attachments) formData.append('attachments', attachment);
+    return api.post<SentEmail>('/admin/emails', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  listMember: () => api.get<SentEmail[]>('/emails'),
+  getMember: (id: string) => api.get<SentEmail>(`/emails/${id}`),
+  downloadAdminAttachment: (emailId: string, attachmentId: string) =>
+    api.get<Blob>(`/admin/emails/${emailId}/attachments/${attachmentId}`, { responseType: 'blob' }),
+  downloadMemberAttachment: (emailId: string, attachmentId: string) =>
+    api.get<Blob>(`/emails/${emailId}/attachments/${attachmentId}`, { responseType: 'blob' }),
 };
 
 export const adminPersonalInfoApi = {

@@ -13,6 +13,12 @@ enum AttendanceResponse {
   DECLINED
 }
 
+enum SentEmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 model Member {
   id           String     @id @default(uuid())
   firstName    String
@@ -191,6 +197,33 @@ model PersonalInfoEntry {
   member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@map("personal_info_entries")
+}
+
+model SentEmail {
+  id               String             @id @default(uuid())
+  subject          String
+  markdownContent  String              @map("markdown_content")
+  signatureMarkdown String             @default("") @map("signature_markdown")
+  status           SentEmailStatus     @default(PENDING)
+  sentAt           DateTime?           @map("sent_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  attachments      SentEmailAttachment[]
+
+  @@index([status, sentAt])
+  @@map("sent_emails")
+}
+
+model SentEmailAttachment {
+  id          String   @id @default(uuid())
+  sentEmailId String   @map("sent_email_id")
+  filename    String
+  contentType String   @map("content_type")
+  size        Int
+  content     Bytes
+  sentEmail   SentEmail @relation(fields: [sentEmailId], references: [id], onDelete: Cascade)
+
+  @@index([sentEmailId])
+  @@map("sent_email_attachments")
 }
 
 model ChoirVoice {

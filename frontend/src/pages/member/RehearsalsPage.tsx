@@ -107,7 +107,7 @@ export function RehearsalsPage() {
         <span className="font-medium flex-1">
           {member?.choirVoice?.name ?? t('voice.not_set')}
         </span>
-        <Button size="sm" variant="tertiary" onPress={openVoiceModal}>
+        <Button size="sm" variant="outline" onPress={openVoiceModal}>
           {t('voice.change')}
         </Button>
       </div>

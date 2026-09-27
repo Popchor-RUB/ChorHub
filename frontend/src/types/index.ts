@@ -160,6 +160,23 @@ export interface PersonalInfo {
   updatedAt: string | null;
 }
 
+export interface SentEmailAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
+export interface SentEmail {
+  id: string;
+  subject: string;
+  rawSubject: string;
+  markdownContent: string;
+  signatureMarkdown: string;
+  sentAt: string;
+  attachments: SentEmailAttachment[];
+}
+
 export interface PersonalInfoConfig {
   id: string;
   markdownTemplate: string;

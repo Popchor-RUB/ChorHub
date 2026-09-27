@@ -3,6 +3,7 @@ import { Spinner, Tabs } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { generalInfoApi, personalInfoApi } from '../../services/api';
 import { MarkdownRenderer } from '../../components/info/MarkdownRenderer';
+import { MemberEmailArchive } from '../../components/info/MemberEmailArchive';
 import type { GeneralInfo, PersonalInfo } from '../../types';
 
 export function InformationenPage() {
@@ -37,6 +38,10 @@ export function InformationenPage() {
               {t('info.member_personal_tab')}
               <Tabs.Indicator />
             </Tabs.Tab>
+            <Tabs.Tab id="email" data-testid="member-email-tab">
+              {t('info.member_email_tab')}
+              <Tabs.Indicator />
+            </Tabs.Tab>
           </Tabs.List>
         </Tabs.ListContainer>
         <Tabs.Panel id="general" className="pt-4">
@@ -47,6 +52,9 @@ export function InformationenPage() {
             content={personalInfo?.markdownContent ?? ''}
             emptyMessage={t('info.personal_empty')}
           />
+        </Tabs.Panel>
+        <Tabs.Panel id="email" className="pt-4">
+          <MemberEmailArchive />
         </Tabs.Panel>
       </Tabs>
     </div>

@@ -23,7 +23,14 @@ describe('MailService', () => {
         firstName: 'Anna',
         lastName: 'Müller',
         email: 'anna@choir.de',
-      } as any,
+        choirVoiceId: null,
+        lastLoginAt: null,
+        isDisabled: false,
+        disabledAt: null,
+        disableReason: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
       'Betreff',
       'Markdown Nachricht',
     );
@@ -38,6 +45,52 @@ describe('MailService', () => {
           subject: 'Betreff',
           htmlContent: '<p>Markdown Nachricht</p>\n',
         }),
+      }),
+    );
+  });
+
+  it('renders admin email body and signature and sends attachments in one message', async () => {
+    const mailerService = {
+      sendMail: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<MailerService>;
+    const module = await Test.createTestingModule({
+      providers: [MailService, { provide: MailerService, useValue: mailerService }],
+    }).compile();
+    const service = module.get(MailService);
+
+    await service.sendInformationEmail({
+      to: 'admin@choir.test',
+      bcc: ['member@choir.test'],
+      subject: '[Popchor Mitglieder] Hallo',
+      markdownContent: '**Nachricht**',
+      signatureMarkdown: '_Viele Grüße_',
+      attachments: [
+        {
+          filename: 'plan.pdf',
+          contentType: 'application/pdf',
+          content: new Uint8Array([1, 2, 3]),
+        },
+      ],
+    });
+
+    expect(mailerService.sendMail).toHaveBeenCalledTimes(1);
+    expect(mailerService.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'admin@choir.test',
+        bcc: ['member@choir.test'],
+        subject: '[Popchor Mitglieder] Hallo',
+        template: 'personal-info',
+        context: expect.objectContaining({
+          htmlContent: '<p><strong>Nachricht</strong></p>\n',
+          htmlSignature: '<p><em>Viele Grüße</em></p>\n',
+        }),
+        attachments: [
+          expect.objectContaining({
+            filename: 'plan.pdf',
+            contentType: 'application/pdf',
+            content: Buffer.from([1, 2, 3]),
+          }),
+        ],
       }),
     );
   });

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import MarkdownIt from 'markdown-it';
 import { Member } from '../generated/prisma/client';
+import type { SentEmailAttachment } from '../generated/prisma/client';
 
 export interface PushFallbackReminderItem {
   label: string;
@@ -85,8 +86,41 @@ export class MailService {
         firstName: member.firstName,
         subject,
         htmlContent,
+        htmlSignature: '',
         markdownContent,
       },
+    });
+  }
+
+  async sendInformationEmail(params: {
+    to: string;
+    bcc: string[];
+    subject: string;
+    markdownContent: string;
+    signatureMarkdown: string;
+    attachments: Array<Pick<SentEmailAttachment, 'filename' | 'contentType' | 'content'>>;
+  }): Promise<void> {
+    const htmlContent = this.renderMarkdownToHtml(params.markdownContent);
+    const htmlSignature = params.signatureMarkdown
+      ? this.renderMarkdownToHtml(params.signatureMarkdown)
+      : '';
+
+    await this.mailerService.sendMail({
+      to: params.to,
+      bcc: params.bcc,
+      subject: params.subject,
+      template: 'personal-info',
+      context: {
+        subject: params.subject,
+        htmlContent,
+        htmlSignature,
+        signatureMarkdown: params.signatureMarkdown,
+      },
+      attachments: params.attachments.map((attachment) => ({
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+        content: Buffer.from(attachment.content),
+      })),
     });
   }
 

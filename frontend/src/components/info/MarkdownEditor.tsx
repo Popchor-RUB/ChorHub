@@ -1,5 +1,6 @@
 import { useDeferredValue, useState } from 'react';
 import { Button, Label, Spinner, Tabs, TextArea, TextField } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface Props {
@@ -8,11 +9,16 @@ interface Props {
   onSave: () => void;
   saving?: boolean;
   hideSaveButton?: boolean;
+  readOnly?: boolean;
+  fieldLabel?: string;
+  fieldTestId?: string;
 }
 
-export function MarkdownEditor({ value, onChange, onSave, saving, hideSaveButton = false }: Props) {
+export function MarkdownEditor({ value, onChange, onSave, saving, hideSaveButton = false, readOnly = false, fieldLabel, fieldTestId }: Props) {
   const [selected, setSelected] = useState<string>('edit');
   const deferredPreviewValue = useDeferredValue(value);
+  const { t } = useTranslation();
+  const editorLabel = fieldLabel ?? t('info.markdown_edit');
 
   return (
     <div className="flex flex-col gap-4">
@@ -23,16 +29,19 @@ export function MarkdownEditor({ value, onChange, onSave, saving, hideSaveButton
           onSelectionChange={(k) => setSelected(k as string)}
         >
           <Tabs.ListContainer>
-            <Tabs.List aria-label="Markdown Editor Tabs">
-              <Tabs.Tab id="edit">Bearbeiten<Tabs.Indicator /></Tabs.Tab>
-              <Tabs.Tab id="preview">Vorschau<Tabs.Indicator /></Tabs.Tab>
+            <Tabs.List aria-label={t('info.markdown_tabs_aria')}>
+              <Tabs.Tab id="edit">{t('info.markdown_edit')}<Tabs.Indicator /></Tabs.Tab>
+              <Tabs.Tab id="preview">{t('info.markdown_preview')}<Tabs.Indicator /></Tabs.Tab>
             </Tabs.List>
           </Tabs.ListContainer>
           <Tabs.Panel id="edit">
             <TextField className="w-full" value={value} onChange={onChange}>
-              <Label className="sr-only">Bearbeiten</Label>
+              <Label className="sr-only">{editorLabel}</Label>
               <TextArea
-              placeholder="Markdown eingeben..."
+                readOnly={readOnly}
+                aria-label={editorLabel}
+                data-testid={fieldTestId ? `${fieldTestId}-mobile` : undefined}
+                placeholder={t('info.markdown_placeholder')}
                 rows={10}
                 className="min-h-64 resize-y font-mono text-sm"
               />
@@ -49,11 +58,14 @@ export function MarkdownEditor({ value, onChange, onSave, saving, hideSaveButton
       {/* Desktop: Side-by-side layout with resizable editor */}
       <div className="hidden md:flex flex-row gap-4 items-start">
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="text-sm font-medium text-muted mb-2">Bearbeiten</div>
+          <div className="text-sm font-medium text-muted mb-2">{editorLabel}</div>
           <TextField className="w-full" value={value} onChange={onChange}>
-            <Label className="sr-only">Bearbeiten</Label>
+            <Label className="sr-only">{editorLabel}</Label>
             <TextArea
-              placeholder="Markdown eingeben..."
+              readOnly={readOnly}
+              aria-label={editorLabel}
+              data-testid={fieldTestId ? `${fieldTestId}-desktop` : undefined}
+              placeholder={t('info.markdown_placeholder')}
               rows={12}
               className="min-h-[22rem] resize-y font-mono text-sm"
             />
@@ -61,7 +73,7 @@ export function MarkdownEditor({ value, onChange, onSave, saving, hideSaveButton
         </div>
         <div className="w-px bg-surface-secondary flex-shrink-0 self-stretch" />
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="text-sm font-medium text-muted mb-2">Vorschau</div>
+          <div className="text-sm font-medium text-muted mb-2">{t('info.markdown_preview')}</div>
           <div className="min-h-[22rem] overflow-auto rounded-xl border border-border bg-surface p-4">
             <MarkdownRenderer content={deferredPreviewValue} />
           </div>
@@ -70,7 +82,7 @@ export function MarkdownEditor({ value, onChange, onSave, saving, hideSaveButton
 
       {!hideSaveButton && (
         <Button onPress={onSave} isPending={saving}>
-          {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}Speichern</>}
+          {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('common.save')}</>}
         </Button>
       )}
     </div>

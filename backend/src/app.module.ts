@@ -16,6 +16,7 @@ import { PushModule } from './push/push.module';
 import { ChoirVoicesModule } from './choir-voices/choir-voices.module';
 import { GlobalAuthGuard } from './auth/guards/global-auth.guard';
 import { CheckinModule } from './checkin/checkin.module';
+import { EmailsModule } from './emails/emails.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CheckinModule } from './checkin/checkin.module';
     PushModule,
     ChoirVoicesModule,
     CheckinModule,
+    EmailsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: GlobalAuthGuard },
