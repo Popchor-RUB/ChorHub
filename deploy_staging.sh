@@ -16,11 +16,15 @@ rsync -av \
   --exclude '.env*' \
   --exclude 'docker-compose.override.yml' \
   --exclude 'generated' \
+  --exclude '.e2e-runs' \
+  --exclude 'test-results' \
+  --exclude '.playwright-mcp' \
+  --exclude '.serena' \
   --progress \
   --delete \
   ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
 
 echo "==> Building and starting containers on remote ..."
-ssh "${REMOTE_USER}@${REMOTE_HOST}" "cd ${REMOTE_DIR} && docker compose build && docker compose up -d"
+ssh "${REMOTE_USER}@${REMOTE_HOST}" "cd ${REMOTE_DIR} && docker compose -f docker-compose.yml -f docker-compose.override.yml build && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d"
 
 echo "==> Deployment complete."
