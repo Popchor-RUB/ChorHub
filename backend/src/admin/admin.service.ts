@@ -7,6 +7,9 @@ import { parse } from 'csv-parse/sync';
 import * as ExcelJS from 'exceljs';
 import type { CreateMemberDto } from './dto/create-member.dto';
 import type { UpdateMemberDto } from './dto/update-member.dto';
+import type { UpdateMemberStatusDto } from './dto/update-member-status.dto';
+import { MemberStatusService } from '../members/member-status.service';
+import { countUnexcusedAbsences, getEuropeBerlinStartOfDay } from './unexcused-absence-count';
 
 interface CsvRow {
   firstName: string;
@@ -21,6 +24,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly authService: AuthService,
+    private readonly memberStatusService: MemberStatusService,
   ) {}
 
   async createMember(dto: CreateMemberDto) {
@@ -41,8 +45,7 @@ export class AdminService {
       },
     });
 
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    const startOfToday = getEuropeBerlinStartOfDay();
     const pastRehearsals = await this.prisma.rehearsal.findMany({
       where: { date: { lt: startOfToday }, isOptional: false },
       select: { id: true },
@@ -63,10 +66,12 @@ export class AdminService {
     return member;
   }
 
-  async deleteMember(id: string) {
-    const member = await this.prisma.member.findUnique({ where: { id } });
+  async updateMemberStatus(memberId: string, dto: UpdateMemberStatusDto) {
+    const member = dto.disabled
+      ? await this.memberStatusService.disable(memberId, dto.reason)
+      : await this.memberStatusService.enable(memberId);
     if (!member) throw new NotFoundException('Mitglied nicht gefunden');
-    await this.prisma.member.delete({ where: { id } });
+    return this.getMemberById(memberId);
   }
 
   async importMembersFromCsv(buffer: Buffer, sendEmails = false) {
@@ -143,13 +148,16 @@ export class AdminService {
     return results;
   }
 
-  async getMemberOverview() {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+  async getMemberOverview(status: 'active' | 'disabled' = 'active') {
+    if (status !== 'active' && status !== 'disabled') throw new BadRequestException('Ungültiger Mitgliederstatus');
+    const startOfToday = getEuropeBerlinStartOfDay();
 
-    const [totalPastRehearsals, members] = await Promise.all([
-      this.prisma.rehearsal.count({ where: { date: { lt: startOfToday }, isOptional: false } }),
-      this.prisma.member.findMany({
+    const rehearsals = await this.prisma.rehearsal.findMany({
+        where: { date: { lt: startOfToday }, isOptional: false, attendanceRecords: { some: {} } },
+        select: { id: true, date: true, isOptional: true, attendanceRecords: { take: 1, select: { id: true } } },
+      });
+    const members = await this.prisma.member.findMany({
+        where: { isDisabled: status === 'disabled' },
         orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
         select: {
           id: true,
@@ -158,27 +166,33 @@ export class AdminService {
           email: true,
           choirVoice: { select: { id: true, name: true, sortOrder: true } },
           createdAt: true,
-          _count: { select: { attendanceRecords: true } },
+          isDisabled: true,
+          disabledAt: true,
+          disableReason: true,
           attendanceRecords: {
-            where: { rehearsal: { date: { lt: startOfToday }, isOptional: false } },
+            where: { rehearsalId: { in: rehearsals.map((r) => r.id) } },
             select: { rehearsalId: true },
           },
           attendancePlans: {
             where: {
               response: 'DECLINED',
-              rehearsal: { date: { lt: startOfToday }, isOptional: false },
+              rehearsalId: { in: rehearsals.map((r) => r.id) },
             },
             select: { rehearsalId: true },
           },
         },
-      }),
-    ]);
+      });
 
     return members.map((m) => {
-      const attendedPastIds = new Set(m.attendanceRecords.map((r) => r.rehearsalId));
-      const declinedPastIds = new Set(m.attendancePlans.map((p) => p.rehearsalId));
-      const declinedNotAttended = [...declinedPastIds].filter((id) => !attendedPastIds.has(id)).length;
-      const unexcusedAbsenceCount = Math.max(0, totalPastRehearsals - attendedPastIds.size - declinedNotAttended);
+      const attendedPastIds = m.attendanceRecords.map((r) => r.rehearsalId);
+      const declinedPastIds = m.attendancePlans.map((p) => p.rehearsalId);
+      const unexcusedAbsenceCount = countUnexcusedAbsences({
+        memberCreatedAt: m.createdAt,
+        rehearsals: rehearsals.map((r) => ({ ...r, hasAttendanceRecord: r.attendanceRecords.length > 0 })),
+        attendedRehearsalIds: attendedPastIds,
+        declinedRehearsalIds: declinedPastIds,
+        now: startOfToday,
+      });
 
       return {
         id: m.id,
@@ -187,7 +201,10 @@ export class AdminService {
         email: m.email,
         choirVoice: m.choirVoice,
         createdAt: m.createdAt,
-        attendanceCount: attendedPastIds.size,
+        isDisabled: m.isDisabled,
+        disabledAt: m.disabledAt,
+        disableReason: m.disableReason,
+        attendanceCount: attendedPastIds.length,
         unexcusedAbsenceCount,
       };
     });
@@ -195,8 +212,7 @@ export class AdminService {
 
   async getMemberActivityStats(rehearsalIds: string[]) {
     const uniqueRehearsalIds = Array.from(new Set(rehearsalIds));
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    const startOfToday = getEuropeBerlinStartOfDay();
 
     const selectedRehearsals = uniqueRehearsalIds.length > 0
       ? await this.prisma.rehearsal.findMany({
@@ -212,6 +228,7 @@ export class AdminService {
     const selectedRehearsalIds = selectedRehearsals.map((r) => r.id);
 
     const members = await this.prisma.member.findMany({
+      where: { isDisabled: false },
       select: {
         id: true,
         choirVoice: { select: { id: true, name: true, sortOrder: true } },
@@ -307,7 +324,7 @@ export class AdminService {
     }
 
     return this.prisma.member.findMany({
-      where: { OR: conditions },
+      where: { isDisabled: false, OR: conditions },
       select: {
         id: true,
         firstName: true,
@@ -346,12 +363,13 @@ export class AdminService {
   }
 
   async getMemberById(memberId: string) {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    const startOfToday = getEuropeBerlinStartOfDay();
 
-    const [totalPastRehearsals, member] = await Promise.all([
-      this.prisma.rehearsal.count({ where: { date: { lt: startOfToday }, isOptional: false } }),
-      this.prisma.member.findUnique({
+    const rehearsals = await this.prisma.rehearsal.findMany({
+        where: { date: { lt: startOfToday }, isOptional: false, attendanceRecords: { some: {} } },
+        select: { id: true, date: true, isOptional: true, attendanceRecords: { take: 1, select: { id: true } } },
+      });
+    const member = await this.prisma.member.findUnique({
         where: { id: memberId },
         select: {
           id: true,
@@ -361,27 +379,34 @@ export class AdminService {
           choirVoice: { select: { id: true, name: true, sortOrder: true } },
           voiceAdminGrants: { select: { choirVoice: { select: { id: true, name: true } } } },
           createdAt: true,
+          isDisabled: true,
+          disabledAt: true,
+          disableReason: true,
           attendanceRecords: {
-            where: { rehearsal: { date: { lt: startOfToday }, isOptional: false } },
+            where: { rehearsalId: { in: rehearsals.map((r) => r.id) } },
             select: { rehearsalId: true },
           },
           attendancePlans: {
             where: {
               response: 'DECLINED',
-              rehearsal: { date: { lt: startOfToday }, isOptional: false },
+              rehearsalId: { in: rehearsals.map((r) => r.id) },
             },
             select: { rehearsalId: true },
           },
         },
-      }),
-    ]);
+      });
 
     if (!member) throw new NotFoundException('Mitglied nicht gefunden');
 
-    const attendedPastIds = new Set(member.attendanceRecords.map((r) => r.rehearsalId));
-    const declinedPastIds = new Set(member.attendancePlans.map((p) => p.rehearsalId));
-    const declinedNotAttended = [...declinedPastIds].filter((id) => !attendedPastIds.has(id)).length;
-    const unexcusedAbsenceCount = Math.max(0, totalPastRehearsals - attendedPastIds.size - declinedNotAttended);
+    const attendedPastIds = member.attendanceRecords.map((r) => r.rehearsalId);
+    const declinedPastIds = member.attendancePlans.map((p) => p.rehearsalId);
+    const unexcusedAbsenceCount = countUnexcusedAbsences({
+      memberCreatedAt: member.createdAt,
+      rehearsals: rehearsals.map((r) => ({ ...r, hasAttendanceRecord: r.attendanceRecords.length > 0 })),
+      attendedRehearsalIds: attendedPastIds,
+      declinedRehearsalIds: declinedPastIds,
+      now: startOfToday,
+    });
 
     return {
       id: member.id,
@@ -391,7 +416,10 @@ export class AdminService {
       choirVoice: member.choirVoice,
       voiceAdminVoices: (member.voiceAdminGrants ?? []).map((grant) => grant.choirVoice),
       createdAt: member.createdAt,
-      attendanceCount: attendedPastIds.size,
+      isDisabled: member.isDisabled,
+      disabledAt: member.disabledAt,
+      disableReason: member.disableReason,
+      attendanceCount: attendedPastIds.length,
       unexcusedAbsenceCount,
     };
   }
@@ -494,16 +522,15 @@ export class AdminService {
   }
 
   async exportMembersExcel(): Promise<Buffer> {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    const startOfToday = getEuropeBerlinStartOfDay();
 
-    const [rehearsals, members] = await Promise.all([
-      this.prisma.rehearsal.findMany({
-        where: { date: { lt: startOfToday }, isOptional: false },
+    const rehearsals = await this.prisma.rehearsal.findMany({
+        where: { date: { lt: startOfToday }, isOptional: false, attendanceRecords: { some: {} } },
         orderBy: { date: 'asc' },
         select: { id: true, date: true, title: true },
-      }),
-      this.prisma.member.findMany({
+      });
+    const members = await this.prisma.member.findMany({
+        where: { isDisabled: false },
         orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
         select: {
           id: true,
@@ -511,21 +538,21 @@ export class AdminService {
           lastName: true,
           email: true,
           lastLoginAt: true,
+          createdAt: true,
           choirVoice: { select: { name: true } },
           attendanceRecords: {
-            where: { rehearsal: { date: { lt: startOfToday }, isOptional: false } },
+            where: { rehearsalId: { in: rehearsals.map((r) => r.id) } },
             select: { rehearsalId: true },
           },
           attendancePlans: {
             where: {
               response: 'DECLINED',
-              rehearsal: { date: { lt: startOfToday }, isOptional: false },
+              rehearsalId: { in: rehearsals.map((r) => r.id) },
             },
             select: { rehearsalId: true },
           },
         },
-      }),
-    ]);
+      });
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Mitglieder');
@@ -548,21 +575,21 @@ export class AdminService {
     ]);
     headerRow.font = { bold: true };
 
-    const rehearsalIdsWithRecords = new Set(
-      members.flatMap((m) => m.attendanceRecords.map((r) => r.rehearsalId)),
-    );
-
     for (const m of members) {
       const attendedIds = new Set(m.attendanceRecords.map((r) => r.rehearsalId));
       const declinedIds = new Set(m.attendancePlans.map((p) => p.rehearsalId));
 
       const attendanceCount = attendedIds.size;
-      const unexcusedCount = rehearsals.filter(
-        (r) => rehearsalIdsWithRecords.has(r.id) && !attendedIds.has(r.id) && !declinedIds.has(r.id),
-      ).length;
+      const unexcusedCount = countUnexcusedAbsences({
+        memberCreatedAt: m.createdAt,
+        rehearsals: rehearsals.map((r) => ({ ...r, isOptional: false, hasAttendanceRecord: true })),
+        attendedRehearsalIds: attendedIds,
+        declinedRehearsalIds: declinedIds,
+        now: startOfToday,
+      });
 
       const rehearsalStatuses = rehearsals.map((r) => {
-        if (!rehearsalIdsWithRecords.has(r.id)) return '–';
+        if (r.date < m.createdAt) return '–';
         if (attendedIds.has(r.id)) return 'ja';
         if (declinedIds.has(r.id)) return 'nein';
         return 'unentschuldigt';

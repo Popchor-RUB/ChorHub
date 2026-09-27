@@ -139,17 +139,22 @@ async function buildMagicLinkMail(member: { id: string; firstName: string; email
   const hashedCode = createHash('sha256').update(rawCode).digest('hex');
   const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-  await prisma.$transaction([
-    prisma.memberLoginCode.deleteMany({
+  await prisma.$transaction(async (tx) => {
+    const active = await tx.member.updateMany({
+      where: { id: member.id, isDisabled: false },
+      data: { updatedAt: new Date() },
+    });
+    if (active.count !== 1) throw new Error('Member account is disabled or missing');
+    await tx.memberLoginCode.deleteMany({
       where: { memberId: member.id, expiresAt: { lt: new Date() } },
-    }),
-    prisma.memberLoginToken.create({
+    });
+    await tx.memberLoginToken.create({
       data: { memberId: member.id, hashedToken },
-    }),
-    prisma.memberLoginCode.create({
+    });
+    await tx.memberLoginCode.create({
       data: { memberId: member.id, hashedCode, expiresAt: codeExpiresAt },
-    }),
-  ]);
+    });
+  });
 
   const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
   return {
@@ -166,8 +171,13 @@ async function buildMagicLinkMail(member: { id: string; firstName: string; email
 async function createMemberSessionToken(memberId: string): Promise<string> {
   const rawToken = randomBytes(32).toString('hex');
   const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-  await prisma.memberLoginToken.create({
-    data: { memberId, hashedToken },
+  await prisma.$transaction(async (tx) => {
+    const active = await tx.member.updateMany({
+      where: { id: memberId, isDisabled: false },
+      data: { updatedAt: new Date() },
+    });
+    if (active.count !== 1) throw new Error('Member account is disabled or missing');
+    await tx.memberLoginToken.create({ data: { memberId, hashedToken } });
   });
   return rawToken;
 }
@@ -326,7 +336,7 @@ function renderProgress(current: number, total: number): void {
 async function inviteMembers(sendToAll: boolean): Promise<void> {
   const SENT_INTERVAL=60000
   const members = await prisma.member.findMany({
-    where: sendToAll ? undefined : { lastLoginAt: null },
+    where: sendToAll ? { isDisabled: false } : { isDisabled: false, lastLoginAt: null },
     orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     select: { id: true, firstName: true, lastName: true, email: true },
   });

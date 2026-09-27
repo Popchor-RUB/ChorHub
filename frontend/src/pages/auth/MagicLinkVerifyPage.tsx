@@ -4,6 +4,8 @@ import { Card, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { attendanceApi, memberAuthApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { DisabledAccountNotice } from '../../components/auth/DisabledAccountNotice';
+import { getDisabledAccountContact } from '../../utils/authErrors';
 
 const isAttendanceResponse = (value: string | null): value is 'CONFIRMED' | 'DECLINED' =>
   value === 'CONFIRMED' || value === 'DECLINED';
@@ -13,6 +15,7 @@ export function MagicLinkVerifyPage() {
   const navigate = useNavigate();
   const { setMemberSession } = useAuthStore();
   const [error, setError] = useState('');
+  const [disabledContactEmail, setDisabledContactEmail] = useState<string | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -45,8 +48,10 @@ export function MagicLinkVerifyPage() {
         }
 
         navigate('/proben', { replace: true });
-      } catch {
-        setError(t('auth.error_invalid_link'));
+      } catch (error) {
+        const contactEmail = getDisabledAccountContact(error);
+        setError(contactEmail ? t('auth.error_member_disabled') : t('auth.error_invalid_link'));
+        setDisabledContactEmail(contactEmail);
       }
     });
   }, [navigate, searchParams, setMemberSession, t]);
@@ -58,7 +63,9 @@ export function MagicLinkVerifyPage() {
           {error ? (
             <div>
               <p className="text-danger font-medium mb-2">{t('auth.login_failed')}</p>
-              <p className="text-muted text-sm">{error}</p>
+              {disabledContactEmail
+                ? <DisabledAccountNotice message={error} contactEmail={disabledContactEmail} />
+                : <p className="text-muted text-sm">{error}</p>}
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4">

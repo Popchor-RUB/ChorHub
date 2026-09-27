@@ -21,11 +21,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
         : typeof responseBody.message === 'string'
           ? responseBody.message
           : 'Interner Serverfehler';
+    const disabledDetails = responseBody.code === 'MEMBER_DISABLED' && typeof responseBody.contactEmail === 'string'
+      ? { code: responseBody.code, contactEmail: responseBody.contactEmail }
+      : {};
 
     response.status(status).json({
       error: {
         statusCode: status,
         message,
+        ...disabledDetails,
       },
       meta: {
         timestamp: new Date().toISOString(),

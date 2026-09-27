@@ -380,7 +380,7 @@ export function AttendancePage() {
           member={selectedMember}
           isOpen={isMemberOpen}
           onClose={onMemberClose}
-          onDelete={(id) => setRecords((prev) => prev.filter((r) => r.id !== id))}
+          onStatusChanged={(id) => setRecords((prev) => prev.filter((record) => record.id !== id))}
         />
       )}
 

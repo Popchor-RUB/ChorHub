@@ -15,6 +15,9 @@ export interface Member {
   lastName: string;
   email: string;
   choirVoice?: { id: string; name: string } | null;
+  disabled?: boolean;
+  disabledAt?: string | null;
+  disableReason?: string | null;
 }
 
 export async function getAdminToken(): Promise<string> {
@@ -35,12 +38,19 @@ export async function getAdminToken(): Promise<string> {
   return data.token;
 }
 
-export async function getFirstMember(adminToken: string): Promise<Member> {
-  const res = await fetch(backendUrl('/admin/members'), {
+export async function getMembers(
+  adminToken: string,
+  status: 'active' | 'disabled' = 'active',
+): Promise<Member[]> {
+  const res = await fetch(backendUrl(`/admin/members?status=${status}`), {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
   if (!res.ok) throw new Error(`Failed to fetch members: ${res.status}`);
-  const members = await res.json() as Member[];
+  return res.json() as Promise<Member[]>;
+}
+
+export async function getFirstMember(adminToken: string): Promise<Member> {
+  const members = await getMembers(adminToken);
   if (!members.length) throw new Error('No members found — run seed first');
   return members[0];
 }
@@ -92,12 +102,21 @@ export async function createMember(
   return res.json() as Promise<Member>;
 }
 
-export async function deleteMember(adminToken: string, memberId: string): Promise<void> {
-  const res = await fetch(backendUrl(`/admin/members/${memberId}`), {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${adminToken}` },
+export async function setMemberDisabled(
+  adminToken: string,
+  memberId: string,
+  disabled: boolean,
+  reason?: string,
+): Promise<void> {
+  const res = await fetch(backendUrl(`/admin/members/${memberId}/status`), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify({ disabled, ...(reason === undefined ? {} : { reason }) }),
   });
-  if (!res.ok) throw new Error(`Failed to delete member: ${res.status}`);
+  if (!res.ok) throw new Error(`Failed to update member status: ${res.status} ${await res.text()}`);
 }
 
 export async function getMemberRehearsals(

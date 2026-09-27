@@ -1,25 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { getAdminToken, createMember, deleteMember, getMemberRehearsals, getAllRehearsals } from '../helpers/api';
-import { backendUrl } from '../config';
+import {
+  getAdminToken,
+  getFirstMember,
+  createMember,
+  getMembers,
+  setMemberDisabled,
+  getMemberRehearsals,
+  getAllRehearsals,
+} from '../helpers/api';
 
 // Runs in the 'admin-auth' project with the configured admin storage state.
-// Serial mode prevents parallel create/delete tests from interfering with row-count assertions
+// Serial mode prevents parallel create/disable tests from interfering with row-count assertions
 test.describe.configure({ mode: 'serial' });
-
-const TEST_EMAILS = ['eva.braun.e2e@test.de', 'plan.test.e2e@test.de'];
-
-// Clean up any leftover test members before the suite runs (handles previous failed runs)
-test.beforeAll(async () => {
-  const token = await getAdminToken();
-  const members = await fetch(backendUrl('/admin/members'), {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then((r) => r.json()) as { id: string; email: string }[];
-  for (const m of members) {
-    if (TEST_EMAILS.includes(m.email)) {
-      await deleteMember(token, m.id).catch(() => {});
-    }
-  }
-});
 
 test.describe('Admin member overview', () => {
   test.beforeEach(async ({ page }) => {
@@ -40,8 +32,10 @@ test.describe('Admin member overview', () => {
     ).toBeVisible();
   });
 
-  test('shows 205 seeded members (206 rows including header)', async ({ page }) => {
-    await expect(page.getByRole('row')).toHaveCount(206);
+  test('shows active members returned by the overview API', async ({ page }) => {
+    const token = await getAdminToken();
+    const activeMembers = await getMembers(token);
+    await expect(page.getByRole('row')).toHaveCount(activeMembers.length + 1);
   });
 
   test('clicking a member row opens the detail modal', async ({ page }) => {
@@ -88,19 +82,16 @@ test.describe('Admin member overview', () => {
 
   test('search input filters the member list', async ({ page }) => {
     const searchInput = page.getByPlaceholder('Name suchen…');
-
-    // Search for a common German surname guaranteed to appear in 200 members
-    await searchInput.fill('Müller');
-
+    const firstMember = await getFirstMember(await getAdminToken());
+    const initialRowCount = await page.getByRole('row').count();
+    await searchInput.fill(`${firstMember.firstName} ${firstMember.lastName}`);
+    await expect.poll(() => page.getByRole('row').count()).toBeLessThan(initialRowCount);
     const rowCount = await page.getByRole('row').count();
-    // Some Müllers exist in 205 members; count is less than full 206
-    expect(rowCount).toBeLessThan(206);
-    // But at least the header + 1 member
     expect(rowCount).toBeGreaterThanOrEqual(2);
 
     // Clear search restores all members
     await searchInput.clear();
-    await expect(page.getByRole('row')).toHaveCount(206);
+    await expect(page.getByRole('row')).toHaveCount(initialRowCount);
   });
 
   test('voice filter chips are visible after members load', async ({ page }) => {
@@ -184,7 +175,7 @@ test.describe('Create member modal', () => {
 
   test.afterEach(async () => {
     if (createdMemberId) {
-      await deleteMember(adminToken, createdMemberId).catch(() => {});
+      await setMemberDisabled(adminToken, createdMemberId, true, 'E2E test cleanup').catch(() => {});
     }
   });
 
@@ -225,7 +216,8 @@ test.describe('Create member modal', () => {
 
     await modal.getByLabel('Vorname').fill('Eva');
     await modal.getByLabel('Nachname').fill('Braun');
-    await modal.getByLabel('E-Mail').fill('eva.braun.e2e@test.de');
+    const email = `eva.braun.${Date.now()}.e2e@test.de`;
+    await modal.getByLabel('E-Mail').fill(email);
     await modal.getByRole('button', { name: 'Anlegen & E-Mail senden' }).click();
 
     await expect(modal).not.toBeVisible({ timeout: 10_000 });
@@ -233,18 +225,15 @@ test.describe('Create member modal', () => {
     await expect(page.getByRole('row')).toHaveCount(initialRowCount + 1, { timeout: 10_000 });
 
     // Fetch the created id for cleanup
-    const members = await fetch(backendUrl('/admin/members'), {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    }).then((r) => r.json()) as { id: string; email: string }[];
-    const created = members.find((m) => m.email === 'eva.braun.e2e@test.de');
-    if (created) createdMemberId = created.id;
+    const created = (await getMembers(adminToken)).find((m) => m.email === email);
+    if (created) {
+      createdMemberId = created.id;
+    }
   });
 
   test('shows error when email is already taken', async ({ page }) => {
     // Get an existing member's email
-    const members = await fetch(backendUrl('/admin/members'), {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    }).then((r) => r.json()) as { email: string }[];
+    const members = await getMembers(adminToken);
     const existingEmail = members[0].email;
 
     await page.getByRole('button', { name: '+ Neu' }).click();
@@ -266,7 +255,7 @@ test.describe('Create member modal', () => {
     const member = await createMember(adminToken, {
       firstName: 'Plan',
       lastName: 'Test',
-      email: 'plan.test.e2e@test.de',
+      email: `plan.test.${Date.now()}.e2e@test.de`,
     });
     createdMemberId = member.id;
 

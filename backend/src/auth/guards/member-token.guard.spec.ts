@@ -19,6 +19,9 @@ const mockMember = {
   email: 'anna@choir.de',
   choirVoice: 'SOPRAN' as const,
   lastLoginAt: null as Date | null,
+  isDisabled: false,
+  disabledAt: null,
+  disableReason: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -55,6 +58,17 @@ describe('MemberTokenGuard', () => {
     prismaMock.memberLoginToken.findUnique.mockResolvedValue(null);
     const ctx = buildContext({ 'x-member-token': 'invalid-token' });
     await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects a token tied to a disabled member', async () => {
+    prismaMock.memberLoginToken.findUnique.mockResolvedValue({
+      ...mockTokenRecord,
+      member: { ...mockMember, isDisabled: true },
+    } as any);
+
+    await expect(guard.canActivate(buildContext({ 'x-member-token': 'raw-token' })))
+      .rejects.toThrow(UnauthorizedException);
+    expect(prismaMock.member.updateMany).not.toHaveBeenCalled();
   });
 
   it('sets request.user and returns true for valid token', async () => {

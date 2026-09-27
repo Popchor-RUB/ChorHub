@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -61,17 +62,24 @@ export class AuthService {
     const hashedCode = createHash('sha256').update(loginCode).digest('hex');
     const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-    await this.prisma.$transaction([
-      this.prisma.memberLoginCode.deleteMany({
+    await this.prisma.$transaction(async (tx) => {
+      // Lock member row before issuing credentials so disablement cannot race creation.
+      const active = await tx.member.updateMany({
+        where: { id: memberId, isDisabled: false },
+        data: { updatedAt: new Date() },
+      });
+      if (active.count !== 1) throw this.disabledMemberError();
+
+      await tx.memberLoginCode.deleteMany({
         where: { memberId, expiresAt: { lt: new Date() } },
-      }),
-      this.prisma.memberLoginToken.create({
+      });
+      await tx.memberLoginToken.create({
         data: { memberId, hashedToken },
-      }),
-      this.prisma.memberLoginCode.create({
+      });
+      await tx.memberLoginCode.create({
         data: { memberId, hashedCode, expiresAt: codeExpiresAt },
-      }),
-    ]);
+      });
+    });
 
     const magicUrl = `${this.config.getOrThrow<string>('APP_URL')}/auth/verify?token=${rawToken}`;
     return { rawToken, loginCode, magicUrl };
@@ -84,6 +92,7 @@ export class AuthService {
     if (!member) {
       throw new UnauthorizedException('Ungültige Zugangsdaten');
     }
+    this.assertMemberActive(member);
 
     const { magicUrl, rawToken, loginCode } = await this.issueMemberMagicLink(member.id);
     await this.mailService.sendMagicLink(member, magicUrl, rawToken, loginCode);
@@ -97,6 +106,7 @@ export class AuthService {
     if (!member) {
       throw new UnauthorizedException('Ungültiger oder abgelaufener Code');
     }
+    this.assertMemberActive(member);
 
     if (this.isStaging()) {
       return this.verifyCodeInStagingMode(member, code);
@@ -165,12 +175,13 @@ export class AuthService {
     const hashedToken = createHash('sha256').update(rawToken).digest('hex');
 
     await this.prisma.$transaction(async (tx) => {
+      const active = await tx.member.updateMany({
+        where: { id: member.id, isDisabled: false },
+        data: { lastLoginAt: new Date() },
+      });
+      if (active.count !== 1) throw this.disabledMemberError();
       await tx.memberLoginToken.create({
         data: { memberId: member.id, hashedToken },
-      });
-      await tx.member.update({
-        where: { id: member.id },
-        data: { lastLoginAt: new Date() },
       });
     });
 
@@ -202,10 +213,12 @@ export class AuthService {
     }
 
     const { member } = tokenRecord;
-    await this.prisma.member.update({
-      where: { id: member.id },
+    this.assertMemberActive(member);
+    const active = await this.prisma.member.updateMany({
+      where: { id: member.id, isDisabled: false },
       data: { lastLoginAt: new Date() },
     });
+    if (active.count !== 1) throw this.disabledMemberError();
 
     return {
       token: rawToken,
@@ -216,5 +229,17 @@ export class AuthService {
         email: member.email,
       },
     };
+  }
+
+  private assertMemberActive(member: { isDisabled: boolean }): void {
+    if (member.isDisabled) throw this.disabledMemberError();
+  }
+
+  private disabledMemberError(): ForbiddenException {
+    return new ForbiddenException({
+      code: 'MEMBER_DISABLED',
+      message: 'Mitgliedskonto deaktiviert',
+      contactEmail: this.config.getOrThrow<string>('CHOIR_ADMIN_EMAIL'),
+    });
   }
 }

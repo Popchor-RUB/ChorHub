@@ -25,7 +25,9 @@ export function MemberOverviewPage() {
   const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState('');
   const [voiceFilter, setVoiceFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'active' | 'disabled'>('active');
   const [selectedMember, setSelectedMember] = useState<MemberOverview | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { isOpen, open: onOpen, close: onClose } = useOverlayState();
   const { isOpen: isCreateOpen, open: onCreateOpen, close: onCreateClose } = useOverlayState();
   const navigate = useNavigate();
@@ -45,6 +47,7 @@ export function MemberOverviewPage() {
       !q ||
       m.firstName.toLowerCase().includes(q) ||
       m.lastName.toLowerCase().includes(q) ||
+      m.email.toLowerCase().includes(q) ||
       `${m.firstName} ${m.lastName}`.toLowerCase().includes(q) || 
       `${m.lastName} ${m.firstName}`.toLowerCase().includes(q.replace(/[,\s]+/, " "));
     const matchesVoice = !voiceFilter || m.choirVoice?.name === voiceFilter;
@@ -52,11 +55,12 @@ export function MemberOverviewPage() {
   });
 
   useEffect(() => {
-    adminMembersApi.list().then((res) => {
+    setLoading(true);
+    adminMembersApi.list(statusFilter).then((res) => {
       setMembers(res.data as MemberOverview[]);
       setLoading(false);
     });
-  }, []);
+  }, [statusFilter, refreshKey]);
 
   const handleRowClick = (member: MemberOverview) => {
     setSelectedMember(member);
@@ -109,6 +113,24 @@ export function MemberOverviewPage() {
         </div>
       </div>
       <MemberActivityStatsPanel />
+      <div className="flex gap-2" role="group" aria-label={t('members.status_filter')}>
+        <Button
+          size="sm"
+          variant={statusFilter === 'active' ? 'primary' : 'tertiary'}
+          data-testid="members-status-active"
+          onPress={() => setStatusFilter('active')}
+        >
+          {t('members.active_filter')}
+        </Button>
+        <Button
+          size="sm"
+          variant={statusFilter === 'disabled' ? 'primary' : 'tertiary'}
+          data-testid="members-status-disabled"
+          onPress={() => setStatusFilter('disabled')}
+        >
+          {t('members.disabled_filter')}
+        </Button>
+      </div>
       <TextField
         className="w-full"
         value={search}
@@ -187,14 +209,18 @@ export function MemberOverviewPage() {
           member={selectedMember}
           isOpen={isOpen}
           onClose={onClose}
-          onDelete={(id) => setMembers((prev) => prev.filter((m) => m.id !== id))}
+          onStatusChanged={() => {
+            setSelectedMember(null);
+            onClose();
+            setRefreshKey((current) => current + 1);
+          }}
         />
       )}
 
       <CreateMemberModal
         isOpen={isCreateOpen}
         onClose={onCreateClose}
-        onCreated={() => adminMembersApi.list().then((res) => setMembers(res.data as MemberOverview[]))}
+        onCreated={() => setRefreshKey((current) => current + 1)}
       />
     </div>
   );

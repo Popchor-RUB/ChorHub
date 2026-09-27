@@ -200,7 +200,10 @@ export const adminMembersApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  list: () => api.get('/admin/members'),
+  list: (status: 'active' | 'disabled' = 'active') =>
+    api.get('/admin/members', { params: { status } }),
+  setStatus: (id: string, data: { disabled: boolean; reason?: string }) =>
+    api.patch(`/admin/members/${id}/status`, data),
   activityStats: (rehearsalIds: string[]) =>
     api.post<MemberActivityStats>('/admin/members/activity-stats', { rehearsalIds }),
   export: () => api.get('/admin/members/export', { responseType: 'blob' }),
@@ -209,7 +212,6 @@ export const adminMembersApi = {
   rehearsals: (id: string) => api.get(`/admin/members/${id}/rehearsals`),
   sendInvite: (id: string) => api.post(`/admin/members/${id}/send-invite`),
   sendLogin: (id: string) => api.post(`/admin/members/${id}/send-login`),
-  delete: (id: string) => api.delete(`/admin/members/${id}`),
   setVoiceAdminVoices: (id: string, voiceIds: string[]) =>
     api.put<{ voiceAdminVoices: VoiceAdminVoice[] }>(`/admin/members/${id}/voice-admin-voices`, { voiceIds }),
   setAttendancePlan: (memberId: string, rehearsalId: string, response: 'CONFIRMED' | 'DECLINED' | null) =>

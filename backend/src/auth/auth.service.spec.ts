@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
@@ -18,6 +18,9 @@ const mockMember = {
   email: 'anna@choir.de',
   choirVoiceId: null,
   lastLoginAt: null,
+  isDisabled: false,
+  disabledAt: null,
+  disableReason: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -32,6 +35,7 @@ describe('AuthService', () => {
   beforeEach(async () => {
     isStagingValue = 'false';
     prismaMock = mockDeep<PrismaClient>();
+    prismaMock.member.updateMany.mockResolvedValue({ count: 1 });
     // Allow $transaction to execute both array and callback forms.
     prismaMock.$transaction.mockImplementation((arg: any) => {
       if (typeof arg === 'function') {
@@ -297,7 +301,7 @@ describe('AuthService', () => {
       prismaMock.memberLoginCode.findFirst.mockResolvedValue(mockCodeRecord as any);
       prismaMock.memberLoginCode.deleteMany.mockResolvedValue({ count: 1 });
       prismaMock.memberLoginToken.create.mockResolvedValue({} as any);
-      prismaMock.member.update.mockResolvedValue({ ...mockMember, lastLoginAt: new Date() });
+      prismaMock.member.updateMany.mockResolvedValue({ count: 1 });
 
       const result = await service.verifyCode('anna@choir.de', rawCode);
 
@@ -424,11 +428,49 @@ describe('AuthService', () => {
 
       expect(result.member.id).toBe(mockMember.id);
       expect(result.token).toBe('valid-raw-token');
-      expect(prismaMock.member.update).toHaveBeenCalledWith({
-        where: { id: mockMember.id },
+      expect(prismaMock.member.updateMany).toHaveBeenCalledWith({
+        where: { id: mockMember.id, isDisabled: false },
         data: { lastLoginAt: expect.any(Date) },
       });
       expect(prismaMock.memberLoginToken.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('disabled members', () => {
+    const disabledMember = { ...mockMember, isDisabled: true };
+
+    it('shows contact response and sends no magic link', async () => {
+      prismaMock.member.findFirst.mockResolvedValue(disabledMember);
+
+      await expect(service.requestMagicLink(disabledMember.email)).rejects.toThrow(ForbiddenException);
+      expect(prismaMock.memberLoginToken.create).not.toHaveBeenCalled();
+      expect(mailService.sendMagicLink).not.toHaveBeenCalled();
+    });
+
+    it('blocks staging bypass code before token creation', async () => {
+      isStagingValue = 'true';
+      prismaMock.member.findFirst.mockResolvedValue(disabledMember);
+
+      await expect(service.verifyCode(disabledMember.email, '111111')).rejects.toThrow(ForbiddenException);
+      expect(prismaMock.memberLoginToken.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects existing magic link for disabled member', async () => {
+      prismaMock.memberLoginToken.findUnique.mockResolvedValue({
+        id: 'token-1', memberId: disabledMember.id, hashedToken: 'hash',
+        createdAt: new Date(), member: disabledMember,
+      } as any);
+
+      await expect(service.verifyMagicLink('raw-token')).rejects.toThrow(ForbiddenException);
+      expect(prismaMock.member.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('checks member state inside credential issuance transaction', async () => {
+      prismaMock.member.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.issueMemberMagicLink(disabledMember.id)).rejects.toThrow(ForbiddenException);
+      expect(prismaMock.memberLoginToken.create).not.toHaveBeenCalled();
+      expect(prismaMock.memberLoginCode.create).not.toHaveBeenCalled();
     });
   });
 });

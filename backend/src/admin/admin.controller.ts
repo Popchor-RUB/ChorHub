@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   Patch,
@@ -23,6 +22,7 @@ import { AdminSetAttendancePlanDto } from './dto/admin-set-attendance-plan.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberActivityStatsDto } from './dto/member-activity-stats.dto';
 import { ReplaceVoiceAdminGrantsDto } from './dto/replace-voice-admin-grants.dto';
+import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
 
 @Controller('admin')
 @UseGuards(JwtAdminGuard)
@@ -45,8 +45,8 @@ export class AdminController {
   }
 
   @Get('members')
-  getMemberOverview() {
-    return this.adminService.getMemberOverview();
+  getMemberOverview(@Query('status') status: 'active' | 'disabled' = 'active') {
+    return this.adminService.getMemberOverview(status);
   }
 
   @Post('members/activity-stats')
@@ -68,10 +68,9 @@ export class AdminController {
     });
   }
 
-  @Delete('members/:id')
-  @HttpCode(204)
-  deleteMember(@Param('id') id: string) {
-    return this.adminService.deleteMember(id);
+  @Patch('members/:id/status')
+  updateMemberStatus(@Param('id') id: string, @Body() dto: UpdateMemberStatusDto) {
+    return this.adminService.updateMemberStatus(id, dto);
   }
 
   @Get('members/:id')

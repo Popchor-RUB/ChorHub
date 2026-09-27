@@ -28,6 +28,9 @@ describe("MembersService", () => {
       choirVoice: { id: "voice-a", name: "Sopran", sortOrder: 1 },
       choirVoiceId: "voice-a",
       lastLoginAt: null,
+      isDisabled: false,
+      disabledAt: null,
+      disableReason: null,
       updatedAt: new Date("2026-01-01T00:00:00Z"),
       voiceAdminGrants: [
         { choirVoice: { id: "voice-a", name: "Sopran" } },

@@ -38,6 +38,9 @@ export class MemberTokenGuard implements CanActivate {
     if (!tokenRecord) {
       throw new UnauthorizedException('Ungültiger Zugriffstoken');
     }
+    if (tokenRecord.member.isDisabled) {
+      throw new UnauthorizedException('Mitgliedskonto deaktiviert');
+    }
 
     await this.updateLastLoginAtIfNeeded(tokenRecord.member.id, tokenRecord.member.lastLoginAt);
     request.user = { id: tokenRecord.member.id, role: 'member' as const, member: tokenRecord.member };

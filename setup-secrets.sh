@@ -70,6 +70,11 @@ TRUST_PROXY=$(prompt TRUST_PROXY "Express trust proxy value (false, true, 1, or 
 VITE_API_URL_PROD=$(prompt VITE_API_URL_PROD "Frontend API URL (production)" "https://example.com/chorhub/api")
 VITE_BASE_PATH_PROD=$(prompt VITE_BASE_PATH_PROD "Frontend base path (production)" "/chorhub/")
 MAIL_FROM=$(prompt MAIL_FROM "Mail from address" "noreply@chorhub.de")
+CHOIR_ADMIN_EMAIL=$(prompt CHOIR_ADMIN_EMAIL "Choir admin email for disabled accounts" "")
+if [[ -z "$CHOIR_ADMIN_EMAIL" ]]; then
+  echo "Error: CHOIR_ADMIN_EMAIL is required." >&2
+  exit 1
+fi
 VAPID_EMAIL=$(prompt VAPID_EMAIL "VAPID contact email" "mailto:admin@chorhub.de")
 
 echo ""
@@ -134,6 +139,7 @@ SMTP_SECURE=${SMTP_SECURE}
 SMTP_USER=${SMTP_USER}
 SMTP_PASS=${SMTP_PASS}
 MAIL_FROM=${MAIL_FROM}
+CHOIR_ADMIN_EMAIL=${CHOIR_ADMIN_EMAIL}
 APP_URL=${APP_URL}
 TRUST_PROXY=${TRUST_PROXY}
 IS_STAGING=${IS_STAGING}

@@ -13,7 +13,8 @@ Chororganisations-Webanwendung für die Verwaltung von Probenterminen, Mitgliede
 - **Mitglieder-Import**: CSV-Upload → automatischer Versand von Einladungslinks
 - **Informationsseite**: Markdown-Editor für alle Mitglieder sichtbarer Inhalt
 - **Anwesenheit**: Probe auswählen, Mitglieder per Autocomplete suchen, Anwesenheit abhaken
-- **Mitgliederübersicht**: Tabelle mit Probenbesuchsstatistik
+- **Mitgliederübersicht**: Tabelle mit Probenbesuchsstatistik und Filter für deaktivierte Konten
+- **Kontosperre**: Tägliche Prüfung um 06:00 Uhr (Europe/Berlin); drei unentschuldigt versäumte Pflichtproben nach dem Beitritt deaktivieren ein Mitglied, sobald für diese Proben Anwesenheit erfasst wurde. Admins können Konten mit optionalem Grund deaktivieren und wieder aktivieren.
 - **Probenübersicht**: Zu- und Absagen für zukünftige Proben, Anwesenheitszahlen für vergangene Proben – jeweils aufgeschlüsselt nach Stimmlage
 
 ## Tech Stack
@@ -219,6 +220,7 @@ Secrets und Konfiguration sind auf mehrere `.env`-Dateien aufgeteilt, die von `s
 | `SMTP_HOST` / `SMTP_PORT` | SMTP-Server |
 | `SMTP_USER` / `SMTP_PASS` | SMTP-Zugangsdaten |
 | `MAIL_FROM` | Absender-Adresse |
+| `CHOIR_ADMIN_EMAIL` | Empfänger der Deaktivierungsbenachrichtigung und Kontaktadresse für gesperrte Mitglieder; vor dem Start setzen |
 | `APP_URL` | URL der Frontend-App (für Magic Links) |
 | `TRUST_PROXY` | Wert für Express `trust proxy` (z. B. `false`, `true`, `1` oder Proxy-Subnetzliste; Standard: `loopback,linklocal,uniquelocal`) |
 | `IS_STAGING` | Aktiviert Staging-Modus (OTP `111111` gültig und Reminder-Mail-Throttling deaktiviert) |
@@ -256,7 +258,8 @@ Secrets und Konfiguration sind auf mehrere `.env`-Dateien aufgeteilt, die von `s
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
 | `POST` | `/admin/members/import` | CSV hochladen + E-Mails versenden |
-| `GET` | `/admin/members` | Mitgliederübersicht |
+| `GET` | `/admin/members?status=active\|disabled` | Mitgliederübersicht; Standard: aktive Mitglieder |
+| `PATCH` | `/admin/members/:id/status` | Mitglied deaktivieren oder wieder aktivieren; optionaler Grund beim Deaktivieren |
 | `GET` | `/admin/members/search?q=` | Mitglieder-Autocomplete |
 | `GET` | `/admin/members/:id/history` | Anwesenheitshistorie eines Mitglieds |
 | `PATCH` | `/general-info` | Allgemeine Informationen aktualisieren |

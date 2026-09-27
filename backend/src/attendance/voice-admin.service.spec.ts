@@ -72,6 +72,9 @@ describe("VoiceAdminService", () => {
       email: "target@example.test",
       choirVoiceId: "voice-a",
       lastLoginAt: null,
+      isDisabled: false,
+      disabledAt: null,
+      disableReason: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -99,6 +102,9 @@ describe("VoiceAdminService", () => {
       email: "target@example.test",
       choirVoiceId: "voice-b",
       lastLoginAt: null,
+      isDisabled: false,
+      disabledAt: null,
+      disableReason: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -124,6 +130,9 @@ describe("VoiceAdminService", () => {
         email: "target@example.test",
         choirVoiceId: null,
         lastLoginAt: null,
+        isDisabled: false,
+        disabledAt: null,
+        disableReason: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -134,6 +143,9 @@ describe("VoiceAdminService", () => {
         email: "target@example.test",
         choirVoiceId: "voice-b",
         lastLoginAt: null,
+        isDisabled: false,
+        disabledAt: null,
+        disableReason: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });

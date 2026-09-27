@@ -21,6 +21,9 @@ model Member {
   choirVoiceId String?     @map("choir_voice_id")
   choirVoice   ChoirVoice? @relation(fields: [choirVoiceId], references: [id])
   lastLoginAt  DateTime?
+  isDisabled   Boolean     @default(false) @map("is_disabled")
+  disabledAt   DateTime?   @map("disabled_at")
+  disableReason String?    @map("disable_reason")
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -31,8 +34,30 @@ model Member {
   pushSubscriptions PushSubscription[]
   personalInfo      PersonalInfoEntry?
   voiceAdminGrants  VoiceAdminGrant[]
+  disableNotices    MemberDisableNotice[]
 
   @@map("members")
+}
+
+model MemberDisableNotice {
+  id              String   @id @default(uuid())
+  memberId        String   @map("member_id")
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  kind            String
+  recipient       String
+  memberEmail     String   @map("member_email")
+  firstName       String   @map("first_name")
+  lastName        String   @map("last_name")
+  disableReason   String?  @map("disable_reason")
+  attempts        Int      @default(0)
+  nextAttemptAt   DateTime @default(now()) @map("next_attempt_at")
+  claimedAt       DateTime? @map("claimed_at")
+  sentAt          DateTime? @map("sent_at")
+  lastError       String?  @map("last_error")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([sentAt, nextAttemptAt])
+  @@map("member_disable_notices")
 }
 
 model MemberLoginCode {

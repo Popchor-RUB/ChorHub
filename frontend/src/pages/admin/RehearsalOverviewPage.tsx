@@ -162,7 +162,7 @@ export function RehearsalOverviewPage() {
           member={selectedMember}
           isOpen={isMemberOpen}
           onClose={onMemberClose}
-          onDelete={loadData}
+          onStatusChanged={loadData}
         />
       )}
     </div>

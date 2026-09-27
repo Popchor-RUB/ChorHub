@@ -50,6 +50,7 @@ export class RehearsalReminderTask {
 
     const [members, plans] = await Promise.all([
       this.prisma.member.findMany({
+        where: { isDisabled: false },
         select: {
           id: true,
           firstName: true,

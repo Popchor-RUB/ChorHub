@@ -7,6 +7,8 @@ import { memberAuthApi, validateStoredSessionToken } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { IOSInstallGuide } from '../../components/IOSInstallGuide';
 import { useIOSInstallGuide } from '../../hooks/useIOSInstallGuide';
+import { DisabledAccountNotice } from '../../components/auth/DisabledAccountNotice';
+import { getDisabledAccountContact } from '../../utils/authErrors';
 
 const isToken = (v: string) => /^[0-9a-f]{64}$/i.test(v);
 
@@ -19,6 +21,7 @@ export function MagicLinkRequestPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [disabledContactEmail, setDisabledContactEmail] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setMemberSession, memberSession, adminSession, logoutMember, logoutAdmin } = useAuthStore();
   const [hasHydrated, setHasHydrated] = useState(() => useAuthStore.persist.hasHydrated());
@@ -97,6 +100,7 @@ export function MagicLinkRequestPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setDisabledContactEmail(null);
     const trimmed = email.trim();
     try {
       if (trimmed.toLowerCase() === 'admin') {
@@ -112,7 +116,11 @@ export function MagicLinkRequestPage() {
         setResendCooldown(30);
       }
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
+      const contactEmail = getDisabledAccountContact(error);
+      if (contactEmail) {
+        setError(t('auth.error_member_disabled'));
+        setDisabledContactEmail(contactEmail);
+      } else if (axios.isAxiosError(error) && error.response?.status === 401) {
         setError(t('auth.error_invalid_credentials'));
       } else {
         setError(t('common.error_generic'));
@@ -126,11 +134,14 @@ export function MagicLinkRequestPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setDisabledContactEmail(null);
     try {
       const res = await memberAuthApi.verifyCode(email.trim(), code.trim());
       handleSession(res.data.token, res.data.member);
-    } catch {
-      setError(t('auth.error_invalid_code'));
+    } catch (error) {
+      const contactEmail = getDisabledAccountContact(error);
+      setError(contactEmail ? t('auth.error_member_disabled') : t('auth.error_invalid_code'));
+      setDisabledContactEmail(contactEmail);
     } finally {
       setLoading(false);
     }
@@ -182,7 +193,7 @@ export function MagicLinkRequestPage() {
                   autoCapitalize="none"
                 />
               </TextField>
-              {error && <p className="text-danger text-sm">{error}</p>}
+              {error && <DisabledAccountNotice message={error} contactEmail={disabledContactEmail} />}
               <Button type="submit" isPending={loading} fullWidth>
                 {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{isToken(email.trim()) ? t('auth.login') : t('auth.continue')}</>}
               </Button>
@@ -216,7 +227,7 @@ export function MagicLinkRequestPage() {
                   className="text-center font-mono text-2xl tracking-[0.5em]"
                 />
               </TextField>
-              {error && <p className="text-danger text-sm">{error}</p>}
+              {error && <DisabledAccountNotice message={error} contactEmail={disabledContactEmail} />}
               <Button type="submit" isPending={loading} isDisabled={code.length !== 6} fullWidth>
                 {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('auth.login')}</>}
               </Button>

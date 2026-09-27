@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Modal, Spinner, Button } from '@heroui/react';
-import { CheckIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { adminMembersApi } from '../../services/api';
 import type { ChoirVoice, MemberRehearsalEntry } from '../../types';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { MemberRehearsalOverview } from './MemberRehearsalOverview';
+import { MemberStatusActions } from './MemberStatusActions';
 
 interface MemberRef {
   id: string;
@@ -14,57 +15,49 @@ interface MemberRef {
   lastName: string;
   email?: string;
   choirVoice: ChoirVoice | null;
+  isDisabled?: boolean;
+  disabledAt?: string | null;
+  disableReason?: string | null;
 }
 
 interface Props {
   member: MemberRef;
   isOpen: boolean;
   onClose: () => void;
-  onDelete?: (memberId: string) => void;
+  onStatusChanged?: (memberId: string) => void;
 }
 
-export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) {
+export function MemberDetailModal({ member, isOpen, onClose, onStatusChanged }: Props) {
   const [rehearsals, setRehearsals] = useState<MemberRehearsalEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dateLocale = useDateLocale();
 
   useEffect(() => {
     if (!isOpen) {
-      setEditMode(false);
-      setShowAllUpcoming(false);
-      setIsDeleteConfirmOpen(false);
       return;
     }
-    setShowAllUpcoming(false);
-    setLoading(true);
-    adminMembersApi.rehearsals(member.id).then((res) => {
+    void Promise.resolve().then(() => {
+      setLoading(true);
+      return adminMembersApi.rehearsals(member.id);
+    }).then((res) => {
       setRehearsals(res.data as MemberRehearsalEntry[]);
-      setLoading(false);
-    });
+    }).finally(() => setLoading(false));
   }, [isOpen, member.id]);
 
-  const handleDeleteConfirm = async () => {
-    setDeleting(true);
-    try {
-      await adminMembersApi.delete(member.id);
-      setIsDeleteConfirmOpen(false);
-      onClose();
-      onDelete?.(member.id);
-    } finally {
-      setDeleting(false);
-    }
+  const handleClose = () => {
+    setEditMode(false);
+    setShowAllUpcoming(false);
+    onClose();
   };
 
   return (
     <>
-      <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
         <Modal.Container size="lg" scroll="inside">
           <Modal.Dialog>
             <Modal.CloseTrigger />
@@ -79,23 +72,19 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
               </Modal.Heading>
             {!loading && (
               <div className="mt-0.5 mr-2 flex shrink-0 items-center gap-1.5">
-                {editMode && onDelete && (
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="danger-soft"
-                    aria-label={t('detail_modal.delete_member')}
-                    onPress={() => setIsDeleteConfirmOpen(true)}
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </Button>
+                {onStatusChanged && (
+                  <MemberStatusActions
+                    memberId={member.id}
+                    status={{ isDisabled: member.isDisabled ?? false, disabledAt: member.disabledAt ?? null, disableReason: member.disableReason ?? null }}
+                    onUpdated={() => onStatusChanged(member.id)}
+                  />
                 )}
                 <Button
                   size="sm"
                   variant="tertiary"
                   data-testid="member-detail-open-page"
                   onPress={() => {
-                    onClose();
+                    handleClose();
                     navigate(`/admin/mitglieder/${member.id}`);
                   }}
                 >
@@ -138,25 +127,6 @@ export function MemberDetailModal({ member, isOpen, onClose, onDelete }: Props) 
         </Modal.Container>
       </Modal.Backdrop>
 
-      <Modal.Backdrop isOpen={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <Modal.Container size="sm">
-          <Modal.Dialog>
-            <Modal.CloseTrigger />
-            <Modal.Header><Modal.Heading>{t('detail_modal.delete_member')}</Modal.Heading></Modal.Header>
-            <Modal.Body>
-            <p className="text-sm text-muted">{t('detail_modal.delete_confirm_prompt')}</p>
-            </Modal.Body>
-            <Modal.Footer>
-            <Button variant="tertiary" onPress={() => setIsDeleteConfirmOpen(false)} isDisabled={deleting}>
-              {t('detail_modal.delete_confirm_no')}
-            </Button>
-            <Button variant="danger" isPending={deleting} onPress={handleDeleteConfirm}>
-              {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('detail_modal.delete_confirm_yes')}</>}
-            </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
     </>
   );
 }

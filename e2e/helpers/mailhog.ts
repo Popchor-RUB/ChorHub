@@ -80,6 +80,19 @@ export async function getLatestMagicLinkCode(
   );
 }
 
+export async function getLatestMailBody(
+  recipientEmail: string,
+  { timeoutMs = 15_000, pollIntervalMs = 500 }: PollOptions = {},
+): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const messages = await fetchMessages(recipientEmail);
+    if (messages.length) return decodeQuotedPrintable(messages[0].Content.Body);
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+  throw new Error(`Timed out waiting for email to ${recipientEmail} after ${timeoutMs}ms`);
+}
+
 export async function clearMailHog(): Promise<void> {
   const res = await fetch(mailhogUrl('/api/v1/messages'), {
     method: 'DELETE',

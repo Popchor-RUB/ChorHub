@@ -3,6 +3,7 @@ import { AdminService } from './admin.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { AuthService } from '../auth/auth.service';
+import { MemberStatusService } from '../members/member-status.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { PrismaClient } from '../generated/prisma/client';
 
@@ -13,6 +14,9 @@ const mockMember = (overrides: Partial<any> = {}) => ({
   email: 'anna@choir.de',
   choirVoiceId: null,
   lastLoginAt: null,
+  isDisabled: false,
+  disabledAt: null,
+  disableReason: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
@@ -26,6 +30,7 @@ describe('AdminService', () => {
 
   beforeEach(async () => {
     prismaMock = mockDeep<PrismaClient>();
+    prismaMock.rehearsal.findMany.mockResolvedValue([]);
     mailService = {
       sendMagicLink: jest.fn().mockResolvedValue(undefined),
       sendMemberInvite: jest.fn().mockResolvedValue(undefined),
@@ -46,6 +51,7 @@ describe('AdminService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: MailService, useValue: mailService },
         { provide: AuthService, useValue: authService },
+        { provide: MemberStatusService, useValue: { disable: jest.fn(), enable: jest.fn() } },
       ],
     }).compile();
 
@@ -273,6 +279,12 @@ describe('AdminService', () => {
   });
 
   describe('getMemberOverview', () => {
+    const countableRehearsals = ['r-1', 'r-2', 'r-3'].map((id, index) => ({
+      id,
+      date: new Date(`2025-01-0${index + 1}T18:00:00Z`),
+      isOptional: false,
+      attendanceRecords: [{ id: `record-${id}` }],
+    }));
     const mockMemberRow = (overrides: {
       attendanceRecords?: { rehearsalId: string }[];
       attendancePlans?: { rehearsalId: string }[];
@@ -282,14 +294,14 @@ describe('AdminService', () => {
       lastName: 'Müller',
       email: 'anna@choir.de',
       choirVoiceId: null,
-      createdAt: new Date(),
+      createdAt: new Date('2024-01-01T00:00:00Z'),
       _count: { attendanceRecords: overrides.attendanceRecords?.length ?? 0 },
       attendanceRecords: overrides.attendanceRecords ?? [],
       attendancePlans: overrides.attendancePlans ?? [],
     });
 
     it('returns unexcusedAbsenceCount=0 when member attended all rehearsals', async () => {
-      prismaMock.rehearsal.count.mockResolvedValue(2);
+      prismaMock.rehearsal.findMany.mockResolvedValue(countableRehearsals.slice(0, 2) as any);
       prismaMock.member.findMany.mockResolvedValue([
         mockMemberRow({
           attendanceRecords: [{ rehearsalId: 'r-1' }, { rehearsalId: 'r-2' }],
@@ -298,13 +310,13 @@ describe('AdminService', () => {
 
       const result = await service.getMemberOverview();
       expect(result[0].unexcusedAbsenceCount).toBe(0);
-      expect(prismaMock.rehearsal.count).toHaveBeenCalledWith({
-        where: { date: { lt: expect.any(Date) }, isOptional: false },
-      });
+      expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ date: { lt: expect.any(Date) }, isOptional: false }),
+      }));
     });
 
     it('counts missed rehearsals with no plan as unentschuldigt', async () => {
-      prismaMock.rehearsal.count.mockResolvedValue(3);
+      prismaMock.rehearsal.findMany.mockResolvedValue(countableRehearsals as any);
       prismaMock.member.findMany.mockResolvedValue([
         mockMemberRow({
           attendanceRecords: [{ rehearsalId: 'r-1' }],
@@ -318,7 +330,7 @@ describe('AdminService', () => {
     });
 
     it('reduces unexcusedAbsenceCount for DECLINED plans (entschuldigt)', async () => {
-      prismaMock.rehearsal.count.mockResolvedValue(3);
+      prismaMock.rehearsal.findMany.mockResolvedValue(countableRehearsals as any);
       prismaMock.member.findMany.mockResolvedValue([
         mockMemberRow({
           attendanceRecords: [{ rehearsalId: 'r-1' }],
@@ -334,7 +346,7 @@ describe('AdminService', () => {
     it('does NOT reduce unexcusedAbsenceCount for CONFIRMED plans (unentschuldigt)', async () => {
       // The query filters attendancePlans to DECLINED only, so a CONFIRMED plan
       // never appears in attendancePlans here — absence remains unentschuldigt.
-      prismaMock.rehearsal.count.mockResolvedValue(2);
+      prismaMock.rehearsal.findMany.mockResolvedValue(countableRehearsals.slice(0, 2) as any);
       prismaMock.member.findMany.mockResolvedValue([
         mockMemberRow({
           attendanceRecords: [],
@@ -641,7 +653,7 @@ describe('AdminService', () => {
       await service.searchMembers('anna');
       expect(prismaMock.member.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ OR: expect.any(Array) }),
+          where: expect.objectContaining({ isDisabled: false, OR: expect.any(Array) }),
           take: 10,
         }),
       );
@@ -650,7 +662,14 @@ describe('AdminService', () => {
 
   describe('getMemberById', () => {
     it('returns member detail with counters', async () => {
-      prismaMock.rehearsal.count.mockResolvedValue(5);
+      prismaMock.rehearsal.findMany.mockResolvedValue(
+        ['r-1', 'r-2', 'r-3', 'r-4', 'r-5'].map((id) => ({
+          id,
+          date: new Date('2025-06-01T18:00:00Z'),
+          isOptional: false,
+          attendanceRecords: [{ id: `record-${id}` }],
+        })) as any,
+      );
       prismaMock.member.findUnique.mockResolvedValue({
         id: 'member-1',
         firstName: 'Anna',
@@ -672,7 +691,7 @@ describe('AdminService', () => {
     });
 
     it('throws NotFoundException when member does not exist', async () => {
-      prismaMock.rehearsal.count.mockResolvedValue(0);
+      prismaMock.rehearsal.findMany.mockResolvedValue([]);
       prismaMock.member.findUnique.mockResolvedValue(null);
       await expect(service.getMemberById('missing')).rejects.toThrow('Mitglied nicht gefunden');
     });

@@ -90,6 +90,30 @@ export class MailService {
     });
   }
 
+  async sendMemberDisabledMail(params: { to: string; firstName: string; adminEmail: string }): Promise<void> {
+    await this.mailerService.sendMail({
+      to: params.to,
+      subject: 'Dein ChorHub Zugang wurde deaktiviert',
+      template: 'member-disabled',
+      context: { firstName: params.firstName, adminEmail: params.adminEmail },
+    });
+  }
+
+  async sendAdminMemberDisabledMail(params: {
+    to: string;
+    firstName: string;
+    lastName: string;
+    memberEmail: string;
+    reason: string | null;
+  }): Promise<void> {
+    await this.mailerService.sendMail({
+      to: params.to,
+      subject: `ChorHub Mitglied deaktiviert: ${params.firstName} ${params.lastName}`,
+      template: 'admin-member-disabled',
+      context: params,
+    });
+  }
+
   private renderMarkdownToHtml(markdownContent: string): string {
     return this.markdownRenderer.render(markdownContent);
   }

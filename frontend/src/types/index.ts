@@ -14,6 +14,9 @@ export interface Member {
   email: string;
   choirVoice: ChoirVoice | null;
   createdAt: string;
+  isDisabled: boolean;
+  disabledAt: string | null;
+  disableReason: string | null;
 }
 
 export interface Rehearsal {

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { getAdminToken, getFirstMember } from './helpers/api';
-import { clearMailHog, getLatestMagicLinkCode } from './helpers/mailhog';
+import { createMember, getAdminToken, getFirstMember, setMemberDisabled } from './helpers/api';
+import { clearMailHog, getLatestMailBody, getLatestMagicLinkCode } from './helpers/mailhog';
 
 // Runs in the 'no-auth' project — no storageState injected
 
@@ -114,5 +114,36 @@ test.describe('Member magic link flow', () => {
     await expect(page.getByLabel('E-Mail-Adresse')).toBeVisible();
     await expect(page.getByText('6-stelliger Code')).not.toBeVisible();
     await expect(page).toHaveURL(/\/login/);
+  });
+
+  test('disabled account gets contact message and sends member/admin notices', async ({ page }) => {
+    const token = await getAdminToken();
+    const member = await createMember(token, {
+      firstName: 'Disabled',
+      lastName: 'E2E',
+      email: `disabled.${Date.now()}@test.de`,
+    });
+    await clearMailHog();
+
+    try {
+      await setMemberDisabled(token, member.id, true, 'E2E disabled account reason');
+
+      const memberNotice = await getLatestMailBody(member.email);
+      const adminNotice = await getLatestMailBody('admins@chorhub.test');
+      expect(memberNotice).toContain('admins@chorhub.test');
+      expect(memberNotice).not.toContain('E2E disabled account reason');
+      expect(adminNotice).toContain(member.email);
+      expect(adminNotice).toContain('E2E disabled account reason');
+
+      await page.goto('/login');
+      await page.getByLabel('E-Mail-Adresse').fill(member.email);
+      await page.getByRole('button', { name: 'Weiter' }).click();
+
+      await expect(page.locator('a[href="mailto:admins@chorhub.test"]')).toBeVisible();
+      await expect(page.getByText(/deaktiviert|disabled/i)).toBeVisible();
+      await expect(page.getByText('6-stelliger Code')).not.toBeVisible();
+    } finally {
+      await setMemberDisabled(token, member.id, false).catch(() => {});
+    }
   });
 });

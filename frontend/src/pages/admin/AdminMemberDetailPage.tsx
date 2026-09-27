@@ -16,6 +16,8 @@ import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { MemberRehearsalOverview } from '../../components/member/MemberRehearsalOverview';
+import { MemberStatusActions } from '../../components/member/MemberStatusActions';
+import type { MemberStatus } from '../../components/member/MemberStatusActions';
 import { adminMembersApi, choirVoicesApi } from '../../services/api';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import type { AdminMemberDetail, ChoirVoice, MemberRehearsalEntry } from '../../types';
@@ -195,6 +197,25 @@ export function AdminMemberDetailPage() {
         <h1 className="text-3xl font-semibold tracking-tight">{t('members.detail_title')}</h1>
         <p className="text-muted">{member.firstName} {member.lastName}</p>
       </div>
+
+      <Card data-testid="member-disable-status">
+        <Card.Content className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="font-medium">{member.isDisabled ? t('members.disabled_status') : t('members.active_status')}</p>
+            {member.disabledAt && (
+              <p className="text-sm text-muted">
+                {t('members.disabled_since', { date: new Date(member.disabledAt).toLocaleDateString(dateLocale) })}
+              </p>
+            )}
+            {member.disableReason && <p className="mt-1 text-sm text-muted">{t('members.disable_reason')}: {member.disableReason}</p>}
+          </div>
+          <MemberStatusActions
+            memberId={member.id}
+            status={{ isDisabled: member.isDisabled, disabledAt: member.disabledAt, disableReason: member.disableReason }}
+            onUpdated={(status: MemberStatus) => setMember((current) => current ? { ...current, ...status } : current)}
+          />
+        </Card.Content>
+      </Card>
 
       <Card>
         <Card.Content className="grid gap-4 md:grid-cols-2">
