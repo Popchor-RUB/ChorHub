@@ -246,7 +246,7 @@ export function OptionsPage() {
           <Modal.Body>
             <p
               dangerouslySetInnerHTML={{
-                __html: t('voice.delete_confirm', { name: deletingVoice?.name ?? '' }),
+                __html: t('voice.delete_confirm', { name: deletingVoice?.name ?? '', interpolation: { escapeValue: true } }),
               }}
             />
           </Modal.Body>

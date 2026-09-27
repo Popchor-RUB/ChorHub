@@ -40,7 +40,7 @@ export function DeleteConfirmModal({ rehearsal, isOpen, onClose, onDeleted }: Pr
           <Modal.Body className="pb-2">
           <p
             dangerouslySetInnerHTML={{
-              __html: t('rehearsals.confirm_delete', { title: rehearsal?.title ?? '' }),
+              __html: t('rehearsals.confirm_delete', { title: rehearsal?.title ?? '', interpolation: { escapeValue: true } }),
             }}
           />
           </Modal.Body>

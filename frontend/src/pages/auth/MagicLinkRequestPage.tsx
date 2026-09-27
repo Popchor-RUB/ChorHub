@@ -203,7 +203,7 @@ export function MagicLinkRequestPage() {
               <p
                 className="text-muted text-sm"
                 dangerouslySetInnerHTML={{
-                  __html: t('auth.email_sent', { email: email.trim() }),
+                  __html: t('auth.email_sent', { email: email.trim(), interpolation: { escapeValue: true } }),
                 }}
               />
               <p

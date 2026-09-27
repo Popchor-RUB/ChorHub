@@ -92,6 +92,19 @@ test.describe('Member magic link flow', () => {
     await expect(page.getByLabel('E-Mail-Adresse')).toBeVisible();
   });
 
+  test('email sent message escapes typed markup', async ({ page }) => {
+    const email = 'test<img src=x onerror=alert(1)>@example.test';
+    await page.route('**/auth/magic-link/request', (route) => route.fulfill({ json: {} }));
+
+    await page.goto('/login');
+    await page.getByLabel('E-Mail-Adresse').fill(email);
+    await page.getByRole('button', { name: 'Weiter' }).click();
+
+    const message = page.locator('p').filter({ hasText: 'Eine E-Mail wurde an' });
+    await expect(message.locator('strong')).toHaveText(email);
+    await expect(message.locator('img')).toHaveCount(0);
+  });
+
   test('resend button is initially disabled on code screen', async ({ page }) => {
     await clearMailHog();
 
