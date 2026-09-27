@@ -23,6 +23,7 @@ import { UpdateMemberDto } from './dto/update-member.dto';
 import { MemberActivityStatsDto } from './dto/member-activity-stats.dto';
 import { ReplaceVoiceAdminGrantsDto } from './dto/replace-voice-admin-grants.dto';
 import { UpdateMemberStatusDto } from './dto/update-member-status.dto';
+import { UpdateMemberCommentDto } from './dto/update-member-comment.dto';
 
 @Controller('admin')
 @UseGuards(JwtAdminGuard)
@@ -76,6 +77,11 @@ export class AdminController {
   @Get('members/:id')
   getMember(@Param('id') id: string) {
     return this.adminService.getMemberById(id);
+  }
+
+  @Put('members/:id/comment')
+  updateMemberComment(@Param('id') id: string, @Body() dto: UpdateMemberCommentDto) {
+    return this.adminService.updateMemberComment(id, dto.comment);
   }
 
   @Put('members/:id/voice-admin-voices')

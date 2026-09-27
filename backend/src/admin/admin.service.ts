@@ -33,7 +33,7 @@ export class AdminService {
 
     if (dto.voiceId) {
       const voice = await this.prisma.choirVoice.findUnique({ where: { id: dto.voiceId } });
-      if (!voice) throw new NotFoundException('Stimmlage nicht gefunden');
+      if (!voice) throw new NotFoundException('Stimmgruppe nicht gefunden');
     }
 
     const member = await this.prisma.member.create({
@@ -106,7 +106,7 @@ export class AdminService {
         if (!voice) {
           results.failed.push({
             email: row.email,
-            reason: `Ungültige Stimmlage: ${row.choirVoice}`,
+            reason: `Ungültige Stimmgruppe: ${row.choirVoice}`,
           });
           continue;
         }
@@ -169,6 +169,7 @@ export class AdminService {
           isDisabled: true,
           disabledAt: true,
           disableReason: true,
+          internalComment: true,
           attendanceRecords: {
             where: { rehearsalId: { in: rehearsals.map((r) => r.id) } },
             select: { rehearsalId: true },
@@ -204,6 +205,7 @@ export class AdminService {
         isDisabled: m.isDisabled,
         disabledAt: m.disabledAt,
         disableReason: m.disableReason,
+        internalComment: m.internalComment,
         attendanceCount: attendedPastIds.length,
         unexcusedAbsenceCount,
       };
@@ -382,6 +384,7 @@ export class AdminService {
           isDisabled: true,
           disabledAt: true,
           disableReason: true,
+          internalComment: true,
           attendanceRecords: {
             where: { rehearsalId: { in: rehearsals.map((r) => r.id) } },
             select: { rehearsalId: true },
@@ -419,9 +422,21 @@ export class AdminService {
       isDisabled: member.isDisabled,
       disabledAt: member.disabledAt,
       disableReason: member.disableReason,
+      internalComment: member.internalComment,
       attendanceCount: attendedPastIds.length,
       unexcusedAbsenceCount,
     };
+  }
+
+
+  async updateMemberComment(memberId: string, comment: string) {
+    const normalizedComment = comment.trim() || null;
+    const result = await this.prisma.member.updateMany({
+      where: { id: memberId },
+      data: { internalComment: normalizedComment },
+    });
+    if (result.count === 0) throw new NotFoundException('Mitglied nicht gefunden');
+    return { comment: normalizedComment };
   }
 
   async replaceVoiceAdminVoices(memberId: string, voiceIds: string[]) {
@@ -436,7 +451,7 @@ export class AdminService {
           })
         : [];
       if (voices.length !== voiceIds.length) {
-        throw new NotFoundException('Stimmlage nicht gefunden');
+        throw new NotFoundException('Stimmgruppe nicht gefunden');
       }
 
       await tx.voiceAdminGrant.deleteMany({ where: { memberId } });
@@ -462,7 +477,7 @@ export class AdminService {
 
     if (dto.voiceId) {
       const voice = await this.prisma.choirVoice.findUnique({ where: { id: dto.voiceId } });
-      if (!voice) throw new NotFoundException('Stimmlage nicht gefunden');
+      if (!voice) throw new NotFoundException('Stimmgruppe nicht gefunden');
     }
 
     await this.prisma.member.update({

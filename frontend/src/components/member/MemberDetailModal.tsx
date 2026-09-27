@@ -8,6 +8,7 @@ import type { ChoirVoice, MemberRehearsalEntry } from '../../types';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { MemberRehearsalOverview } from './MemberRehearsalOverview';
 import { MemberStatusActions } from './MemberStatusActions';
+import { MemberCommentEditor } from './MemberCommentEditor';
 
 interface MemberRef {
   id: string;
@@ -18,6 +19,7 @@ interface MemberRef {
   isDisabled?: boolean;
   disabledAt?: string | null;
   disableReason?: string | null;
+  internalComment?: string | null;
 }
 
 interface Props {
@@ -25,9 +27,11 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onStatusChanged?: (memberId: string) => void;
+  showComment?: boolean;
+  onCommentChanged?: (memberId: string, comment: string | null) => void;
 }
 
-export function MemberDetailModal({ member, isOpen, onClose, onStatusChanged }: Props) {
+export function MemberDetailModal({ member, isOpen, onClose, onStatusChanged, showComment = false, onCommentChanged }: Props) {
   const [rehearsals, setRehearsals] = useState<MemberRehearsalEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -90,6 +94,15 @@ export function MemberDetailModal({ member, isOpen, onClose, onStatusChanged }: 
                 >
                   {t('detail_modal.open_member_page')}
                 </Button>
+                {showComment && (
+                  <MemberCommentEditor
+                    comment={member.internalComment}
+                    onSave={async (comment) => {
+                      const response = await adminMembersApi.setComment(member.id, comment);
+                      onCommentChanged?.(member.id, response.data.comment);
+                    }}
+                  />
+                )}
                 <Button
                   isIconOnly
                   size="sm"

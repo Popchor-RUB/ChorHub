@@ -34,6 +34,7 @@ describe('EmailsService', () => {
       isDisabled: false,
       disabledAt: null,
       disableReason: null,
+      internalComment: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

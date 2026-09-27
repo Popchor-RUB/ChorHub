@@ -7,15 +7,17 @@ import { voiceAdminAttendanceApi } from '../../services/api';
 import type { MemberRehearsalEntry, VoiceAttendanceRecord } from '../../types';
 import { useDateLocale } from '../../hooks/useDateLocale';
 import { MemberRehearsalOverview } from './MemberRehearsalOverview';
+import { MemberCommentEditor } from './MemberCommentEditor';
 
 type Props = {
   member: VoiceAttendanceRecord | null;
   isOpen: boolean;
   onClose: () => void;
   onAccessRevoked: () => void;
+  onCommentChanged: (memberId: string, comment: string | null) => void;
 };
 
-export function VoiceAdminMemberDetailModal({ member, isOpen, onClose, onAccessRevoked }: Props) {
+export function VoiceAdminMemberDetailModal({ member, isOpen, onClose, onAccessRevoked, onCommentChanged }: Props) {
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
   const [rehearsals, setRehearsals] = useState<MemberRehearsalEntry[]>([]);
@@ -77,16 +79,30 @@ export function VoiceAdminMemberDetailModal({ member, isOpen, onClose, onAccessR
               <span className="text-sm font-normal text-muted">{member?.choirVoice?.name ?? '—'}</span>
             </Modal.Heading>
             {!loading && !loadError && member && (
-              <Button
-                isIconOnly
-                size="sm"
-                variant={editMode ? 'primary' : 'tertiary'}
-                aria-label={editMode ? t('detail_modal.edit_mode_done') : t('detail_modal.edit_mode_toggle')}
-                data-testid="voice-admin-member-edit-mode-toggle"
-                onPress={() => setEditMode((current) => !current)}
-              >
-                {editMode ? <CheckIcon className="h-4 w-4" /> : <PencilSquareIcon className="h-4 w-4" />}
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <MemberCommentEditor
+                  comment={member.internalComment}
+                  onSave={async (comment) => {
+                    try {
+                      const response = await voiceAdminAttendanceApi.setMemberComment(member.id, comment);
+                      onCommentChanged(member.id, response.data.comment);
+                    } catch (error: unknown) {
+                      if (axios.isAxiosError(error) && error.response?.status === 403) onAccessRevoked();
+                      throw error;
+                    }
+                  }}
+                />
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant={editMode ? 'primary' : 'tertiary'}
+                  aria-label={editMode ? t('detail_modal.edit_mode_done') : t('detail_modal.edit_mode_toggle')}
+                  data-testid="voice-admin-member-edit-mode-toggle"
+                  onPress={() => setEditMode((current) => !current)}
+                >
+                  {editMode ? <CheckIcon className="h-4 w-4" /> : <PencilSquareIcon className="h-4 w-4" />}
+                </Button>
+              </div>
             )}
           </Modal.Header>
           <Modal.Body className="pb-6">

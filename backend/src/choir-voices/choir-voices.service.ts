@@ -34,7 +34,7 @@ export class ChoirVoicesService {
     const memberCount = await this.prisma.member.count({ where: { choirVoiceId: id } });
     if (memberCount > 0) {
       throw new BadRequestException(
-        `Diese Stimmlage kann nicht gelöscht werden, da ihr ${memberCount} Mitglied(er) zugeordnet sind.`,
+        `Diese Stimmgruppe kann nicht gelöscht werden, da ihr ${memberCount} Mitglied(er) zugeordnet sind.`,
       );
     }
     await this.prisma.choirVoice.delete({ where: { id } });
@@ -43,7 +43,7 @@ export class ChoirVoicesService {
 
   private async ensureExists(id: string) {
     const voice = await this.prisma.choirVoice.findUnique({ where: { id } });
-    if (!voice) throw new NotFoundException('Stimmlage nicht gefunden');
+    if (!voice) throw new NotFoundException('Stimmgruppe nicht gefunden');
     return voice;
   }
 

@@ -320,6 +320,10 @@ export function VoiceAdminAttendancePage() {
         isOpen={detailMember !== null}
         onClose={() => setDetailMember(null)}
         onAccessRevoked={handleAccessRevoked}
+        onCommentChanged={(memberId, internalComment) => {
+          setRecords((current) => current.map((record) => record.id === memberId ? { ...record, internalComment } : record));
+          setDetailMember((current) => current?.id === memberId ? { ...current, internalComment } : current);
+        }}
       />
     </div>
   );

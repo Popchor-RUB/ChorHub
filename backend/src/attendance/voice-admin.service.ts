@@ -57,6 +57,21 @@ export class VoiceAdminService {
     );
   }
 
+  async updateMemberComment(memberId: string, targetMemberId: string, comment: string) {
+    const voiceIds = await this.requireVoiceIds(memberId);
+    const normalizedComment = comment.trim() || null;
+    const result = await this.prisma.member.updateMany({
+      where: { id: targetMemberId, choirVoiceId: { in: voiceIds } },
+      data: { internalComment: normalizedComment },
+    });
+    if (result.count === 0) {
+      throw new ForbiddenException(
+        "Mitglied liegt außerhalb der freigegebenen Stimmgruppen",
+      );
+    }
+    return { comment: normalizedComment };
+  }
+
   async getCheckinPublicKey(memberId: string) {
     await this.requireVoiceIds(memberId);
     return { publicKey: this.checkinService.getPublicKeyBase64() };
@@ -68,7 +83,7 @@ export class VoiceAdminService {
       select: { choirVoiceId: true },
     });
     if (grants.length === 0)
-      throw new ForbiddenException("Keine Stimmlagen freigegeben");
+      throw new ForbiddenException("Keine Stimmgruppen freigegeben");
     return grants.map((grant) => grant.choirVoiceId);
   }
 
@@ -79,7 +94,7 @@ export class VoiceAdminService {
     });
     if (!member?.choirVoiceId || !voiceIds.includes(member.choirVoiceId)) {
       throw new ForbiddenException(
-        "Mitglied liegt außerhalb der freigegebenen Stimmlagen",
+        "Mitglied liegt außerhalb der freigegebenen Stimmgruppen",
       );
     }
     return member;

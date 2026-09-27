@@ -17,6 +17,7 @@ const mockMember = (overrides: Partial<any> = {}) => ({
   isDisabled: false,
   disabledAt: null,
   disableReason: null,
+  internalComment: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
@@ -125,7 +126,7 @@ describe('AdminService', () => {
       prismaMock.choirVoice.findUnique.mockResolvedValue(null);
 
       await expect(service.createMember({ ...dto, voiceId: 'unknown-voice' })).rejects.toThrow(
-        'Stimmlage nicht gefunden',
+        'Stimmgruppe nicht gefunden',
       );
       expect(prismaMock.member.create).not.toHaveBeenCalled();
     });
@@ -202,7 +203,7 @@ describe('AdminService', () => {
       );
       const result = await service.importMembersFromCsv(csv);
       expect(result.failed).toHaveLength(1);
-      expect(result.failed[0].reason).toContain('Ungültige Stimmlage');
+      expect(result.failed[0].reason).toContain('Ungültige Stimmgruppe');
       expect(mailService.sendMemberInvite).not.toHaveBeenCalled();
     });
 
@@ -288,11 +289,13 @@ describe('AdminService', () => {
     const mockMemberRow = (overrides: {
       attendanceRecords?: { rehearsalId: string }[];
       attendancePlans?: { rehearsalId: string }[];
+      internalComment?: string | null;
     } = {}) => ({
       id: 'member-1',
       firstName: 'Anna',
       lastName: 'Müller',
       email: 'anna@choir.de',
+      internalComment: overrides.internalComment ?? null,
       choirVoiceId: null,
       createdAt: new Date('2024-01-01T00:00:00Z'),
       _count: { attendanceRecords: overrides.attendanceRecords?.length ?? 0 },
@@ -305,11 +308,13 @@ describe('AdminService', () => {
       prismaMock.member.findMany.mockResolvedValue([
         mockMemberRow({
           attendanceRecords: [{ rehearsalId: 'r-1' }, { rehearsalId: 'r-2' }],
+          internalComment: 'Bitte anrufen',
         }),
       ] as any);
 
       const result = await service.getMemberOverview();
       expect(result[0].unexcusedAbsenceCount).toBe(0);
+      expect(result[0].internalComment).toBe('Bitte anrufen');
       expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith(expect.objectContaining({
         where: expect.objectContaining({ date: { lt: expect.any(Date) }, isOptional: false }),
       }));
@@ -676,6 +681,7 @@ describe('AdminService', () => {
         lastName: 'Müller',
         email: 'anna@choir.de',
         choirVoice: { id: 'v1', name: 'Sopran', sortOrder: 1 },
+        internalComment: 'Bitte anrufen',
         createdAt: new Date('2025-01-01'),
         attendanceRecords: [{ rehearsalId: 'r-1' }, { rehearsalId: 'r-2' }],
         attendancePlans: [{ rehearsalId: 'r-3' }],
@@ -685,6 +691,7 @@ describe('AdminService', () => {
       expect(result).toMatchObject({
         id: 'member-1',
         firstName: 'Anna',
+        internalComment: 'Bitte anrufen',
         attendanceCount: 2,
         unexcusedAbsenceCount: 2,
       });
@@ -694,6 +701,24 @@ describe('AdminService', () => {
       prismaMock.rehearsal.findMany.mockResolvedValue([]);
       prismaMock.member.findUnique.mockResolvedValue(null);
       await expect(service.getMemberById('missing')).rejects.toThrow('Mitglied nicht gefunden');
+    });
+
+    it('trims member comments, clears blank comments, and reports missing members', async () => {
+      prismaMock.member.updateMany.mockResolvedValue({ count: 1 } as any);
+      await expect(service.updateMemberComment('member-1', '  Notiz  ')).resolves.toEqual({ comment: 'Notiz' });
+      expect(prismaMock.member.updateMany).toHaveBeenLastCalledWith({
+        where: { id: 'member-1' },
+        data: { internalComment: 'Notiz' },
+      });
+
+      await expect(service.updateMemberComment('member-1', '   ')).resolves.toEqual({ comment: null });
+      expect(prismaMock.member.updateMany).toHaveBeenLastCalledWith({
+        where: { id: 'member-1' },
+        data: { internalComment: null },
+      });
+
+      prismaMock.member.updateMany.mockResolvedValue({ count: 0 } as any);
+      await expect(service.updateMemberComment('missing', 'note')).rejects.toThrow('Mitglied nicht gefunden');
     });
   });
 

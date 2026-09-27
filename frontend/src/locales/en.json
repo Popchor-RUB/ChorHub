@@ -415,6 +415,14 @@
     "delete_confirm_yes": "Yes, delete",
     "delete_confirm_no": "Cancel"
   },
+  "member_comment": {
+    "indicator_label": "Member comment",
+    "edit": "Edit member comment",
+    "label": "Internal comment",
+    "save": "Save",
+    "cancel": "Cancel",
+    "save_failed": "Could not save comment. Please try again."
+  },
   "attendance_detail": {
     "present_chip": "{{count}} present",
     "unexcused_chip": "{{count}} unexcused absence",

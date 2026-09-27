@@ -15,7 +15,7 @@ Chororganisations-Webanwendung für die Verwaltung von Probenterminen, Mitgliede
 - **Anwesenheit**: Probe auswählen, Mitglieder per Autocomplete suchen, Anwesenheit abhaken
 - **Mitgliederübersicht**: Tabelle mit Probenbesuchsstatistik und Filter für deaktivierte Konten
 - **Kontosperre**: Tägliche Prüfung um 06:00 Uhr (Europe/Berlin); drei unentschuldigt versäumte Pflichtproben nach dem Beitritt deaktivieren ein Mitglied, sobald für diese Proben Anwesenheit erfasst wurde. Admins können Konten mit optionalem Grund deaktivieren und wieder aktivieren.
-- **Probenübersicht**: Zu- und Absagen für zukünftige Proben, Anwesenheitszahlen für vergangene Proben – jeweils aufgeschlüsselt nach Stimmlage
+- **Probenübersicht**: Zu- und Absagen für zukünftige Proben, Anwesenheitszahlen für vergangene Proben – jeweils aufgeschlüsselt nach Stimmgruppe
 
 ## Tech Stack
 
@@ -107,7 +107,7 @@ Anna,Müller,anna@beispiel.de,SOPRAN
 Max,Schmidt,max@beispiel.de,BASS
 ```
 
-**Gültige Stimmlagen:** `SOPRAN`, `MEZZOSOPRAN`, `ALT`, `TENOR`, `BARITON`, `BASS`
+**Gültige Stimmgruppen:** `SOPRAN`, `MEZZOSOPRAN`, `ALT`, `TENOR`, `BARITON`, `BASS`
 
 ## Tests
 

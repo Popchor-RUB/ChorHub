@@ -15,6 +15,7 @@ const member: Member = {
   isDisabled: false,
   disabledAt: null,
   disableReason: null,
+  internalComment: null,
   createdAt: new Date('2025-01-01T00:00:00Z'),
   updatedAt: new Date('2025-01-01T00:00:00Z'),
 };
@@ -90,6 +91,7 @@ describe('MemberStatusService', () => {
       firstName: member.firstName,
       lastName: member.lastName,
       disableReason: null,
+      internalComment: null,
       attempts: 0,
     }] as any);
     prisma.memberDisableNotice.updateMany.mockResolvedValue({ count: 1 });

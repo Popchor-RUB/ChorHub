@@ -41,6 +41,7 @@ export interface AttendancePlan {
 export interface MemberOverview extends Member {
   attendanceCount: number;
   unexcusedAbsenceCount: number;
+  internalComment: string | null;
 }
 
 export interface MemberActivityRehearsal {
@@ -85,6 +86,7 @@ export interface VoiceAttendanceRecord {
   attended: boolean;
   plan: AttendanceResponse | null;
   lastAttendedRehearsalsAgo: number | null;
+  internalComment: string | null;
 }
 
 export interface MemberProfile extends Member {

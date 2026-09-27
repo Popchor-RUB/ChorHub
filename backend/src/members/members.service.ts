@@ -29,7 +29,7 @@ export class MembersService {
   async updateVoice(memberId: string, voiceId: string | null) {
     if (voiceId !== null) {
       const voice = await this.prisma.choirVoice.findUnique({ where: { id: voiceId } });
-      if (!voice) throw new NotFoundException('Stimmlage nicht gefunden');
+      if (!voice) throw new NotFoundException('Stimmgruppe nicht gefunden');
     }
     return this.prisma.member.update({
       where: { id: memberId },

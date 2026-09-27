@@ -4,6 +4,7 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import type { MemberUser } from "../auth/types/auth-user.types";
 import { SetAttendanceRecordDto } from "./dto/attendance.dto";
 import { VoiceAdminAttendancePlanDto } from "./dto/voice-admin-attendance-plan.dto";
+import { UpdateMemberCommentDto } from "../admin/dto/update-member-comment.dto";
 import { VoiceAdminService } from "./voice-admin.service";
 
 @Controller("attendance/voice-admin")
@@ -54,6 +55,15 @@ export class VoiceAdminController {
       rehearsalId,
       dto.response,
     );
+  }
+
+  @Put("members/:memberId/comment")
+  updateMemberComment(
+    @CurrentUser() user: MemberUser,
+    @Param("memberId") memberId: string,
+    @Body() dto: UpdateMemberCommentDto,
+  ) {
+    return this.voiceAdminService.updateMemberComment(user.id, memberId, dto.comment);
   }
 
   @Get("checkin/public-key")

@@ -18,6 +18,7 @@ import { MemberDetailModal } from '../../components/member/MemberDetailModal';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import { MemberActivityStatsPanel } from '../../components/member/MemberActivityStatsPanel';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
+import { MemberCommentIndicator } from '../../components/member/MemberCommentIndicator';
 
 export function MemberOverviewPage() {
   const [members, setMembers] = useState<MemberOverview[]>([]);
@@ -178,6 +179,7 @@ export function MemberOverviewPage() {
                   <span className="inline-flex items-center gap-1 text-accent font-medium">
                     <span>{m.firstName} {m.lastName}</span>
                     <MagnifyingGlassIcon className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+                    <MemberCommentIndicator comment={m.internalComment} />
                   </span>
                 </Table.Cell>
                 <Table.Cell className="text-sm text-muted">{m.email}</Table.Cell>
@@ -208,6 +210,11 @@ export function MemberOverviewPage() {
         <MemberDetailModal
           member={selectedMember}
           isOpen={isOpen}
+          showComment
+          onCommentChanged={(memberId, comment) => {
+            setMembers((current) => current.map((member) => member.id === memberId ? { ...member, internalComment: comment } : member));
+            setSelectedMember((current) => current?.id === memberId ? { ...current, internalComment: comment } : current);
+          }}
           onClose={onClose}
           onStatusChanged={() => {
             setSelectedMember(null);

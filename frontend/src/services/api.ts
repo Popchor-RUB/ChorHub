@@ -205,6 +205,8 @@ export const adminMembersApi = {
     api.get('/admin/members', { params: { status } }),
   setStatus: (id: string, data: { disabled: boolean; reason?: string }) =>
     api.patch(`/admin/members/${id}/status`, data),
+  setComment: (id: string, comment: string) =>
+    api.put<{ comment: string | null }>(`/admin/members/${id}/comment`, { comment }),
   activityStats: (rehearsalIds: string[]) =>
     api.post<MemberActivityStats>('/admin/members/activity-stats', { rehearsalIds }),
   export: () => api.get('/admin/members/export', { responseType: 'blob' }),
@@ -226,6 +228,8 @@ export const voiceAdminAttendanceApi = {
     api.put(`/attendance/voice-admin/records/${rehearsalId}`, { memberId, attended }),
   getMemberRehearsals: (memberId: string) =>
     api.get<MemberRehearsalEntry[]>(`/attendance/voice-admin/members/${memberId}/rehearsals`),
+  setMemberComment: (memberId: string, comment: string) =>
+    api.put<{ comment: string | null }>(`/attendance/voice-admin/members/${memberId}/comment`, { comment }),
   setMemberAttendancePlan: (memberId: string, rehearsalId: string, response: 'CONFIRMED' | 'DECLINED' | null) =>
     api.put(`/attendance/voice-admin/members/${memberId}/attendance-plans/${rehearsalId}`, { response }),
   getCheckinPublicKey: () => api.get<{ publicKey: string }>('/attendance/voice-admin/checkin/public-key'),

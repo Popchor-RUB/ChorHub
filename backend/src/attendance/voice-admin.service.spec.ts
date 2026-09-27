@@ -75,6 +75,7 @@ describe("VoiceAdminService", () => {
       isDisabled: false,
       disabledAt: null,
       disableReason: null,
+      internalComment: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -105,6 +106,7 @@ describe("VoiceAdminService", () => {
       isDisabled: false,
       disabledAt: null,
       disableReason: null,
+      internalComment: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -116,6 +118,30 @@ describe("VoiceAdminService", () => {
       "target",
       true,
     );
+  });
+
+  it("updates comments only when target still has a currently granted voice", async () => {
+    prismaMock.voiceAdminGrant.findMany.mockResolvedValue([
+      { memberId: "admin-member", choirVoiceId: "voice-a" },
+    ]);
+    prismaMock.member.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(service.updateMemberComment("admin-member", "target", "  Hinweis  "))
+      .resolves.toEqual({ comment: "Hinweis" });
+    expect(prismaMock.member.updateMany).toHaveBeenCalledWith({
+      where: { id: "target", choirVoiceId: { in: ["voice-a"] } },
+      data: { internalComment: "Hinweis" },
+    });
+
+    prismaMock.member.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.updateMemberComment("admin-member", "target", "text"))
+      .rejects.toThrow("Mitglied liegt außerhalb der freigegebenen Stimmgruppen");
+
+    prismaMock.member.updateMany.mockClear();
+    prismaMock.voiceAdminGrant.findMany.mockResolvedValue([]);
+    await expect(service.updateMemberComment("admin-member", "target", "text"))
+      .rejects.toThrow("Keine Stimmgruppen freigegeben");
+    expect(prismaMock.member.updateMany).not.toHaveBeenCalled();
   });
 
   it("rejects members without a voice and voices outside current grants", async () => {
@@ -133,6 +159,7 @@ describe("VoiceAdminService", () => {
         isDisabled: false,
         disabledAt: null,
         disableReason: null,
+        internalComment: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -146,6 +173,7 @@ describe("VoiceAdminService", () => {
         isDisabled: false,
         disabledAt: null,
         disableReason: null,
+        internalComment: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });

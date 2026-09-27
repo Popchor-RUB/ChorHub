@@ -1,0 +1,1 @@
+export const MEMBER_COMMENT_LIMIT = 2000;

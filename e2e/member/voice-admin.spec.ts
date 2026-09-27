@@ -11,6 +11,7 @@ type Member = {
   email: string;
   choirVoice: { id: string; name: string } | null;
   voiceAdminVoices?: { id: string; name: string }[];
+  internalComment?: string | null;
 };
 type MemberSession = { memberId: string; token: string };
 type MemberRehearsal = {
@@ -204,6 +205,73 @@ test.describe('Choir voice admin attendance', () => {
     await expect(page.locator('[data-testid="voice-admin-nav"]:visible')).toBeVisible();
   });
 
+  test('voice admin reads and edits shared scoped comments', async ({ page }) => {
+    await openAttendance(page);
+    const firstRow = page.getByTestId('attendance-member-row').first();
+    const memberId = await firstRow.getAttribute('data-member-id');
+    if (!memberId) throw new Error('Scoped member row missing ID');
+
+    const originalResponse = await fetch(backendUrl(`/admin/members/${memberId}`), { headers: adminHeaders() });
+    expect(originalResponse.ok).toBeTruthy();
+    const originalComment = ((await originalResponse.json()) as Member).internalComment ?? '';
+    const originalSelfResponse = await fetch(backendUrl(`/admin/members/${memberSession.memberId}`), {
+      headers: adminHeaders(),
+    });
+    expect(originalSelfResponse.ok).toBeTruthy();
+    const originalSelfComment = ((await originalSelfResponse.json()) as Member).internalComment ?? '';
+
+    const putAdminComment = async (targetId: string, comment: string) => {
+      const response = await fetch(backendUrl(`/admin/members/${targetId}/comment`), {
+        method: 'PUT',
+        headers: adminHeaders(),
+        body: JSON.stringify({ comment }),
+      });
+      expect(response.ok, await response.text()).toBeTruthy();
+    };
+
+    try {
+      await putAdminComment(memberId, 'Notiz der Gesamtadmin');
+      await openAttendance(page);
+      const scopedRow = page.locator(`[data-testid="attendance-member-row"][data-member-id="${memberId}"]`);
+      const indicator = scopedRow.getByTestId('member-comment-indicator');
+      await expect(indicator).toBeVisible();
+      await indicator.hover();
+      await expect(page.getByRole('tooltip')).toHaveText('Notiz der Gesamtadmin');
+
+      await scopedRow.locator('button').first().click();
+      const modal = page.getByTestId('voice-admin-member-detail');
+      await modal.getByTestId('member-comment-toggle').click();
+      const commentDialog = page.getByRole('dialog', { name: 'Mitgliederkommentar bearbeiten' });
+      await expect(commentDialog).toBeVisible();
+      await commentDialog.getByTestId('member-comment-input').fill('Notiz der Stimmadmin');
+      await commentDialog.getByTestId('member-comment-save').click();
+      await expect(commentDialog).not.toBeVisible();
+      await expect.poll(async () => {
+        const response = await fetch(backendUrl(`/admin/members/${memberId}`), { headers: adminHeaders() });
+        return ((await response.json()) as Member).internalComment;
+      }).toBe('Notiz der Stimmadmin');
+
+      const denied = await fetch(backendUrl(`/attendance/voice-admin/members/${outsideMember.id}/comment`), {
+        method: 'PUT',
+        headers: memberHeaders(),
+        body: JSON.stringify({ comment: 'Nicht erlaubt' }),
+      });
+      expect(denied.status).toBe(403);
+
+      await putAdminComment(memberSession.memberId, 'Nur für Verwaltungsrollen');
+      const profileResponse = await fetch(backendUrl('/members/me'), { headers: memberHeaders() });
+      expect(profileResponse.ok).toBeTruthy();
+      const profile = (await profileResponse.json()) as Record<string, unknown>;
+      expect(profile).not.toHaveProperty('comment');
+      expect(profile).not.toHaveProperty('internalComment');
+    } finally {
+      await putAdminComment(memberId, originalComment);
+      if (memberSession.memberId !== memberId) {
+        await putAdminComment(memberSession.memberId, originalSelfComment);
+      }
+    }
+  });
+
   test('member detail edits plan through scoped API', async ({ page }) => {
     await openAttendance(page);
     const firstRow = page.getByTestId('attendance-member-row').first();
@@ -282,5 +350,11 @@ test.describe('Choir voice admin attendance', () => {
       headers: memberHeaders(),
     });
     expect(response.status).toBe(403);
+    const deniedComment = await fetch(backendUrl(`/attendance/voice-admin/members/${outsideMember.id}/comment`), {
+      method: 'PUT',
+      headers: memberHeaders(),
+      body: JSON.stringify({ comment: 'Nicht erlaubt' }),
+    });
+    expect(deniedComment.status).toBe(403);
   });
 });

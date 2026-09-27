@@ -16,6 +16,7 @@ import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { MemberRehearsalOverview } from '../../components/member/MemberRehearsalOverview';
+import { AdminMemberCommentField } from '../../components/member/AdminMemberCommentField';
 import { MemberStatusActions } from '../../components/member/MemberStatusActions';
 import type { MemberStatus } from '../../components/member/MemberStatusActions';
 import { adminMembersApi, choirVoicesApi } from '../../services/api';
@@ -309,6 +310,16 @@ export function AdminMemberDetailPage() {
           </div>
         </Card.Content>
       </Card>
+
+      <AdminMemberCommentField
+        key={member.id}
+        comment={member.internalComment}
+        onSave={async (comment) => {
+          const response = await adminMembersApi.setComment(member.id, comment);
+          setMember((current) => current ? { ...current, internalComment: response.data.comment } : current);
+          return response.data.comment;
+        }}
+      />
 
       <Card data-testid="voice-admin-grants">
         <Card.Header>

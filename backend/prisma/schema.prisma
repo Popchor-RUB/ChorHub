@@ -30,6 +30,7 @@ model Member {
   isDisabled   Boolean     @default(false) @map("is_disabled")
   disabledAt   DateTime?   @map("disabled_at")
   disableReason String?    @map("disable_reason")
+  internalComment String?  @map("internal_comment")
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

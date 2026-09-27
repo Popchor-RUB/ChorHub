@@ -31,6 +31,7 @@ describe("MembersService", () => {
       isDisabled: false,
       disabledAt: null,
       disableReason: null,
+      internalComment: null,
       updatedAt: new Date("2026-01-01T00:00:00Z"),
       voiceAdminGrants: [
         { choirVoice: { id: "voice-a", name: "Sopran" } },

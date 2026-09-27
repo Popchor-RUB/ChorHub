@@ -2,6 +2,7 @@ import { Button, Spinner } from '@heroui/react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import type { AttendanceResponse, ChoirVoice } from '../../types';
+import { MemberCommentIndicator } from '../member/MemberCommentIndicator';
 
 export interface AttendanceRowMember {
   id: string;
@@ -11,6 +12,7 @@ export interface AttendanceRowMember {
   attended: boolean;
   plan: AttendanceResponse | null;
   lastAttendedRehearsalsAgo: number | null;
+  internalComment?: string | null;
 }
 
 type Props = {
@@ -67,6 +69,11 @@ export function AttendanceMemberRow({
           </button>
         ) : (
           <p className="font-medium text-sm">{member.firstName} {member.lastName}</p>
+        )}
+        {onOpenDetail && member.internalComment && (
+          <span className="ml-1 inline-flex align-middle" onClick={(event) => event.stopPropagation()}>
+            <MemberCommentIndicator comment={member.internalComment} />
+          </span>
         )}
         {member.plan === null && (
           <p className="text-xs text-danger mt-0.5">{t('attendance.no_plan_notice')}</p>
