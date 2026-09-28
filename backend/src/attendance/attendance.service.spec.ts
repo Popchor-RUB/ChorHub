@@ -103,7 +103,7 @@ describe('AttendanceService', () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue({ ...rehearsalC, isOptional: true } as any);
       prismaMock.rehearsal.findMany.mockResolvedValue([rehearsalB] as any);
       prismaMock.member.findMany.mockResolvedValue([
-        { ...mockMember, attendanceRecords: [], attendancePlans: [{ response: 'CONFIRMED' }] },
+        { ...mockMember, internalComment: 'Bitte anrufen', attendanceRecords: [], attendancePlans: [{ response: 'CONFIRMED' }] },
       ] as any);
       prismaMock.attendanceRecord.findMany.mockResolvedValue([] as any);
 
@@ -111,6 +111,7 @@ describe('AttendanceService', () => {
 
       expect(result[0].plan).toBe('CONFIRMED');
       expect(result[0].attended).toBe(false);
+      expect(result[0].internalComment).toBe('Bitte anrufen');
     });
 
     it('computes lastAttendedRehearsalsAgo correctly', async () => {

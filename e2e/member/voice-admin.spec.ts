@@ -238,6 +238,15 @@ test.describe('Choir voice admin attendance', () => {
       await indicator.hover();
       await expect(page.getByRole('tooltip')).toHaveText('Notiz der Gesamtadmin');
 
+      await page.setViewportSize({ width: 390, height: 844 });
+      await indicator.click();
+      const readDialog = page.getByRole('dialog', { name: 'Interner Kommentar' });
+      await expect(readDialog).toContainText('Notiz der Gesamtadmin');
+      await expect(page.getByTestId('voice-admin-member-detail')).toHaveCount(0);
+      await readDialog.getByRole('button', { name: 'Close' }).click();
+      await expect(readDialog).not.toBeVisible();
+      await page.setViewportSize({ width: 1280, height: 720 });
+
       await scopedRow.locator('button').first().click();
       const modal = page.getByTestId('voice-admin-member-detail');
       await modal.getByTestId('member-comment-toggle').click();

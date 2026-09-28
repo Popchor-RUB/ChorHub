@@ -123,6 +123,7 @@ export interface AttendanceRecord {
   firstName: string;
   lastName: string;
   email: string;
+  internalComment: string | null;
   choirVoice: ChoirVoice | null;
   attended: boolean;
   plan: AttendanceResponse | null;

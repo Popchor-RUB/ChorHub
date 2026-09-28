@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import type { SortDescriptor } from '@heroui/react';
 import {
   Table,
   Chip,
@@ -19,6 +20,7 @@ import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import { MemberActivityStatsPanel } from '../../components/member/MemberActivityStatsPanel';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
 import { MemberCommentIndicator } from '../../components/member/MemberCommentIndicator';
+import { sortMembers } from '../../utils/sortMembers';
 
 export function MemberOverviewPage() {
   const [members, setMembers] = useState<MemberOverview[]>([]);
@@ -27,12 +29,13 @@ export function MemberOverviewPage() {
   const [search, setSearch] = useState('');
   const [voiceFilter, setVoiceFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'active' | 'disabled'>('active');
+  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({ column: 'name', direction: 'ascending' });
   const [selectedMember, setSelectedMember] = useState<MemberOverview | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const { isOpen, open: onOpen, close: onClose } = useOverlayState();
   const { isOpen: isCreateOpen, open: onCreateOpen, close: onCreateClose } = useOverlayState();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const voiceNames = [...new Map(
     members
@@ -54,6 +57,7 @@ export function MemberOverviewPage() {
     const matchesVoice = !voiceFilter || m.choirVoice?.name === voiceFilter;
     return matchesSearch && matchesVoice;
   });
+  const sortedMembers = sortMembers(filteredMembers, sortDescriptor, i18n.language);
 
   useEffect(() => {
     setLoading(true);
@@ -160,20 +164,32 @@ export function MemberOverviewPage() {
           <Table.Content
             aria-label={t('members.table_aria')}
             className="min-w-[700px] [&_tbody_tr]:cursor-pointer"
+            sortDescriptor={sortDescriptor}
+            onSortChange={setSortDescriptor}
             onRowAction={(key) => {
               const member = members.find((item) => item.id === String(key));
               if (member) handleRowClick(member);
             }}
           >
           <Table.Header>
-            <Table.Column isRowHeader>{t('members.col_name')}</Table.Column>
-            <Table.Column>{t('members.col_email')}</Table.Column>
-            <Table.Column>{t('members.col_voice')}</Table.Column>
-            <Table.Column>{t('members.col_rehearsals')}</Table.Column>
-            <Table.Column>{t('members.col_unexcused')}</Table.Column>
+            <Table.Column allowsSorting isRowHeader id="name">
+              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_name')}</Table.SortableColumnHeader>}
+            </Table.Column>
+            <Table.Column allowsSorting id="email">
+              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_email')}</Table.SortableColumnHeader>}
+            </Table.Column>
+            <Table.Column allowsSorting id="voice">
+              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_voice')}</Table.SortableColumnHeader>}
+            </Table.Column>
+            <Table.Column allowsSorting id="rehearsals">
+              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_rehearsals')}</Table.SortableColumnHeader>}
+            </Table.Column>
+            <Table.Column allowsSorting id="unexcused">
+              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_unexcused')}</Table.SortableColumnHeader>}
+            </Table.Column>
           </Table.Header>
           <Table.Body renderEmptyState={() => <p className="py-4 text-center text-muted">{t('members.no_members')}</p>}>
-            {filteredMembers.map((m) => (
+            {sortedMembers.map((m) => (
               <Table.Row key={m.id} id={m.id}>
                 <Table.Cell>
                   <span className="inline-flex items-center gap-1 text-accent font-medium">

@@ -44,6 +44,15 @@ test('admin edits and clears a member comment in active and disabled views', asy
   await indicator.hover();
   await expect(page.getByRole('tooltip')).toHaveText('Erste Notiz');
 
+  await page.setViewportSize({ width: 390, height: 844 });
+  await indicator.click();
+  const commentDialog = page.getByRole('dialog', { name: 'Interner Kommentar' });
+  await expect(commentDialog).toContainText('Erste Notiz');
+  await expect(page.getByRole('dialog').filter({ has: page.getByTestId('member-comment-toggle') })).toHaveCount(0);
+  await commentDialog.getByRole('button', { name: 'Close' }).click();
+  await expect(commentDialog).not.toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   await saveComment('Aktualisierte Notiz');
   await indicator.hover();
   await expect(page.getByRole('tooltip')).toHaveText('Aktualisierte Notiz');

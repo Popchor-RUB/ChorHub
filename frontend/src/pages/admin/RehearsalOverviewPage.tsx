@@ -27,6 +27,7 @@ export function RehearsalOverviewPage() {
   const { isOpen: isDeleteOpen, open: onDeleteOpen, close: onDeleteClose } = useOverlayState();
 
   const [selectedMember, setSelectedMember] = useState<AttendanceRecord | null>(null);
+  const [comments, setComments] = useState<Record<string, string | null>>({});
   const { isOpen: isMemberOpen, open: onMemberOpen, close: onMemberClose } = useOverlayState();
 
   const loadData = () =>
@@ -65,7 +66,7 @@ export function RehearsalOverviewPage() {
   };
 
   const handleMemberClick = (member: AttendanceRecord) => {
-    setSelectedMember(member);
+    setSelectedMember(member.id in comments ? { ...member, internalComment: comments[member.id] } : member);
     onMemberOpen();
   };
 
@@ -140,6 +141,7 @@ export function RehearsalOverviewPage() {
           isOpen={isOpen}
           onClose={onClose}
           onMemberClick={handleMemberClick}
+          comments={comments}
         />
       )}
 
@@ -161,6 +163,11 @@ export function RehearsalOverviewPage() {
         <MemberDetailModal
           member={selectedMember}
           isOpen={isMemberOpen}
+          showComment
+          onCommentChanged={(memberId, comment) => {
+            setComments((current) => ({ ...current, [memberId]: comment }));
+            setSelectedMember((current) => current?.id === memberId ? { ...current, internalComment: comment } : current);
+          }}
           onClose={onMemberClose}
           onStatusChanged={loadData}
         />

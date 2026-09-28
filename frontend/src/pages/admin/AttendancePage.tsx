@@ -379,6 +379,11 @@ export function AttendancePage() {
         <MemberDetailModal
           member={selectedMember}
           isOpen={isMemberOpen}
+          showComment
+          onCommentChanged={(memberId, comment) => {
+            setRecords((current) => current.map((record) => record.id === memberId ? { ...record, internalComment: comment } : record));
+            setSelectedMember((current) => current?.id === memberId ? { ...current, internalComment: comment } : current);
+          }}
           onClose={onMemberClose}
           onStatusChanged={(id) => setRecords((prev) => prev.filter((record) => record.id !== id))}
         />

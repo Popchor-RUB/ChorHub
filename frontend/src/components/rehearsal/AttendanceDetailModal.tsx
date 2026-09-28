@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { attendanceApi } from '../../services/api';
 import type { RehearsalOverview, AttendanceRecord } from '../../types';
 import { VoiceGroupList } from '../common/VoiceGroupList';
+import { MemberCommentIndicator } from '../member/MemberCommentIndicator';
 import type { VoiceGroupData } from '../common/VoiceGroupList';
 import { useCollapsedVoices } from '../../hooks/useCollapsedVoices';
 import { useDateLocale } from '../../hooks/useDateLocale';
@@ -20,11 +21,12 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onMemberClick?: (member: AttendanceRecord) => void;
+  comments?: Record<string, string | null>;
 }
 
 const NO_VOICE_KEY = '__no_voice__';
 
-export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemberClick }: Props) {
+export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemberClick, comments = {} }: Props) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [planFilter, setPlanFilter] = useState<'CONFIRMED' | 'DECLINED' | 'NONE' | null>(null);
   const [attendanceFilter, setAttendanceFilter] = useState<'PRESENT' | 'UNEXCUSED' | 'EXCUSED' | null>(null);
@@ -114,11 +116,12 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
       ),
       rows: members.map((m) => {
         const absent = isUnexpectedAbsence(m);
+        const comment = m.id in comments ? comments[m.id] : m.internalComment;
         return {
           key: m.id,
           content: (
             <div
-              onClick={onMemberClick ? () => onMemberClick(m) : undefined}
+              onClick={onMemberClick ? () => onMemberClick({ ...m, internalComment: comment }) : undefined}
               className={[
                 'flex items-center justify-between px-4 py-2.5 text-sm',
                 !showPlanStatus
@@ -143,6 +146,11 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
               >
                 <span>{m.firstName} {m.lastName}</span>
                 {onMemberClick && <MagnifyingGlassIcon className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />}
+                {comment && (
+                  <span onClick={(event) => event.stopPropagation()}>
+                    <MemberCommentIndicator comment={comment} />
+                  </span>
+                )}
               </span>
               {!showPlanStatus ? (
                 <span className="text-xs">
@@ -198,7 +206,7 @@ export function AttendanceDetailModal({ rehearsal, type, isOpen, onClose, onMemb
           </span>
           </Modal.Header>
           <Modal.Body className="p-0">
-          <div style={{ overflowY: 'auto', maxHeight: '70vh', padding: '0 1.5rem 1.5rem' }}>
+          <div style={{ overflowY: 'auto', maxHeight: '70vh', padding: '0 0 0rem' }}>
             {loading ? (
               <div className="flex justify-center py-8">
                 <Spinner />
