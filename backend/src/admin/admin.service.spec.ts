@@ -159,14 +159,40 @@ describe('AdminService', () => {
       prismaMock.choirVoice.findMany.mockResolvedValue(mockVoices);
     });
 
-    it('throws BadRequestException for malformed CSV', async () => {
-      // csv-parse may not throw on simple text - test with truly malformed
-      // Instead test missing columns scenario
-      const csvMissingCols = Buffer.from('name;email\nAnna;anna@test.de\n');
-      prismaMock.member.findUnique.mockResolvedValue(null);
-      prismaMock.member.upsert.mockResolvedValue(mockMember());
-      const result = await service.importMembersFromCsv(csvMissingCols);
-      expect(result.failed.length).toBeGreaterThan(0);
+    it('reports a missing CSV header for an empty file', async () => {
+      await expect(service.importMembersFromCsv(Buffer.from(''))).rejects.toThrow(
+        'CSV-Kopfzeile fehlt. Erwartete Spalten: firstName, lastName, email',
+      );
+    });
+
+    it('reports expected columns when the CSV header is invalid', async () => {
+      const csv = Buffer.from('name;address\nAnna;anna@test.de\n');
+
+      await expect(service.importMembersFromCsv(csv)).rejects.toThrow(
+        'CSV-Kopfzeile fehlt oder ist ungültig. Erwartete Spalten: firstName, lastName, email',
+      );
+    });
+
+    it('reports missing required CSV columns', async () => {
+      const csv = Buffer.from('firstName;email\nAnna;anna@test.de\n');
+
+      await expect(service.importMembersFromCsv(csv)).rejects.toThrow(
+        'CSV-Kopfzeile unvollständig. Fehlende Spalten: lastName',
+      );
+    });
+
+    it('reports an unknown CSV delimiter', async () => {
+      const csv = Buffer.from('firstName lastName email\nAnna Müller anna@test.de\n');
+
+      await expect(service.importMembersFromCsv(csv)).rejects.toThrow(
+        "CSV-Trennzeichen konnte nicht erkannt werden. Verwenden Sie ',' oder ';'.",
+      );
+    });
+
+    it('rejects malformed CSV rows', async () => {
+      const csv = Buffer.from('firstName;lastName;email\n"Anna;Müller;anna@test.de\n');
+
+      await expect(service.importMembersFromCsv(csv)).rejects.toThrow('Ungültiges CSV-Format');
     });
 
     it('creates member and sends invite for valid CSV row', async () => {
@@ -181,6 +207,38 @@ describe('AdminService', () => {
       expect(result.created).toBe(1);
       expect(result.failed).toHaveLength(0);
       expect(mailService.sendMemberInvite).toHaveBeenCalledTimes(1);
+    });
+
+    it('imports comma-delimited CSV with a quoted comma in a name', async () => {
+      const csv = Buffer.from(
+        '\uFEFFfirstName,lastName,email,choirVoice\nAnna,"Müller, Jr.",anna@choir.de,SOPRAN\n',
+      );
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      prismaMock.member.upsert.mockResolvedValue(mockMember());
+
+      const result = await service.importMembersFromCsv(csv);
+
+      expect(result.created).toBe(1);
+      expect(result.failed).toHaveLength(0);
+      expect(prismaMock.member.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ create: expect.objectContaining({ lastName: 'Müller, Jr.' }) }),
+      );
+    });
+
+    it('keeps commas in unquoted values of semicolon-delimited CSV', async () => {
+      const csv = Buffer.from(
+        'firstName;lastName;email;choirVoice\nAnna;Müller, Jr.;anna@choir.de;SOPRAN\n',
+      );
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      prismaMock.member.upsert.mockResolvedValue(mockMember());
+
+      const result = await service.importMembersFromCsv(csv);
+
+      expect(result.created).toBe(1);
+      expect(result.failed).toHaveLength(0);
+      expect(prismaMock.member.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ create: expect.objectContaining({ lastName: 'Müller, Jr.' }) }),
+      );
     });
 
     it('creates member but does not send invite when sendEmails is false', async () => {

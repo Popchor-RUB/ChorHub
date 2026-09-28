@@ -96,7 +96,7 @@ export function ImportMembersPage() {
 
           {error && <p className="text-danger text-sm">{error}</p>}
 
-          <Checkbox isSelected={sendEmails} onChange={setSendEmails}>
+          <Checkbox isSelected={sendEmails} onChange={setSendEmails} variant='secondary'>
             <Checkbox.Content>
               <Checkbox.Control><Checkbox.Indicator /></Checkbox.Control>
               {t('members.import_send_emails')}

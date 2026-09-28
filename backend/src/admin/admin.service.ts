@@ -10,6 +10,7 @@ import type { UpdateMemberDto } from './dto/update-member.dto';
 import type { UpdateMemberStatusDto } from './dto/update-member-status.dto';
 import { MemberStatusService } from '../members/member-status.service';
 import { countUnexcusedAbsences, getEuropeBerlinStartOfDay } from './unexcused-absence-count';
+import { detectCsvHeader, REQUIRED_CSV_HEADERS } from './csv-delimiter';
 
 interface CsvRow {
   firstName: string;
@@ -75,13 +76,38 @@ export class AdminService {
   }
 
   async importMembersFromCsv(buffer: Buffer, sendEmails = false) {
+    const expectedHeaders = REQUIRED_CSV_HEADERS.join(', ');
+    if (!buffer.toString('utf8').trim()) {
+      throw new BadRequestException(`CSV-Kopfzeile fehlt. Erwartete Spalten: ${expectedHeaders}`);
+    }
+
+    const header = detectCsvHeader(buffer);
+    if (!header) {
+      throw new BadRequestException(
+        "CSV-Trennzeichen konnte nicht erkannt werden. Verwenden Sie ',' oder ';'.",
+      );
+    }
+
+    const missingHeaders = REQUIRED_CSV_HEADERS.filter((column) => !header.columns.includes(column));
+    if (missingHeaders.length === REQUIRED_CSV_HEADERS.length) {
+      throw new BadRequestException(
+        `CSV-Kopfzeile fehlt oder ist ungültig. Erwartete Spalten: ${expectedHeaders}`,
+      );
+    }
+    if (missingHeaders.length > 0) {
+      throw new BadRequestException(
+        `CSV-Kopfzeile unvollständig. Fehlende Spalten: ${missingHeaders.join(', ')}`,
+      );
+    }
+
     let records: CsvRow[];
     try {
       records = parse(buffer, {
+        bom: true,
         columns: true,
         skip_empty_lines: true,
         trim: true,
-        delimiter: ";"
+        delimiter: header.delimiter,
       });
     } catch {
       throw new BadRequestException('Ungültiges CSV-Format');
