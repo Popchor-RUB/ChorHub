@@ -69,7 +69,7 @@ export function MemberStatusActions({ memberId, status, onUpdated }: Props) {
           data-testid="member-status-toggle"
           onPress={() => { setError(''); setIsDialogOpen(true); }}
         >
-          {t('members.disable_account')}
+          {t('members.disable_account_btn')}
         </Button>
       )}
       {error && <p className="text-danger text-sm" role="alert">{error}</p>}

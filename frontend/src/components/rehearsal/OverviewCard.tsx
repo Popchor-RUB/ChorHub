@@ -17,7 +17,6 @@ interface Props {
 export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
-  const total = type === 'future' ? item.totalConfirmed ?? 0 : item.totalAttended ?? 0;
   const rehearsalDate = new Date(item.date);
   const now = new Date();
   const startOfToday = new Date(now);
@@ -55,7 +54,7 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
             <div className="flex items-center gap-2">
               <p className="font-semibold">{item.title}</p>
               {item.isOptional && (
-                <Chip size="sm" variant="tertiary" color="accent">
+                <Chip size="sm" variant="primary" color="accent">
                   {t('rehearsals.optional_badge')}
                 </Chip>
               )}
@@ -64,20 +63,22 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
               {dateLabel}
               {endTime ? ` · ${t('rehearsals.ends_at', { time: endTime })}` : ''}
             </p>
-            <div className="mt-1">
-              <Chip color={type === 'future' ? 'accent' : 'success'} variant="tertiary" size="sm">
-                {total}{' '}
-                {type === 'future'
-                  ? t('attendance_detail.label_confirmed')
-                  : t('attendance_detail.label_present')}
+            <div className="mt-1 flex flex-wrap gap-2">
+              <Chip className="bg-accent-soft text-accent-soft-foreground" variant="primary" size="sm">
+                {item.totalConfirmed ?? 0} {t('attendance_detail.label_confirmed')}
               </Chip>
+              {type === 'past' && (
+                <Chip className="bg-success-soft text-success-soft-foreground" variant="primary" size="sm">
+                  {item.totalAttended ?? 0} {t('attendance_detail.label_present')}
+                </Chip>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1">
             <Button
               isIconOnly
               size="sm"
-              variant="tertiary"
+              variant="primary"
               aria-label={t('rehearsals.edit')}
               onPress={onEdit}
             >
@@ -97,7 +98,7 @@ export function OverviewCard({ item, type, onClick, onEdit, onDelete }: Props) {
         </div>
         <div className="flex flex-wrap gap-2 mt-1">
           {Object.entries(item.byVoice).map(([name, count]) => (
-            <Chip key={name} size="sm" variant="tertiary">
+            <Chip key={name} size="sm" variant="primary">
               {name}: {count}
             </Chip>
           ))}

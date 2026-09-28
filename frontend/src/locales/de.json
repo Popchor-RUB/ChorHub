@@ -163,6 +163,7 @@
     "disabled_status": "Konto deaktiviert",
     "disabled_since": "Deaktiviert am {{date}}",
     "disable_account": "Mitglied deaktivieren",
+    "disable_account_btn": "Deaktivieren",
     "enable_account": "Mitglied aktivieren",
     "disable_reason": "Grund",
     "disable_reason_optional": "Optionalen Grund für die Deaktivierung dieses Kontos hinzufügen.",

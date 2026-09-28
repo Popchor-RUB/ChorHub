@@ -163,6 +163,7 @@
     "disabled_status": "Account disabled",
     "disabled_since": "Disabled on {{date}}",
     "disable_account": "Disable member",
+    "disable_account_btn": "Disable",
     "enable_account": "Enable member",
     "disable_reason": "Reason",
     "disable_reason_optional": "Add an optional reason for disabling this account.",

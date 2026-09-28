@@ -107,6 +107,7 @@ function buildRehearsalSeries(offsetDays: number, count: number, titleStartIndex
 }
 
 const PAST_REHEARSALS = buildRehearsalSeries(-7 * PAST_REHEARSAL_COUNT, PAST_REHEARSAL_COUNT, 1);
+const MEMBER_CREATED_AT = daysFromNow(-7 * PAST_REHEARSAL_COUNT - 1);
 const OPTIONAL_UPCOMING_REHEARSAL_INDEXES = new Set([1, 4, 8]);
 const UPCOMING_REHEARSALS = buildRehearsalSeries(7, UPCOMING_REHEARSAL_COUNT, PAST_REHEARSAL_COUNT + 1).map(
   (rehearsal, index) => ({
@@ -194,7 +195,7 @@ async function main() {
     usedEmails.add(email);
 
     const voiceId = voiceByName.get(voice)!.id;
-    return { firstName, lastName, email, choirVoice: { connect: { id: voiceId } } };
+    return { firstName, lastName, email, createdAt: MEMBER_CREATED_AT, choirVoice: { connect: { id: voiceId } } };
   });
 
   const voicedMembers = await prisma.$transaction(
@@ -210,7 +211,7 @@ async function main() {
     { firstName: 'Tanja',  lastName: 'Brückner', email: 'tanja.brueckner@example.com' },
   ];
   const unvoicedMembers = await prisma.$transaction(
-    UNVOICED.map(d => prisma.member.create({ data: d })),
+    UNVOICED.map(d => prisma.member.create({ data: { ...d, createdAt: MEMBER_CREATED_AT } })),
   );
 
   const members = [...voicedMembers, ...unvoicedMembers];

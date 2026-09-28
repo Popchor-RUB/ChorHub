@@ -134,17 +134,17 @@ export function MemberRehearsalOverview({
       </div>
 
       <div className="mb-4 mt-4 flex flex-wrap gap-2">
-        <Chip color="success" variant="tertiary">
+        <Chip className='bg-success-soft text-success-soft-foreground'>
           {t('detail_modal.present_count', { count: countablePast.filter((r) => r.attended).length })}
         </Chip>
-        <Chip color="danger" variant="tertiary">
+        <Chip className='bg-danger-soft text-danger-soft-foreground'>
           {t('detail_modal.unexcused_count', { count: unexcusedCount })}
         </Chip>
-        <Chip color="default" variant="tertiary">
+        <Chip>
           {t('detail_modal.excused_count', { count: excusedCount })}
         </Chip>
         {countableUpcoming.length > 0 && (
-          <Chip color="accent" variant="tertiary">
+          <Chip className='bg-accent-soft text-accent-soft-foreground'>
             {t('detail_modal.confirmed_upcoming', {
               confirmed: countableUpcoming.filter((r) => r.plan === 'CONFIRMED').length,
               total: countableUpcoming.length,

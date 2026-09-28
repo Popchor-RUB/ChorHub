@@ -203,6 +203,10 @@ export class AttendanceService {
       where: { date: includeBoundary ? { lte: boundary } : { lt: boundary } },
       orderBy: { date: 'desc' },
       include: {
+        attendancePlans: {
+          where: { response: AttendanceResponse.CONFIRMED },
+          select: { id: true },
+        },
         attendanceRecords: {
           include: { member: { select: { choirVoice: { select: { name: true } } } } },
         },
@@ -215,6 +219,7 @@ export class AttendanceService {
       title: r.title,
       durationMinutes: r.durationMinutes,
       isOptional: r.isOptional,
+      totalConfirmed: r.attendancePlans.length,
       totalAttended: r.attendanceRecords.length,
       byVoice: this.groupByVoice(
         r.attendanceRecords.map((rec) => rec.member.choirVoice?.name),

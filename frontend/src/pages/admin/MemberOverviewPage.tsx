@@ -191,11 +191,13 @@ export function MemberOverviewPage() {
                 <Table.Cell>{m.attendanceCount}</Table.Cell>
                 <Table.Cell>
                   {m.unexcusedAbsenceCount > 0 ? (
-                    <Chip size="sm" color="danger" variant="tertiary">
+                    <Chip size="sm" className='bg-danger-soft text-danger-soft-foreground' variant="primary">
                       {m.unexcusedAbsenceCount}
                     </Chip>
                   ) : (
-                    <span className="text-muted">0</span>
+                    <Chip size="sm" color="default" variant="primary">
+                      {m.unexcusedAbsenceCount}
+                    </Chip>
                   )}
                 </Table.Cell>
               </Table.Row>

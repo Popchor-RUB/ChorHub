@@ -278,6 +278,7 @@ describe('AttendanceService', () => {
         {
           ...mockRehearsal,
           date: new Date('2024-01-01'),
+          attendancePlans: [{ response: 'CONFIRMED' }, { response: 'CONFIRMED' }],
           attendanceRecords: [
             { member: { choirVoice: { name: 'Alt' } } },
             { member: { choirVoice: { name: 'Tenor' } } },
@@ -291,9 +292,16 @@ describe('AttendanceService', () => {
       expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { date: { lt: startOfToday } },
+          include: expect.objectContaining({
+            attendancePlans: {
+              where: { response: 'CONFIRMED' },
+              select: { id: true },
+            },
+          }),
         }),
       );
       expect(result[0].totalAttended).toBe(3);
+      expect(result[0].totalConfirmed).toBe(2);
       expect(result[0].byVoice['Alt']).toBe(2);
       expect(result[0].byVoice['Tenor']).toBe(1);
     });
@@ -319,6 +327,7 @@ describe('AttendanceService', () => {
             ...mockRehearsal,
             id: 'started-rehearsal',
             date: new Date('2030-01-01T11:00:00.000Z'),
+            attendancePlans: [{ response: 'CONFIRMED' }],
             attendanceRecords: [
               { member: { choirVoice: { name: 'Alt' } } },
               { member: { choirVoice: { name: 'Alt' } } },
@@ -344,6 +353,7 @@ describe('AttendanceService', () => {
       expect(result.future[0].totalConfirmed).toBe(1);
       expect(result.past[0].id).toBe('started-rehearsal');
       expect(result.past[0].totalAttended).toBe(2);
+      expect(result.past[0].totalConfirmed).toBe(1);
     });
   });
 });

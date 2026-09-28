@@ -107,6 +107,7 @@ npm run test:e2e:report
 - Run `./setup-secrets.sh` before first local startup to generate required `.env*` files and symlinks.
 - `cd backend && npm run start:dev` runs `backend/scripts/start-dev-with-lan.cjs`, which auto-runs `prisma generate` and sets LAN-friendly `APP_URL`/`CORS_ORIGINS`.
 - Root `tsconfig.json` is for Playwright/E2E files. Frontend app type checks must use `frontend/tsconfig.app.json`.
+- Demo seed members have `createdAt` before the earliest past rehearsal to keep attendance history consistent; rerunning `npm run seed` deletes and recreates demo data.
 
 ## Testing instructions
 - Backend changes: run `npm run test` in `backend/` (plus focused tests when possible).
