@@ -43,7 +43,7 @@ export function AttendanceMemberRow({
   testId = 'attendance-member-row',
 }: Props) {
   const { t } = useTranslation();
-  const hasHighUnexcusedAbsences = typeof unexcusedAbsenceCount === 'number' && unexcusedAbsenceCount > 3;
+  const hasHighUnexcusedAbsences = typeof unexcusedAbsenceCount === 'number' && unexcusedAbsenceCount > 0;
 
   return (
     <div
