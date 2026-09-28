@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SortDescriptor } from '@heroui/react';
 import {
-  Table,
-  Chip,
   Button,
   CloseButton,
   Spinner,
@@ -18,8 +15,8 @@ import type { MemberOverview } from '../../types';
 import { MemberDetailModal } from '../../components/member/MemberDetailModal';
 import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import { MemberActivityStatsPanel } from '../../components/member/MemberActivityStatsPanel';
+import { MemberOverviewTable } from '../../components/member/MemberOverviewTable';
 import { VoiceFilterChips } from '../../components/common/VoiceFilterChips';
-import { MemberCommentIndicator } from '../../components/member/MemberCommentIndicator';
 import { sortMembers } from '../../utils/sortMembers';
 
 export function MemberOverviewPage() {
@@ -31,33 +28,39 @@ export function MemberOverviewPage() {
   const [statusFilter, setStatusFilter] = useState<'active' | 'disabled'>('active');
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({ column: 'name', direction: 'ascending' });
   const [selectedMember, setSelectedMember] = useState<MemberOverview | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { isOpen, open: onOpen, close: onClose } = useOverlayState();
   const { isOpen: isCreateOpen, open: onCreateOpen, close: onCreateClose } = useOverlayState();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
 
-  const voiceNames = [...new Map(
+  const voiceNames = useMemo(() => [...new Map(
     members
-      .filter((m) => m.choirVoice)
-      .map((m) => [m.choirVoice!.name, m.choirVoice!.sortOrder] as const)
+      .filter((member) => member.choirVoice)
+      .map((member) => [member.choirVoice!.name, member.choirVoice!.sortOrder] as const)
   ).entries()]
-    .sort((a, b) => a[1] - b[1])
-    .map(([name]) => name);
+    .sort((first, second) => first[1] - second[1])
+    .map(([name]) => name), [members]);
 
-  const filteredMembers = members.filter((m) => {
+  const filteredMembers = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const matchesSearch =
-      !q ||
-      m.firstName.toLowerCase().includes(q) ||
-      m.lastName.toLowerCase().includes(q) ||
-      m.email.toLowerCase().includes(q) ||
-      `${m.firstName} ${m.lastName}`.toLowerCase().includes(q) || 
-      `${m.lastName} ${m.firstName}`.toLowerCase().includes(q.replace(/[,\s]+/, " "));
-    const matchesVoice = !voiceFilter || m.choirVoice?.name === voiceFilter;
-    return matchesSearch && matchesVoice;
-  });
-  const sortedMembers = sortMembers(filteredMembers, sortDescriptor, i18n.language);
+    const reversedQuery = q.replace(/[,\s]+/, ' ');
+    return members.filter((member) => {
+      const matchesSearch =
+        !q ||
+        member.firstName.toLowerCase().includes(q) ||
+        member.lastName.toLowerCase().includes(q) ||
+        member.email.toLowerCase().includes(q) ||
+        `${member.firstName} ${member.lastName}`.toLowerCase().includes(q) ||
+        `${member.lastName} ${member.firstName}`.toLowerCase().includes(reversedQuery);
+      const matchesVoice = !voiceFilter || member.choirVoice?.name === voiceFilter;
+      return matchesSearch && matchesVoice;
+    });
+  }, [members, search, voiceFilter]);
+  const sortedMembers = useMemo(
+    () => sortMembers(filteredMembers, sortDescriptor, i18n.language),
+    [filteredMembers, sortDescriptor, i18n.language],
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -67,10 +70,11 @@ export function MemberOverviewPage() {
     });
   }, [statusFilter, refreshKey]);
 
-  const handleRowClick = (member: MemberOverview) => {
+  const handleRowClick = useCallback((member: MemberOverview) => {
     setSelectedMember(member);
-    onOpen();
-  };
+    setIsDetailOpen(true);
+  }, []);
+  const closeDetail = useCallback(() => setIsDetailOpen(false), []);
 
   const handleExport = async () => {
     setExporting(true);
@@ -159,84 +163,27 @@ export function MemberOverviewPage() {
           <Spinner />
         </div>
       ) : (
-        <Table>
-          <Table.ScrollContainer>
-          <Table.Content
-            aria-label={t('members.table_aria')}
-            className="min-w-[700px] [&_tbody_tr]:cursor-pointer"
-            sortDescriptor={sortDescriptor}
-            onSortChange={setSortDescriptor}
-            onRowAction={(key) => {
-              const member = members.find((item) => item.id === String(key));
-              if (member) handleRowClick(member);
-            }}
-          >
-          <Table.Header>
-            <Table.Column allowsSorting isRowHeader id="name">
-              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_name')}</Table.SortableColumnHeader>}
-            </Table.Column>
-            <Table.Column allowsSorting id="email">
-              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_email')}</Table.SortableColumnHeader>}
-            </Table.Column>
-            <Table.Column allowsSorting id="voice">
-              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_voice')}</Table.SortableColumnHeader>}
-            </Table.Column>
-            <Table.Column allowsSorting id="rehearsals">
-              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_rehearsals')}</Table.SortableColumnHeader>}
-            </Table.Column>
-            <Table.Column allowsSorting id="unexcused">
-              {({ sortDirection }) => <Table.SortableColumnHeader sortDirection={sortDirection}>{t('members.col_unexcused')}</Table.SortableColumnHeader>}
-            </Table.Column>
-          </Table.Header>
-          <Table.Body renderEmptyState={() => <p className="py-4 text-center text-muted">{t('members.no_members')}</p>}>
-            {sortedMembers.map((m) => (
-              <Table.Row key={m.id} id={m.id}>
-                <Table.Cell>
-                  <span className="inline-flex items-center gap-1 text-accent font-medium">
-                    <span>{m.firstName} {m.lastName}</span>
-                    <MagnifyingGlassIcon className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
-                    <MemberCommentIndicator comment={m.internalComment} />
-                  </span>
-                </Table.Cell>
-                <Table.Cell className="text-sm text-muted">{m.email}</Table.Cell>
-                <Table.Cell>
-                  <Chip size="sm" variant="tertiary">
-                    {m.choirVoice?.name ?? '—'}
-                  </Chip>
-                </Table.Cell>
-                <Table.Cell>{m.attendanceCount}</Table.Cell>
-                <Table.Cell>
-                  {m.unexcusedAbsenceCount > 0 ? (
-                    <Chip size="sm" className='bg-danger-soft text-danger-soft-foreground' variant="primary">
-                      {m.unexcusedAbsenceCount}
-                    </Chip>
-                  ) : (
-                    <Chip size="sm" color="default" variant="primary">
-                      {m.unexcusedAbsenceCount}
-                    </Chip>
-                  )}
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-          </Table.Content>
-          </Table.ScrollContainer>
-        </Table>
+        <MemberOverviewTable
+          members={sortedMembers}
+          sortDescriptor={sortDescriptor}
+          onSortChange={setSortDescriptor}
+          onSelectMember={handleRowClick}
+        />
       )}
 
       {selectedMember && (
         <MemberDetailModal
           member={selectedMember}
-          isOpen={isOpen}
+          isOpen={isDetailOpen}
           showComment
           onCommentChanged={(memberId, comment) => {
             setMembers((current) => current.map((member) => member.id === memberId ? { ...member, internalComment: comment } : member));
             setSelectedMember((current) => current?.id === memberId ? { ...current, internalComment: comment } : current);
           }}
-          onClose={onClose}
+          onClose={closeDetail}
           onStatusChanged={() => {
             setSelectedMember(null);
-            onClose();
+            closeDetail();
             setRefreshKey((current) => current + 1);
           }}
         />

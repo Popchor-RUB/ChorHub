@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Button, Chip, Label, ListBox, Select, Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { adminMembersApi, rehearsalsApi } from '../../services/api';
@@ -28,7 +28,7 @@ function formatNumber(value: number, locale: string): string {
   }).format(value);
 }
 
-export function MemberActivityStatsPanel() {
+export const MemberActivityStatsPanel = memo(function MemberActivityStatsPanel() {
   const [pastRehearsals, setPastRehearsals] = useState<Rehearsal[]>([]);
   const [selectedRehearsalIds, setSelectedRehearsalIds] = useState<string[]>([]);
   const [stats, setStats] = useState<MemberActivityStats | null>(null);
@@ -217,4 +217,4 @@ export function MemberActivityStatsPanel() {
       </div>
     </section>
   );
-}
+});
