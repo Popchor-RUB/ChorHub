@@ -2,6 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Res,
@@ -12,22 +15,39 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
+import { SentEmailKind } from '../generated/prisma/client';
 import { sendEmailAttachmentResponse } from './email-attachment-response';
+import { CreateEmailDto } from './dto/create-email.dto';
+import { RetryEmailDto } from './dto/retry-email.dto';
 import { EmailsService } from './emails.service';
 
 const MAX_ATTACHMENT_COUNT = 10;
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 
-interface CreateEmailBody {
-  subject: string;
-  markdownContent: string;
-  signatureMarkdown?: string;
-}
-
 @Controller('admin/emails')
 @UseGuards(JwtAdminGuard)
 export class AdminEmailsController {
   constructor(private readonly emailsService: EmailsService) {}
+
+  @Get('jobs')
+  listJobs() {
+    return this.emailsService.listJobs();
+  }
+
+  @Get('jobs/:id')
+  getJob(@Param('id') id: string) {
+    return this.emailsService.getJob(id);
+  }
+
+  @Post('jobs/:id/retry')
+  @HttpCode(HttpStatus.ACCEPTED)
+  retryJob(
+    @Param('id') id: string,
+    @Headers('idempotency-key') idempotencyKey: string,
+    @Body() body: RetryEmailDto = {},
+  ) {
+    return this.emailsService.retryJob(id, idempotencyKey, body.acknowledgeDuplicateRisk === true);
+  }
 
   @Get()
   listSentEmails() {
@@ -40,20 +60,46 @@ export class AdminEmailsController {
   }
 
   @Post()
+  @HttpCode(HttpStatus.ACCEPTED)
   @UseInterceptors(
     FilesInterceptor('attachments', MAX_ATTACHMENT_COUNT, {
       limits: { fileSize: MAX_ATTACHMENT_SIZE, files: MAX_ATTACHMENT_COUNT },
     }),
   )
   sendEmail(
-    @Body() body: CreateEmailBody,
+    @Body() body: CreateEmailDto,
+    @Headers('idempotency-key') idempotencyKey: string,
     @UploadedFiles() files: Express.Multer.File[] = [],
   ) {
-    return this.emailsService.sendEmail(
+    return this.emailsService.enqueueEmail(
+      SentEmailKind.BULK,
       body.subject,
       body.markdownContent,
       body.signatureMarkdown,
       files,
+      idempotencyKey,
+    );
+  }
+
+  @Post('test')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseInterceptors(
+    FilesInterceptor('attachments', MAX_ATTACHMENT_COUNT, {
+      limits: { fileSize: MAX_ATTACHMENT_SIZE, files: MAX_ATTACHMENT_COUNT },
+    }),
+  )
+  sendTestEmail(
+    @Body() body: CreateEmailDto,
+    @Headers('idempotency-key') idempotencyKey: string,
+    @UploadedFiles() files: Express.Multer.File[] = [],
+  ) {
+    return this.emailsService.enqueueEmail(
+      SentEmailKind.TEST,
+      body.subject,
+      body.markdownContent,
+      body.signatureMarkdown,
+      files,
+      idempotencyKey,
     );
   }
 

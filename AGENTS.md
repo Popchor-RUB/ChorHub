@@ -155,6 +155,9 @@ npm run test:e2e:report
 - Admin sends choir information mail through `POST /admin/emails` as one message: `TO CHOIR_ADMIN_EMAIL`, `BCC` distinct active-member addresses (admin excluded), subject prefixed with `[Popchor Mitglieder]`.
 - Only successfully sent messages appear in admin and member email archives. Every active member can read the full archive, including messages sent before they joined; attachment downloads use authenticated routes.
 - Email attachments are stored with their sent message. Upload limits: 10 files, 5 MB per file, 20 MB total.
+- Admin bulk and test sends require `Idempotency-Key` and return HTTP 202 after persisting a PostgreSQL-backed job. Admin job status and manual retries live under `/admin/emails/jobs`; test jobs never appear in member or sent-email archives.
+- Queued jobs survive restarts. Workers atomically claim jobs, heartbeat ownership, and never automatically retry SMTP delivery. Interrupted or ambiguous sends become `UNKNOWN`; manual retries require duplicate-risk acknowledgement. Retrying HTTP submission with the same key must not create another delivery.
+- Deploy the backend and frontend together when changing the email acceptance contract. Verify email job unit tests and the isolated SMTP-fixture E2E scenarios alongside the existing archive tests.
 
 ## Project structure hints
 - Backend auth: `backend/src/auth/**`

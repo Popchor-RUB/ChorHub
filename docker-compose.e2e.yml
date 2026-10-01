@@ -21,6 +21,21 @@ services:
       timeout: 3s
       retries: 30
 
+  smtp-fixture:
+    build:
+      context: ./e2e/smtp-fixture
+    environment:
+      SMTP_UPSTREAM_HOST: mailhog
+      SMTP_UPSTREAM_PORT: 1025
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8026/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    depends_on:
+      mailhog:
+        condition: service_healthy
+
   backend:
     build:
       context: .
@@ -35,7 +50,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      mailhog:
+      smtp-fixture:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "const socket=require('node:net').connect(3000,'127.0.0.1',()=>{socket.end();process.exit(0)});socket.on('error',()=>process.exit(1))"]
@@ -70,6 +85,7 @@ services:
       E2E_BASE_URL: http://frontend:5173
       E2E_BACKEND_URL: http://backend:3000
       E2E_MAILHOG_URL: http://mailhog:8025
+      E2E_SMTP_FIXTURE_URL: http://smtp-fixture:8026
       E2E_AUTH_DIR: /tmp/chorhub-e2e-auth
       E2E_ARTIFACT_DIR: /artifacts
     volumes:

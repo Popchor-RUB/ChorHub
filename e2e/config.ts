@@ -8,6 +8,7 @@ export const e2eConfig = {
   baseUrl: process.env.E2E_BASE_URL ?? 'https://localhost:5173',
   backendUrl: process.env.E2E_BACKEND_URL ?? 'http://localhost:3000',
   mailhogUrl: process.env.E2E_MAILHOG_URL ?? 'http://localhost:8025',
+  smtpFixtureUrl: process.env.E2E_SMTP_FIXTURE_URL ?? 'http://localhost:8026',
   authDir: path.resolve(process.env.E2E_AUTH_DIR ?? DEFAULT_AUTH_DIR),
   artifactDir: path.resolve(process.env.E2E_ARTIFACT_DIR ?? DEFAULT_ARTIFACT_DIR),
 } as const;
@@ -24,4 +25,8 @@ export function backendUrl(pathname: string): string {
 
 export function mailhogUrl(pathname: string): string {
   return new URL(pathname, `${e2eConfig.mailhogUrl}/`).toString();
+}
+
+export function smtpFixtureUrl(pathname: string): string {
+  return new URL(pathname, `${e2eConfig.smtpFixtureUrl}/`).toString();
 }

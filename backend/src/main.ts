@@ -69,6 +69,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: debugLoggingEnabled ? DEV_LOG_LEVELS : undefined,
   });
+  app.enableShutdownHooks();
   const httpLogger = new Logger('HTTP');
 
   if (debugLoggingEnabled) {

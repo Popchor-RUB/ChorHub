@@ -8,6 +8,8 @@ import type {
   PersonalInfoMemberRow,
   PersonalInfoSendStatus,
   SentEmail,
+  AdminEmailJob,
+  AdminEmailJobAcceptance,
   MemberProfile,
   VoiceAttendanceRecord,
   MemberRehearsalEntry,
@@ -245,19 +247,34 @@ export const personalInfoApi = {
   getMe: () => api.get<PersonalInfo>('/personal-info/me'),
 };
 
+type ComposeEmailInput = { subject: string; markdownContent: string; signatureMarkdown: string; attachments: File[] };
+
+function createEmailFormData(input: ComposeEmailInput): FormData {
+  const formData = new FormData();
+  formData.append('subject', input.subject);
+  formData.append('markdownContent', input.markdownContent);
+  formData.append('signatureMarkdown', input.signatureMarkdown);
+  for (const attachment of input.attachments) formData.append('attachments', attachment);
+  return formData;
+}
+
 export const sentEmailsApi = {
   listAdmin: () => api.get<SentEmail[]>('/admin/emails'),
   getAdmin: (id: string) => api.get<SentEmail>(`/admin/emails/${id}`),
-  send: (input: { subject: string; markdownContent: string; signatureMarkdown: string; attachments: File[] }) => {
-    const formData = new FormData();
-    formData.append('subject', input.subject);
-    formData.append('markdownContent', input.markdownContent);
-    formData.append('signatureMarkdown', input.signatureMarkdown);
-    for (const attachment of input.attachments) formData.append('attachments', attachment);
-    return api.post<SentEmail>('/admin/emails', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
+  send: (input: ComposeEmailInput, idempotencyKey: string) =>
+    api.post<AdminEmailJobAcceptance>('/admin/emails', createEmailFormData(input), {
+      headers: { 'Content-Type': 'multipart/form-data', 'Idempotency-Key': idempotencyKey },
+    }),
+  sendTest: (input: ComposeEmailInput, idempotencyKey: string) =>
+    api.post<AdminEmailJobAcceptance>('/admin/emails/test', createEmailFormData(input), {
+      headers: { 'Content-Type': 'multipart/form-data', 'Idempotency-Key': idempotencyKey },
+    }),
+  listJobs: () => api.get<AdminEmailJob[]>('/admin/emails/jobs'),
+  getJob: (id: string) => api.get<AdminEmailJob>(`/admin/emails/jobs/${id}`),
+  retryJob: (id: string, idempotencyKey: string, acknowledgeDuplicateRisk = false) =>
+    api.post<AdminEmailJobAcceptance>(`/admin/emails/jobs/${id}/retry`, { acknowledgeDuplicateRisk }, {
+      headers: { 'Idempotency-Key': idempotencyKey },
+    }),
   listMember: () => api.get<SentEmail[]>('/emails'),
   getMember: (id: string) => api.get<SentEmail>(`/emails/${id}`),
   downloadAdminAttachment: (emailId: string, attachmentId: string) =>

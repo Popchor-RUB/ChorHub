@@ -10,6 +10,7 @@ interface MailHogMessage {
   To: MailHogAddress[];
   Content: {
     Body: string;
+    Headers?: Record<string, string[]>;
   };
   Created: string;
 }
@@ -35,6 +36,43 @@ async function fetchMessages(recipientEmail: string): Promise<MailHogMessage[]> 
     .sort(
       (a, b) => new Date(b.Created).getTime() - new Date(a.Created).getTime(),
     );
+}
+
+export async function getMailhogMessages(
+  recipientEmail: string,
+  subjectMarker: string,
+): Promise<MailHogMessage[]> {
+  const messages = await fetchMessages(recipientEmail);
+  return messages.filter((message) =>
+    (message.Content.Headers?.Subject ?? []).some((subject) => subject.includes(subjectMarker)),
+  );
+}
+
+export async function waitForMailhogMessages(
+  recipientEmail: string,
+  subjectMarker: string,
+  expectedCount: number,
+  { timeoutMs = 15_000, pollIntervalMs = 250 }: PollOptions = {},
+): Promise<MailHogMessage[]> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const messages = await getMailhogMessages(recipientEmail, subjectMarker);
+    if (messages.length >= expectedCount) return messages;
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+  const messages = await getMailhogMessages(recipientEmail, subjectMarker);
+  throw new Error(
+    `Timed out waiting for ${expectedCount} MailHog message(s) for "${subjectMarker}"; got ${messages.length}`,
+  );
+}
+
+export async function getMailhogBodyForSubject(
+  recipientEmail: string,
+  subjectMarker: string,
+  options: PollOptions = {},
+): Promise<string> {
+  const messages = await waitForMailhogMessages(recipientEmail, subjectMarker, 1, options);
+  return decodeQuotedPrintable(messages[0].Content.Body);
 }
 
 function decodeQuotedPrintable(input: string): string {

@@ -15,8 +15,15 @@ enum AttendanceResponse {
 
 enum SentEmailStatus {
   PENDING
+  SENDING
   SENT
   FAILED
+  UNKNOWN
+}
+
+enum SentEmailKind {
+  BULK
+  TEST
 }
 
 model Member {
@@ -206,11 +213,22 @@ model SentEmail {
   markdownContent  String              @map("markdown_content")
   signatureMarkdown String             @default("") @map("signature_markdown")
   status           SentEmailStatus     @default(PENDING)
+  kind             SentEmailKind       @default(BULK)
+  idempotencyKey   String?            @unique @map("idempotency_key")
+  payloadHash      String?            @map("payload_hash")
+  recipients       Json                @default("[]")
+  processingToken String?             @map("processing_token")
+  heartbeatAt     DateTime?           @map("heartbeat_at")
+  failureCode      String?             @map("failure_code")
+  retrySourceId    String?             @unique @map("retry_source_id")
   sentAt           DateTime?           @map("sent_at")
   createdAt        DateTime            @default(now()) @map("created_at")
+  retrySource      SentEmail?          @relation("EmailRetries", fields: [retrySourceId], references: [id], onDelete: SetNull)
+  retryJob         SentEmail?          @relation("EmailRetries")
   attachments      SentEmailAttachment[]
 
-  @@index([status, sentAt])
+  @@index([status, createdAt])
+  @@index([status, heartbeatAt])
   @@map("sent_emails")
 }
 

@@ -1,8 +1,46 @@
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 import { MailService } from './mail.service';
 
 describe('MailService', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it.each([new Error('SMTP connection failed'), 'SMTP connection failed'])(
+    'logs send failures and rethrows the original error: %s',
+    async (error) => {
+      const logError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+      const mailerService = {
+        sendMail: jest.fn().mockRejectedValue(error),
+      };
+      const module = await Test.createTestingModule({
+        providers: [
+          MailService,
+          { provide: MailerService, useValue: mailerService },
+          { provide: ConfigService, useValue: { getOrThrow: () => 'https://chorhub.test' } },
+        ],
+      }).compile();
+      const service = module.get(MailService);
+
+      await expect(
+        service.sendMemberDisabledMail({
+          to: 'member@choir.test',
+          firstName: 'Anna',
+          adminEmail: 'admin@choir.test',
+        }),
+      ).rejects.toBe(error);
+
+      expect(logError).toHaveBeenCalledTimes(1);
+      expect(logError).toHaveBeenCalledWith(
+        'Failed to send email (template: member-disabled): SMTP connection failed',
+        error instanceof Error ? error.stack : undefined,
+      );
+    },
+  );
+
   it('sends personal info email with template and context', async () => {
     const mailerService = {
       sendMail: jest.fn().mockResolvedValue(undefined),
@@ -12,6 +50,7 @@ describe('MailService', () => {
       providers: [
         MailService,
         { provide: MailerService, useValue: mailerService },
+        { provide: ConfigService, useValue: { getOrThrow: () => 'https://chorhub.test' } },
       ],
     }).compile();
 
@@ -45,6 +84,7 @@ describe('MailService', () => {
           firstName: 'Anna',
           subject: 'Betreff',
           htmlContent: '<p>Markdown Nachricht</p>\n',
+          appUrl: 'https://chorhub.test',
         }),
       }),
     );
@@ -55,7 +95,11 @@ describe('MailService', () => {
       sendMail: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<MailerService>;
     const module = await Test.createTestingModule({
-      providers: [MailService, { provide: MailerService, useValue: mailerService }],
+      providers: [
+        MailService,
+        { provide: MailerService, useValue: mailerService },
+        { provide: ConfigService, useValue: { getOrThrow: () => 'https://chorhub.test' } },
+      ],
     }).compile();
     const service = module.get(MailService);
 

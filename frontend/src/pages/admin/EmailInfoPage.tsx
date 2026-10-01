@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Input, Label, ListBox, Select, Spinner, TextField } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { MarkdownEditor } from '../../components/info/MarkdownEditor';
@@ -6,14 +7,15 @@ import { sentEmailsApi } from '../../services/api';
 import type { SentEmail } from '../../types';
 import { downloadBlob } from '../../utils/downloadBlob';
 import { formatEmailDate } from '../../utils/formatEmailDate';
+import { formatFileSize } from '../../utils/formatFileSize';
+import { AdminEmailJobsPanel } from './email/AdminEmailJobsPanel';
+import { useAdminEmailJobs } from './email/useAdminEmailJobs';
+import { clearEmailRetryKey, clearEmailSubmission, getEmailPayloadFingerprint, getEmailRetryKey, getEmailSubmissionKey, saveAcceptedEmailJob } from './email/emailSubmissionKey';
+import type { AdminEmailJob, AdminEmailJobKind } from '../../types';
 
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_TOTAL_SIZE = 20 * 1024 * 1024;
-
-function formatSize(value: number): string {
-  return `${(value / (1024 * 1024)).toFixed(value < 1024 * 1024 ? 2 : 1)} MB`;
-}
 
 export function EmailInfoPage() {
   const { t, i18n } = useTranslation();
@@ -24,19 +26,23 @@ export function EmailInfoPage() {
   const [signature, setSignature] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
+  const [sending, setSending] = useState<'test' | 'all' | null>(null);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState<'test' | 'all' | null>(null);
+  const [submissionKey, setSubmissionKey] = useState<{ kind: AdminEmailJobKind; key: string } | null>(null);
+  const [submissionFingerprint, setSubmissionFingerprint] = useState<string | null>(null);
+  const clearedJobRef = useRef<string | null>(null);
+  const emailJobs = useAdminEmailJobs(submissionKey?.key ?? null);
 
   const readOnly = selectedEmail !== null;
   const attachmentSize = useMemo(() => attachments.reduce((sum, file) => sum + file.size, 0), [attachments]);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (preserveSignature = false) => {
     try {
       const response = await sentEmailsApi.listAdmin();
       const messages = response.data;
       setHistory(messages);
-      setSignature(messages[0]?.signatureMarkdown ?? '');
+      if (!preserveSignature) setSignature(messages[0]?.signatureMarkdown ?? '');
     } catch {
       setError(t('info.email_load_error'));
     } finally {
@@ -46,9 +52,31 @@ export function EmailInfoPage() {
 
   useEffect(() => { void loadHistory(); }, [loadHistory]);
 
+  const linkedJob = submissionKey ? emailJobs.jobs.find((job) => job.idempotencyKey === submissionKey.key) ?? null : null;
+
+  useEffect(() => {
+    if (!linkedJob || linkedJob.status !== 'SENT' || clearedJobRef.current === linkedJob.id) return;
+    clearedJobRef.current = linkedJob.id;
+    if (submissionFingerprint) clearEmailSubmission(linkedJob.kind, submissionFingerprint);
+    setSubmissionKey(null);
+    if (linkedJob.kind === 'TEST') {
+      setSuccess('test');
+      return;
+    }
+    setSelectedEmail(null);
+    setSubject('');
+    setContent('');
+    setAttachments([]);
+    setSignature(linkedJob.signatureMarkdown);
+    void loadHistory(true);
+    setSubmissionKey(null);
+    setSuccess('all');
+  }, [linkedJob, loadHistory, submissionFingerprint]);
+
   const handleSelect = async (key: string | number | null) => {
     setError('');
-    setSuccess(false);
+    setSuccess(null);
+    setSubmissionKey(null);
     if (key === 'new' || key === null) {
       setSelectedEmail(null);
       setSubject('');
@@ -72,6 +100,7 @@ export function EmailInfoPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? []);
     event.target.value = '';
+    setSubmissionKey(null);
     const nextFiles = [...attachments, ...selectedFiles];
     if (nextFiles.length > MAX_FILES) {
       setError(t('info.email_attachment_limit_count', { count: MAX_FILES }));
@@ -89,9 +118,10 @@ export function EmailInfoPage() {
     setAttachments(nextFiles);
   };
 
-  const handleSend = async () => {
+  const handleSend = async (testOnly: boolean) => {
+    if (sending) return;
     setError('');
-    setSuccess(false);
+    setSuccess(null);
     if (!subject.trim()) {
       setError(t('info.email_subject_required'));
       return;
@@ -100,27 +130,57 @@ export function EmailInfoPage() {
       setError(t('info.email_content_required'));
       return;
     }
-    setSending(true);
+    setSending(testOnly ? 'test' : 'all');
     try {
-      const response = await sentEmailsApi.send({
+      const input = {
         subject: subject.trim(),
         markdownContent: content,
         signatureMarkdown: signature,
         attachments,
-      });
-      setHistory((messages) => [response.data, ...messages]);
-      setSelectedEmail(null);
-      setSubject('');
-      setContent('');
-      setSignature(response.data.signatureMarkdown);
-      setAttachments([]);
-      setSuccess(true);
-    } catch {
-      setError(t('info.email_send_error'));
+      };
+      const kind: AdminEmailJobKind = testOnly ? 'TEST' : 'BULK';
+      const fingerprint = await getEmailPayloadFingerprint(input);
+      setSubmissionFingerprint(fingerprint);
+      const submission = getEmailSubmissionKey(kind, fingerprint);
+      setSubmissionKey({ kind, key: submission.key });
+      const existingJob = emailJobs.jobs.find((job) => job.idempotencyKey === submission.key);
+      if (existingJob) {
+        saveAcceptedEmailJob(kind, submission, existingJob.id);
+        emailJobs.accept({ id: existingJob.id, kind: existingJob.kind, status: existingJob.status, createdAt: existingJob.createdAt }, submission.key);
+        await emailJobs.refresh();
+        return;
+      }
+      if (testOnly) {
+        const response = await sentEmailsApi.sendTest(input, submission.key);
+        saveAcceptedEmailJob(kind, submission, response.data.id);
+        emailJobs.accept(response.data, submission.key);
+      } else {
+        const response = await sentEmailsApi.send(input, submission.key);
+        saveAcceptedEmailJob(kind, submission, response.data.id);
+        emailJobs.accept(response.data, submission.key);
+      }
+      setSuccess(null);
+    } catch (sendError) {
+      if (axios.isAxiosError(sendError) && sendError.response?.status === 409) {
+        setError(t('info.email_submission_conflict'));
+      } else if (axios.isAxiosError(sendError) && sendError.response && sendError.response.status < 500) {
+        setError(t('info.email_submission_failed'));
+      } else {
+        setError(t('info.email_submission_uncertain'));
+        void emailJobs.refresh();
+      }
     } finally {
-      setSending(false);
+      setSending(null);
     }
   };
+
+  const handleRetryJob = async (job: AdminEmailJob, acknowledgeDuplicateRisk: boolean) => {
+    const key = getEmailRetryKey(job.id);
+    await emailJobs.retry(job, key, acknowledgeDuplicateRisk);
+    clearEmailRetryKey(job.id);
+  };
+
+  const acceptedForComposer = linkedJob !== null;
 
   const downloadPreviousAttachment = async (attachmentId: string, filename: string) => {
     if (!selectedEmail) return;
@@ -169,16 +229,16 @@ export function EmailInfoPage() {
             <Label>{t('info.email_subject_label')}</Label>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <span className="shrink-0 rounded-md bg-surface-secondary px-2 py-1.5 text-sm font-medium" data-testid="admin-email-prefix">[Popchor Mitglieder]</span>
-              <Input className="min-w-0 flex-1" data-testid="admin-email-subject" placeholder={t('info.email_subject_placeholder')} />
+              <Input className="min-w-0 flex-1" data-testid="admin-email-subject" placeholder={t('info.email_subject_placeholder')} onChange={(event) => { setSubject(event.target.value); setSubmissionKey(null); setSuccess(null); }} />
             </div>
           </TextField>
 
           <section className="flex flex-col gap-2">
-            <MarkdownEditor value={content} onChange={setContent} onSave={() => undefined} hideSaveButton readOnly={readOnly} fieldLabel={t('info.email_content_label')} fieldTestId="admin-email-body" />
+            <MarkdownEditor value={content} onChange={(value) => { setContent(value); setSubmissionKey(null); setSuccess(null); }} onSave={() => undefined} hideSaveButton readOnly={readOnly} fieldLabel={t('info.email_content_label')} fieldTestId="admin-email-body" />
           </section>
 
           <section className="flex flex-col gap-2">
-            <MarkdownEditor value={signature} onChange={setSignature} onSave={() => undefined} hideSaveButton readOnly={readOnly} fieldLabel={t('info.email_signature_label')} fieldTestId="admin-email-signature" />
+            <MarkdownEditor value={signature} onChange={(value) => { setSignature(value); setSubmissionKey(null); setSuccess(null); }} onSave={() => undefined} hideSaveButton readOnly={readOnly} fieldLabel={t('info.email_signature_label')} fieldTestId="admin-email-signature" />
           </section>
 
           <section className="flex flex-col gap-3">
@@ -197,8 +257,8 @@ export function EmailInfoPage() {
               <ul className="space-y-1 text-sm" aria-label={t('info.email_selected_attachments')}>
                 {attachments.map((file, index) => (
                   <li key={`${file.name}-${index}`} className="flex items-center justify-between gap-3">
-                    <span className="truncate">{file.name}</span><span className="text-muted">{formatSize(file.size)}</span>
-                    {!readOnly && <Button size="sm" variant="tertiary" onPress={() => setAttachments((current) => current.filter((_, i) => i !== index))}>{t('info.email_remove_attachment')}</Button>}
+                    <span className="truncate">{file.name}</span><span className="text-muted">{formatFileSize(file.size)}</span>
+                    {!readOnly && <Button size="sm" variant="tertiary" onPress={() => { setAttachments((current) => current.filter((_, i) => i !== index)); setSubmissionKey(null); setSuccess(null); }}>{t('info.email_remove_attachment')}</Button>}
                   </li>
                 ))}
               </ul>
@@ -213,7 +273,7 @@ export function EmailInfoPage() {
                       data-testid="admin-email-attachment-link"
                       onPress={() => void downloadPreviousAttachment(attachment.id, attachment.filename)}
                     >
-                      {attachment.filename} <span className="text-muted">({formatSize(attachment.size)})</span>
+                      {attachment.filename} <span className="text-muted">({formatFileSize(attachment.size)})</span>
                     </Button>
                   </li>
                 ))}
@@ -223,10 +283,14 @@ export function EmailInfoPage() {
           </section>
 
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-          {success && <p role="status" className="text-sm text-accent">{t('info.email_sent')}</p>}
+          {success && <p role="status" className="text-sm text-accent">{t(success === 'test' ? 'info.email_test_sent' : 'info.email_sent')}</p>}
+          {linkedJob && linkedJob.status !== 'SENT' && <p role="status" className="text-sm text-muted">{t(`info.email_job_status_${linkedJob.status.toLowerCase()}`)}</p>}
           {!readOnly && (
-            <div className="flex justify-end">
-              <Button data-testid="admin-email-send" onPress={() => void handleSend()} isPending={sending}>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" data-testid="admin-email-send-test" onPress={() => void handleSend(true)} isDisabled={sending !== null || (acceptedForComposer && submissionKey?.kind === 'TEST')} isPending={sending === 'test'}>
+                {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('info.email_send_test')}</>}
+              </Button>
+              <Button data-testid="admin-email-send" onPress={() => void handleSend(false)} isDisabled={sending !== null || (acceptedForComposer && submissionKey?.kind === 'BULK')} isPending={sending === 'all'}>
                 {({ isPending }) => <>{isPending && <Spinner color="current" size="sm" />}{t('info.email_send')}</>}
               </Button>
             </div>
@@ -234,6 +298,7 @@ export function EmailInfoPage() {
           {readOnly && selectedEmail && <p className="text-xs text-muted">{t('info.email_sent_at', { date: formatEmailDate(selectedEmail.sentAt, i18n.language) })}</p>}
           {!readOnly && attachmentSize > MAX_TOTAL_SIZE && <p className="text-danger">{t('info.email_attachment_limit_total', { size: 20 })}</p>}
       </div>
+      <AdminEmailJobsPanel jobs={emailJobs.jobs} loading={emailJobs.loading} connectionError={emailJobs.connectionError} retry={handleRetryJob} />
     </div>
   );
 }

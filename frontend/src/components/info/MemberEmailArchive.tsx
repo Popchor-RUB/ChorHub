@@ -42,7 +42,7 @@ export function MemberEmailArchive() {
 
   return (
     <div data-testid="member-email-archive">
-      <nav aria-label={t('info.email_archive_label')} className="flex flex-col divide-y divide-border">
+      <nav aria-label={t('info.email_archive_label')} className="flex flex-col gap-2 divide-y divide-border">
         {emails.map((email) => (
           <Button
             key={email.id}

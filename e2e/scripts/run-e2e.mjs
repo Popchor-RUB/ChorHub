@@ -128,6 +128,7 @@ async function main() {
       '--wait',
       'db',
       'mailhog',
+      'smtp-fixture',
       'backend',
       'frontend',
     ], composeEnv);

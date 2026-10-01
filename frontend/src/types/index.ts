@@ -180,6 +180,28 @@ export interface SentEmail {
   attachments: SentEmailAttachment[];
 }
 
+export type AdminEmailJobKind = 'BULK' | 'TEST';
+export type AdminEmailJobStatus = 'PENDING' | 'SENDING' | 'SENT' | 'FAILED' | 'UNKNOWN';
+
+export interface AdminEmailJobAcceptance {
+  id: string;
+  kind: AdminEmailJobKind;
+  status: AdminEmailJobStatus;
+  createdAt: string;
+}
+
+export interface AdminEmailJob extends AdminEmailJobAcceptance {
+  idempotencyKey: string | null;
+  sentAt: string | null;
+  rawSubject: string;
+  subject: string;
+  markdownContent: string;
+  signatureMarkdown: string;
+  attachments: SentEmailAttachment[];
+  failureCode: string | null;
+  retryJobId: string | null;
+}
+
 export interface PersonalInfoConfig {
   id: string;
   markdownTemplate: string;

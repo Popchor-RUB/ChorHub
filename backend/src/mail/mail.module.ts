@@ -51,6 +51,9 @@ function parseBooleanEnv(value: string | undefined, fallback = false): boolean {
             adapter: new HandlebarsAdapter(),
             options: { strict: true },
           },
+          options: {
+            partials: { dir: join(__dirname, 'templates', 'partials') },
+          },
         };
       },
       inject: [ConfigService],

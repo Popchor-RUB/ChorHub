@@ -3,63 +3,71 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>{{title}}</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;color:#1a1a1a;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4">
+<body style="margin:0;padding:0;background-color:#f5f7fb;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f5f7fb" style="width:100%;border-collapse:collapse;">
     <tr>
-      <td align="center" style="padding:24px 12px;">
-        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="max-width:600px;border-radius:8px;">
+      <td align="center" style="padding:12px 8px;">
+        <!--[if mso]><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:640px;border-collapse:collapse;">
           <tr>
-            <td style="padding:28px;">
-              <h1 style="margin:0 0 12px 0;font-size:24px;">Hallo {{firstName}},</h1>
-              <p style="margin:0 0 16px 0;line-height:1.6;">{{intro}}</p>
-
-              <ul style="margin:0 0 16px 0;padding:0;line-height:1.6;list-style:none;">
-                {{#each items}}
-                <li style="margin:0 0 12px 0;padding:0;">
-                  <p style="margin:0 0 8px 0;">{{label}}</p>
-                  {{#if confirmUrl}}
-                  <p style="margin:0 0 4px 0;">
-                    <a href="{{confirmUrl}}" target="_blank"
-                       style="background:#17c964;color:#ffffff;text-decoration:none;padding:9px 14px;border-radius:8px;display:inline-block;font-weight:bold;margin-right:6px;">
-                      Ich komme
-                    </a>
-                    <a href="{{declineUrl}}" target="_blank"
-                       style="background:#f31260;color:#ffffff;text-decoration:none;padding:9px 14px;border-radius:8px;display:inline-block;font-weight:bold;">
-                      Ich komme nicht
-                    </a>
-                  </p>
-                  {{/if}}
-                </li>
-                {{/each}}
-              </ul>
-
-              {{#if question}}
-              <p style="margin:0 0 20px 0;line-height:1.6;"><strong>{{question}}</strong></p>
-              {{/if}}
-
-              {{#if showGenericLogin}}
-              <p style="margin:0 0 20px 0;line-height:1.6;">Melde dich direkt über deinen Link an:</p>
-
-              <p style="margin:0 0 24px 0;">
-                <a href="{{magicUrl}}" target="_blank"
-                   style="background:#006FEE;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block;font-weight:bold;">
-                  Jetzt anmelden
-                </a>
-              </p>
-
-              <p style="margin:0;font-size:13px;color:#666;word-break:break-all;">
-                Falls der Button nicht funktioniert: <a href="{{magicUrl}}" target="_blank">{{magicUrl}}</a>
-              </p>
-              {{/if}}
-
-              <p style="margin:20px 0 0 0;line-height:1.6;">
-                Vielen Dank für deine Unterstützung und dass du dir kurz Zeit für eine Rückmeldung nimmst.
-              </p>
+            <td style="padding:20px 20px 12px;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+              <h1 style="margin:0;font-size:22px;line-height:29px;">Hallo {{firstName}},</h1>
             </td>
           </tr>
+          <tr>
+            <td style="padding:0 20px 16px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:25px;color:#172033;">
+              <p style="margin:0;">{{intro}}</p>
+            </td>
+          </tr>
+          {{#each items}}
+          <tr>
+            <td style="padding:0 20px 16px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:25px;color:#172033;">
+              <p style="margin:0 0 8px;font-weight:bold;">{{label}}</p>
+              {{#if confirmUrl}}
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                <tr>
+                  <td bgcolor="#127b46" style="background-color:#127b46;padding:9px 14px;"><a href="{{confirmUrl}}" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;font-weight:bold;color:#ffffff;text-decoration:none;">Ich komme</a></td>
+                </tr>
+                <tr><td height="8" style="height:8px;font-size:0;line-height:0;">&nbsp;</td></tr>
+                <tr>
+                  <td bgcolor="#bb164e" style="background-color:#bb164e;padding:9px 14px;"><a href="{{declineUrl}}" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:22px;font-weight:bold;color:#ffffff;text-decoration:none;">Ich komme nicht</a></td>
+                </tr>
+              </table>
+              {{/if}}
+            </td>
+          </tr>
+          {{/each}}
+          {{#if question}}
+          <tr>
+            <td style="padding:0 20px 16px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:25px;color:#172033;"><strong>{{question}}</strong></td>
+          </tr>
+          {{/if}}
+          {{#if showGenericLogin}}
+          <tr>
+            <td style="padding:0 20px 12px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:25px;color:#172033;">Melde dich direkt über deinen Link an:</td>
+          </tr>
+          <tr>
+            <td style="padding:0 20px 12px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                <tr>
+                  <td bgcolor="#006fee" style="background-color:#006fee;padding:11px 18px;"><a href="{{magicUrl}}" target="_blank" style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;font-weight:bold;color:#ffffff;text-decoration:none;">Jetzt anmelden</a></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 20px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#596579;word-wrap:break-word;">Falls der Button nicht funktioniert: <a href="{{magicUrl}}" target="_blank" style="color:#006fee;word-break:break-all;">{{magicUrl}}</a></td>
+          </tr>
+          {{/if}}
+          <tr>
+            <td style="padding:0 20px 20px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:25px;color:#172033;">Vielen Dank für deine Unterstützung und dass du dir kurz Zeit für eine Rückmeldung nimmst.</td>
+          </tr>
+          {{> footer}}
         </table>
+        <!--[if mso]></td></tr></table><![endif]-->
       </td>
     </tr>
   </table>

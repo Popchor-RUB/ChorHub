@@ -1,28 +1,40 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{subject}}</title>
-  </head>
-  <body style="margin:0;padding:24px;background:#f5f7fb;font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.5;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:800px;margin:0 auto;background:#ffffff;border:1px solid #dde3ee;border-radius:12px;overflow:hidden;">
-      <tr>
-        <td style="padding:24px 24px 12px 24px;">
-          <h1 style="margin:0;font-size:22px;">{{subject}}</h1>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:0 24px 24px 24px;font-size:15px;color:#172033;line-height:1.6;">{{{htmlContent}}}</td>
-      </tr>
-      {{#if htmlSignature}}
-      <tr>
-        <td style="padding:16px 24px 24px 24px;font-size:15px;color:#172033;line-height:1.6;border-top:1px solid #dde3ee;">{{{htmlSignature}}}</td>
-      </tr>
-      {{/if}}
-      <tr>
-        <td style="padding:16px 24px 24px 24px;font-size:12px;color:#6f7b91;line-height:1.4;border-top:1px solid #dde3ee;">Gesendet mit ChorHub 🎵</td>
-      </tr>
-    </table>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>{{subject}}</title>
+  <style>
+    .mail-content p, .mail-signature p { margin:0 0 16px; }
+    .mail-content p:last-child, .mail-signature p:last-child { margin-bottom:0; }
+    .mail-content a, .mail-signature a { color:#006fee; }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f5f7fb;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f5f7fb" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <td align="center" style="padding:12px 8px;">
+        <!--[if mso]><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:640px;border-collapse:collapse;">
+          <tr>
+            <td style="padding:20px 20px 12px;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+              <h1 style="margin:0;font-size:22px;line-height:29px;font-weight:bold;">{{subject}}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td class="mail-content" style="padding:0 20px 20px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:25px;color:#172033;word-wrap:break-word;overflow-wrap:break-word;">{{{htmlContent}}}</td>
+          </tr>
+          {{#if htmlSignature}}
+          <tr>
+            <td class="mail-signature" style="padding:16px 20px 20px;border-top:1px solid #dde3ee;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:25px;color:#172033;word-wrap:break-word;overflow-wrap:break-word;">{{{htmlSignature}}}</td>
+          </tr>
+          {{/if}}
+          {{> footer}}
+        </table>
+        <!--[if mso]></td></tr></table><![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
