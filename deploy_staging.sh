@@ -20,6 +20,7 @@ rsync -av \
   --exclude 'test-results' \
   --exclude '.playwright-mcp' \
   --exclude '.serena' \
+  --exclude 'playwright-report' \
   --progress \
   --delete \
   ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
