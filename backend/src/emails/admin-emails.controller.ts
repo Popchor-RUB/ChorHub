@@ -15,6 +15,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
+import { EMAIL_UPLOAD_OPTIONS } from '../common/multipart-upload-options';
 import { SentEmailKind } from '../generated/prisma/client';
 import { sendEmailAttachmentResponse } from './email-attachment-response';
 import { CreateEmailDto } from './dto/create-email.dto';
@@ -22,7 +23,6 @@ import { RetryEmailDto } from './dto/retry-email.dto';
 import { EmailsService } from './emails.service';
 
 const MAX_ATTACHMENT_COUNT = 10;
-const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 
 @Controller('admin/emails')
 @UseGuards(JwtAdminGuard)
@@ -62,9 +62,7 @@ export class AdminEmailsController {
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   @UseInterceptors(
-    FilesInterceptor('attachments', MAX_ATTACHMENT_COUNT, {
-      limits: { fileSize: MAX_ATTACHMENT_SIZE, files: MAX_ATTACHMENT_COUNT },
-    }),
+    FilesInterceptor('attachments', MAX_ATTACHMENT_COUNT, EMAIL_UPLOAD_OPTIONS),
   )
   sendEmail(
     @Body() body: CreateEmailDto,
@@ -84,9 +82,7 @@ export class AdminEmailsController {
   @Post('test')
   @HttpCode(HttpStatus.ACCEPTED)
   @UseInterceptors(
-    FilesInterceptor('attachments', MAX_ATTACHMENT_COUNT, {
-      limits: { fileSize: MAX_ATTACHMENT_SIZE, files: MAX_ATTACHMENT_COUNT },
-    }),
+    FilesInterceptor('attachments', MAX_ATTACHMENT_COUNT, EMAIL_UPLOAD_OPTIONS),
   )
   sendTestEmail(
     @Body() body: CreateEmailDto,

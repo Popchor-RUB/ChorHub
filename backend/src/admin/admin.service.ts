@@ -11,6 +11,7 @@ import type { UpdateMemberStatusDto } from './dto/update-member-status.dto';
 import { MemberStatusService } from '../members/member-status.service';
 import { countUnexcusedAbsences, getEuropeBerlinStartOfDay } from './unexcused-absence-count';
 import { detectCsvHeader, REQUIRED_CSV_HEADERS } from './csv-delimiter';
+import { normalizeSingleMailbox } from '../common/single-mailbox';
 
 interface CsvRow {
   firstName: string;
@@ -29,7 +30,9 @@ export class AdminService {
   ) {}
 
   async createMember(dto: CreateMemberDto) {
-    const existing = await this.prisma.member.findUnique({ where: { email: dto.email } });
+    const email = normalizeSingleMailbox(dto.email);
+    if (!email) throw new BadRequestException('Ungültige E-Mail-Adresse');
+    const existing = await this.prisma.member.findUnique({ where: { email } });
     if (existing) throw new ConflictException('E-Mail-Adresse bereits vergeben');
 
     if (dto.voiceId) {
@@ -41,7 +44,7 @@ export class AdminService {
       data: {
         firstName: dto.firstName,
         lastName: dto.lastName,
-        email: dto.email,
+        email,
         choirVoiceId: dto.voiceId ?? null,
       },
     });
@@ -128,6 +131,12 @@ export class AdminService {
         continue;
       }
 
+      const email = normalizeSingleMailbox(row.email);
+      if (!email) {
+        results.failed.push({ email: row.email, reason: 'Ungültige E-Mail-Adresse' });
+        continue;
+      }
+
       const choirVoiceValue = row.choirVoice?.trim();
       let choirVoiceId: string | null = null;
       if (choirVoiceValue && choirVoiceValue !== '-') {
@@ -143,14 +152,14 @@ export class AdminService {
       }
 
       try {
-        const existing = await this.prisma.member.findUnique({ where: { email: row.email } });
+        const existing = await this.prisma.member.findUnique({ where: { email } });
 
         const member = await this.prisma.member.upsert({
-          where: { email: row.email },
+          where: { email },
           create: {
             firstName: row.firstName,
             lastName: row.lastName,
-            email: row.email,
+            email,
             choirVoiceId,
           },
           update: {
@@ -498,7 +507,8 @@ export class AdminService {
     const member = await this.prisma.member.findUnique({ where: { id: memberId } });
     if (!member) throw new NotFoundException('Mitglied nicht gefunden');
 
-    const normalizedEmail = dto.email.trim().toLowerCase();
+    const normalizedEmail = normalizeSingleMailbox(dto.email);
+    if (!normalizedEmail) throw new BadRequestException('Ungültige E-Mail-Adresse');
     const existingByEmail = await this.prisma.member.findUnique({ where: { email: normalizedEmail } });
     if (existingByEmail && existingByEmail.id !== memberId) {
       throw new ConflictException('E-Mail-Adresse bereits vergeben');

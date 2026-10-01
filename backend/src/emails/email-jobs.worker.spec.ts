@@ -3,6 +3,7 @@ import { SentEmailKind, SentEmailStatus } from '../generated/prisma/client';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailJobsWorker } from './email-jobs.worker';
+import { InvalidMailRecipientError } from '../common/invalid-mail-recipient.error';
 
 describe('EmailJobsWorker', () => {
   const prisma = mockDeep<PrismaService>();
@@ -68,6 +69,20 @@ describe('EmailJobsWorker', () => {
     await worker.poll();
     expect(prisma.sentEmail.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: SentEmailStatus.UNKNOWN, failureCode: 'DELIVERY_OUTCOME_UNKNOWN' }),
+    }));
+  });
+
+  it('marks legacy jobs rejected by recipient validation as failed before SMTP', async () => {
+    const email = 'member@example.test,external@example.test';
+    prisma.member.findMany.mockResolvedValue([{ email }] as never);
+    prisma.sentEmail.findUnique.mockImplementation((() => Promise.resolve({
+      ...queuedJob(), recipients: { to: 'admin@choir.test', bcc: [email] },
+    } as never)) as never);
+    mail.sendInformationEmail.mockRejectedValueOnce(new InvalidMailRecipientError());
+
+    await worker.poll();
+    expect(prisma.sentEmail.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: SentEmailStatus.FAILED, failureCode: 'INVALID_RECIPIENT' }),
     }));
   });
 

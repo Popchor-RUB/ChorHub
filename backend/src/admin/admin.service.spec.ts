@@ -97,6 +97,15 @@ describe('AdminService', () => {
     const createdMember = mockMember({ email: 'peter@choir.de' });
     const pastRehearsal = { id: 'r-past-1' };
 
+    it('rejects address lists before creating a member or issuing an invitation', async () => {
+      await expect(service.createMember({ ...dto, email: 'member@example.test,external@example.test' }))
+        .rejects.toThrow('Ungültige E-Mail-Adresse');
+      expect(prismaMock.member.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.member.create).not.toHaveBeenCalled();
+      expect(authService.issueMemberMagicLink).not.toHaveBeenCalled();
+      expect(mailService.sendMemberInvite).not.toHaveBeenCalled();
+    });
+
     beforeEach(() => {
       prismaMock.member.findUnique.mockResolvedValue(null);
       prismaMock.member.create.mockResolvedValue(createdMember);
@@ -179,6 +188,63 @@ describe('AdminService', () => {
   });
 
   describe('importMembersFromCsv', () => {
+    it.each([
+      'member@example.test,external@example.test',
+      'member@example.test;external@example.test',
+      'Choir: member@example.test,external@example.test;',
+      'Anna <member@example.test>',
+      'not-an-email',
+      'member@example.test\r\nBcc: external@example.test',
+      '"member,external"@example.test',
+    ])('rejects unsafe email field %s with either CSV delimiter', async (email) => {
+      for (const delimiter of [',', ';']) {
+        const field = `"${email.replaceAll('"', '""')}"`;
+        const csv = Buffer.from(
+          `firstName${delimiter}lastName${delimiter}email\nAnna${delimiter}Müller${delimiter}${field}\n`,
+        );
+        const result = await service.importMembersFromCsv(csv, true);
+        expect(result).toEqual({
+          created: 0, updated: 0,
+          failed: [{ email, reason: 'Ungültige E-Mail-Adresse' }],
+        });
+      }
+      expect(prismaMock.member.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.member.upsert).not.toHaveBeenCalled();
+      expect(authService.issueMemberMagicLink).not.toHaveBeenCalled();
+      expect(mailService.sendMemberInvite).not.toHaveBeenCalled();
+    });
+
+    it('rejects unquoted semicolon-CSV address lists and continues importing valid rows', async () => {
+      const csv = Buffer.from(
+        'firstName;lastName;email\nAnna;Müller;member@example.test,external@example.test\n' +
+        'Ben;Meier;ben@example.test\n',
+      );
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      prismaMock.member.upsert.mockResolvedValue(mockMember({ email: 'ben@example.test' }));
+
+      const result = await service.importMembersFromCsv(csv, true);
+      expect(result.created).toBe(1);
+      expect(result.failed).toEqual([{
+        email: 'member@example.test,external@example.test', reason: 'Ungültige E-Mail-Adresse',
+      }]);
+      expect(prismaMock.member.upsert).toHaveBeenCalledTimes(1);
+      expect(mailService.sendMemberInvite).toHaveBeenCalledTimes(1);
+      expect(mailService.sendMemberInvite).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'ben@example.test' }), expect.any(String),
+      );
+    });
+
+    it('normalizes a valid address before lookup and persistence', async () => {
+      const csv = Buffer.from('firstName;lastName;email\nAnna;Müller;"  ANNA@CHOIR.DE  "\n');
+      prismaMock.member.findUnique.mockResolvedValue(mockMember());
+      prismaMock.member.upsert.mockResolvedValue(mockMember());
+
+      expect(await service.importMembersFromCsv(csv)).toEqual({ created: 0, updated: 1, failed: [] });
+      expect(prismaMock.member.findUnique).toHaveBeenCalledWith({ where: { email: 'anna@choir.de' } });
+      expect(prismaMock.member.upsert).toHaveBeenCalledWith(expect.objectContaining({
+        where: { email: 'anna@choir.de' }, create: expect.objectContaining({ email: 'anna@choir.de' }),
+      }));
+    });
     const mockVoices = [
       { id: 'v1', name: 'Sopran', sortOrder: 1, createdAt: new Date() },
       { id: 'v2', name: 'Mezzosopran', sortOrder: 2, createdAt: new Date() },
@@ -815,6 +881,14 @@ describe('AdminService', () => {
 
   describe('updateMember', () => {
     const dto = { firstName: 'Neu', lastName: 'Name', email: 'new@choir.de' };
+
+    it('rejects address lists before updating a member', async () => {
+      prismaMock.member.findUnique.mockResolvedValue(mockMember());
+      await expect(service.updateMember('member-1', {
+        ...dto, email: 'member@example.test,external@example.test',
+      })).rejects.toThrow('Ungültige E-Mail-Adresse');
+      expect(prismaMock.member.update).not.toHaveBeenCalled();
+    });
 
     it('updates member and returns refreshed detail', async () => {
       prismaMock.member.findUnique

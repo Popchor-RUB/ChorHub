@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
+import { PERSONAL_INFO_UPLOAD_OPTIONS } from '../common/multipart-upload-options';
 import { PersonalInfoService } from './personal-info.service';
 import type { PersonalInfoSendStatus } from './personal-info.service';
 import { PublishPersonalInfoDto } from './dto/publish-personal-info.dto';
@@ -37,10 +38,13 @@ export class AdminPersonalInfoController {
 
   @Patch('config')
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'recipients', maxCount: 1 },
-      { name: 'placeholderValues', maxCount: 100 },
-    ]),
+    FileFieldsInterceptor(
+      [
+        { name: 'recipients', maxCount: 1 },
+        { name: 'placeholderValues', maxCount: 100 },
+      ],
+      PERSONAL_INFO_UPLOAD_OPTIONS,
+    ),
   )
   publishConfig(
     @Body() dto: PublishPersonalInfoDto,

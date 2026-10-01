@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { SentEmailKind, SentEmailStatus } from '../generated/prisma/client';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { InvalidMailRecipientError } from '../common/invalid-mail-recipient.error';
 
 const HEARTBEAT_MS = 10_000;
 const STALE_AFTER_MS = 5 * 60_000;
@@ -125,8 +126,10 @@ export class EmailJobsWorker implements OnModuleDestroy {
       else this.logger.error(`Email job ${id} SMTP accepted; status remains uncertain after ${Date.now() - startedAt}ms`);
     } catch (error) {
       const explicitRejection = this.isExplicitSmtpRejection(error);
-      const status = explicitRejection ? SentEmailStatus.FAILED : SentEmailStatus.UNKNOWN;
-      const failureCode = explicitRejection ? 'SMTP_REJECTED' : 'DELIVERY_OUTCOME_UNKNOWN';
+      const invalidRecipient = error instanceof InvalidMailRecipientError;
+      const status = explicitRejection || invalidRecipient ? SentEmailStatus.FAILED : SentEmailStatus.UNKNOWN;
+      const failureCode = invalidRecipient ? 'INVALID_RECIPIENT'
+        : explicitRejection ? 'SMTP_REJECTED' : 'DELIVERY_OUTCOME_UNKNOWN';
       this.logger.error(`Email job ${id} (${job.kind}) ${status} after ${Date.now() - startedAt}ms: ${this.errorMessage(error)}`);
       await this.persistTerminalState(id, token, status, failureCode, null);
     } finally {

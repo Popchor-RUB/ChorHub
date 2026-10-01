@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import type { SendMailOptions, TransportOptions } from 'nodemailer';
 import { MailService } from './mail.service';
 import { MailQueueService } from './mail-queue.service';
 import { MailTemplateService } from './mail-template.service';
@@ -26,6 +27,11 @@ function parseBooleanEnv(value: string | undefined, fallback = false): boolean {
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => {
         const smtpSecure = parseBooleanEnv(config.get<string>('SMTP_SECURE'), false);
+        // Mailer still types message defaults as transport options. Nodemailer 10
+        // separates them, so expose both types at this compatibility boundary.
+        const defaults: SendMailOptions & TransportOptions = {
+          from: config.get<string>('MAIL_FROM', 'noreply@chorhub.de'),
+        };
         return {
           transport: {
             host: config.get<string>('SMTP_HOST'),
@@ -42,9 +48,7 @@ function parseBooleanEnv(value: string | undefined, fallback = false): boolean {
                   }
                 : undefined,
           },
-          defaults: {
-            from: config.get<string>('MAIL_FROM', 'noreply@chorhub.de'),
-          },
+          defaults,
         };
       },
       inject: [ConfigService],

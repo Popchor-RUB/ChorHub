@@ -17,6 +17,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminService } from './admin.service';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
+import { MEMBER_IMPORT_UPLOAD_OPTIONS } from '../common/multipart-upload-options';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { AdminSetAttendancePlanDto } from './dto/admin-set-attendance-plan.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
@@ -36,7 +37,7 @@ export class AdminController {
   }
 
   @Post('members/import')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', MEMBER_IMPORT_UPLOAD_OPTIONS))
   async importMembers(
     @UploadedFile() file: Express.Multer.File,
     @Body('sendEmails') sendEmails: string,

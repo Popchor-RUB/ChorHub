@@ -8,6 +8,7 @@ import {
 import { createHash } from 'crypto';
 import { SentEmailKind, SentEmailStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizeSingleMailbox } from '../common/single-mailbox';
 
 const LEGACY_SUBJECT_PREFIX = '[Popchor Mitglieder]';
 const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024;
@@ -194,15 +195,22 @@ export class EmailsService {
 
   private async resolveRecipients(adminEmail: string): Promise<RecipientSnapshot> {
     const members = await this.prisma.member.findMany({
-      where: { isDisabled: false }, select: { email: true },
+      where: { isDisabled: false }, select: { id: true, email: true },
     });
-    const seen = new Set<string>([adminEmail.toLocaleLowerCase('en-US')]);
-    const bcc = members.flatMap(({ email }) => {
-      const normalized = email.trim();
-      const key = normalized.toLocaleLowerCase('en-US');
-      if (!normalized || seen.has(key)) return [];
-      seen.add(key);
-      return [normalized];
+    const normalizedMembers = members.map(({ id, email }) => ({
+      id, email: normalizeSingleMailbox(email),
+    }));
+    const invalidMembers = normalizedMembers.filter(({ email }) => !email);
+    if (invalidMembers.length > 0) {
+      throw new BadRequestException(
+        `Ungültige E-Mail-Adressen bei Mitgliedern: ${invalidMembers.map(({ id }) => id).join(', ')}`,
+      );
+    }
+    const seen = new Set<string>([adminEmail]);
+    const bcc = normalizedMembers.flatMap(({ email }) => {
+      if (!email || seen.has(email)) return [];
+      seen.add(email);
+      return [email];
     });
     return { to: adminEmail, bcc };
   }
@@ -227,8 +235,8 @@ export class EmailsService {
   }
 
   private getAdminEmail(): string {
-    const adminEmail = process.env.CHOIR_ADMIN_EMAIL?.trim();
-    if (!adminEmail) throw new InternalServerErrorException('CHOIR_ADMIN_EMAIL ist nicht konfiguriert');
+    const adminEmail = normalizeSingleMailbox(process.env.CHOIR_ADMIN_EMAIL);
+    if (!adminEmail) throw new InternalServerErrorException('CHOIR_ADMIN_EMAIL fehlt oder ist ungültig');
     return adminEmail;
   }
 

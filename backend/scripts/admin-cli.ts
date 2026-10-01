@@ -33,6 +33,7 @@ import { readFile } from 'fs/promises';
 import { resolve } from 'path';
 import * as Handlebars from 'handlebars';
 import * as nodemailer from 'nodemailer';
+import { requireSingleMailbox } from '../src/common/single-mailbox';
 
 type SupportedMailTemplate = 'invite' | 'magic-link';
 
@@ -213,6 +214,7 @@ async function sendTemplateMail(template: SupportedMailTemplate, email: string):
     process.exit(1);
   }
 
+  const recipient = requireSingleMailbox(member.email);
   const transporter = getMailTransporter();
   const from = process.env.MAIL_FROM ?? 'noreply@chorhub.de';
   const mail =
@@ -230,7 +232,7 @@ async function sendTemplateMail(template: SupportedMailTemplate, email: string):
 
   await transporter.sendMail({
     from,
-    to: member.email,
+    to: recipient,
     subject: mail.subject,
     html: mail.html,
   });
@@ -363,10 +365,11 @@ async function inviteMembers(sendToAll: boolean): Promise<void> {
     }
 
     try {
+      const recipient = requireSingleMailbox(member.email);
       const mail = await buildInviteMail(member);
       await transporter.sendMail({
         from,
-        to: member.email,
+        to: recipient,
         subject: mail.subject,
         html: mail.html,
       });

@@ -53,6 +53,28 @@ describe('EmailsService durable jobs', () => {
     }));
   });
 
+  it.each([
+    'member@example.test,external@example.test',
+    'Choir: member@example.test;',
+    'malformed',
+    '',
+  ])('blocks bulk submission for invalid stored member email %s', async (email) => {
+    prisma.member.findMany.mockResolvedValue([
+      { id: 'member-invalid', email }, { id: 'member-valid', email: 'valid@example.test' },
+    ] as never);
+    await expect(service.enqueueEmail(SentEmailKind.BULK, 'News', 'Body', '', [], key))
+      .rejects.toThrow('Ungültige E-Mail-Adressen bei Mitgliedern: member-invalid');
+    expect(prisma.sentEmail.create).not.toHaveBeenCalled();
+  });
+
+  it.each(['admin@example.test,external@example.test', 'Choir: admin@example.test;', 'broken'])
+    ('rejects invalid administrator recipient %s for test jobs', async (email) => {
+      process.env.CHOIR_ADMIN_EMAIL = email;
+      await expect(service.enqueueEmail(SentEmailKind.TEST, 'News', 'Body', '', [], key))
+        .rejects.toThrow('CHOIR_ADMIN_EMAIL fehlt oder ist ungültig');
+      expect(prisma.sentEmail.create).not.toHaveBeenCalled();
+    });
+
   it('replays same key and payload without creating duplicate job', async () => {
     const body = { subject: 'Summer', content: 'Body', signature: '', attachments: [] as Express.Multer.File[] };
     await service.enqueueEmail(SentEmailKind.BULK, body.subject, body.content, body.signature, body.attachments, key);
