@@ -4,6 +4,7 @@ export type MailTemplateKey =
   | 'push-fallback-reminder'
   | 'personal-info'
   | 'member-disabled'
+  | 'member-automatically-disabled'
   | 'admin-member-disabled';
 
 export interface BilingualText {

@@ -107,6 +107,7 @@ export async function setMemberDisabled(
   memberId: string,
   disabled: boolean,
   reason?: string,
+  emailOptions?: { notifyMember?: boolean; includeReasonInEmail?: boolean },
 ): Promise<void> {
   const res = await fetch(backendUrl(`/admin/members/${memberId}/status`), {
     method: 'PATCH',
@@ -114,7 +115,11 @@ export async function setMemberDisabled(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${adminToken}`,
     },
-    body: JSON.stringify({ disabled, ...(reason === undefined ? {} : { reason }) }),
+    body: JSON.stringify({
+      disabled,
+      ...(reason === undefined ? {} : { reason }),
+      ...emailOptions,
+    }),
   });
   if (!res.ok) throw new Error(`Failed to update member status: ${res.status} ${await res.text()}`);
 }

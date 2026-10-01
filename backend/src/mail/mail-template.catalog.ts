@@ -7,6 +7,7 @@ import type {
 
 export interface MailTemplateDefinition {
   key: MailTemplateKey;
+  defaultFileName?: string;
   name: BilingualText;
   description: BilingualText;
   subjectTemplate: string;
@@ -92,13 +93,14 @@ export const MAIL_TEMPLATE_DEFINITIONS: MailTemplateDefinition[] = [
   },
   {
     key: 'personal-info',
-    name: { de: 'Persönliche Information', en: 'Personal information' },
+    defaultFileName: 'info.hbs',
+    name: { de: 'Info-Mails (persönlich/alle)', en: 'Info emails (personal/all)' },
     description: { de: 'Persönliche und gemeinsame Informationsmail.', en: 'Personal and bulk information email.' },
     subjectTemplate: '{{subject}}',
     placeholders: [
       ...COMMON_PLACEHOLDERS,
       placeholder('subject', { de: 'Betreff für Nachricht und Mail.', en: 'Message and email subject.' }, 'Informationen zum Sommerfest'),
-      placeholder('rawSubject', { de: 'Unpräfixter Betreff aus dem Versandformular.', en: 'Unprefixed subject from the send form.' }, 'Informationen zum Sommerfest'),
+      placeholder('rawSubject', { de: 'Unveränderter Betreff aus dem Versandformular.', en: 'Original subject from the send form.' }, 'Informationen zum Sommerfest'),
       placeholder('firstName', { de: 'Vorname, bei Sammelmail leer.', en: 'First name, empty for bulk mail.' }, 'Alex', { optional: true }),
       { ...placeholder('htmlContent', { de: 'Sicher gerendertes HTML des Markdown-Inhalts.', en: 'Safely rendered Markdown content as HTML.' }, '<p>Bitte melde dich an.</p>'), syntax: '{{{htmlContent}}}' },
       { ...placeholder('htmlSignature', { de: 'Sicher gerendertes HTML der Signatur.', en: 'Safely rendered signature HTML.' }, '<p>Viele Grüße</p>', { optional: true }), syntax: '{{{htmlSignature}}}' },
@@ -112,9 +114,26 @@ export const MAIL_TEMPLATE_DEFINITIONS: MailTemplateDefinition[] = [
   },
   {
     key: 'member-disabled',
-    name: { de: 'Zugang deaktiviert', en: 'Account disabled' },
-    description: { de: 'Hinweis an ein Mitglied über einen deaktivierten Zugang.', en: 'Notify a member that their account was disabled.' },
+    name: { de: 'Zugang durch Admin deaktiviert', en: 'Account disabled by admin' },
+    description: { de: 'Hinweis an ein Mitglied über einen durch einen Admin deaktivierten Zugang.', en: 'Notify a member that an admin disabled their account.' },
     subjectTemplate: 'Dein ChorHub Zugang wurde deaktiviert',
+    placeholders: [
+      ...COMMON_PLACEHOLDERS,
+      placeholder('firstName', { de: 'Vorname des Mitglieds.', en: 'Member first name.' }, 'Alex'),
+      placeholder('adminEmail', { de: 'Kontaktadresse der Chor-Admins.', en: 'Choir admin contact address.' }, 'chor-admin@example.org'),
+      placeholder('reason', { de: 'Optionaler Deaktivierungsgrund, wenn er mitgeteilt werden soll.', en: 'Optional account-disable reason, when it should be shared.' }, 'Drei unentschuldigte Fehlzeiten.', { optional: true }),
+    ],
+    previewScenarios: [
+      scenario('standard', 'Standard', 'Standard'),
+      scenario('with-reason', 'Mit Deaktivierungsgrund', 'With disable reason'),
+      scenario('without-reason', 'Ohne Deaktivierungsgrund', 'Without disable reason'),
+    ],
+  },
+  {
+    key: 'member-automatically-disabled',
+    name: { de: 'Zugang automatisch deaktiviert', en: 'Account automatically disabled' },
+    description: { de: 'Hinweis an ein Mitglied über eine automatische Deaktivierung nach drei unentschuldigten Fehlzeiten.', en: 'Notify a member that the system disabled their account after three unexcused absences.' },
+    subjectTemplate: 'Dein ChorHub Zugang wurde automatisch deaktiviert',
     placeholders: [
       ...COMMON_PLACEHOLDERS,
       placeholder('firstName', { de: 'Vorname des Mitglieds.', en: 'Member first name.' }, 'Alex'),

@@ -121,12 +121,23 @@ export class MailService {
     return subject;
   }
 
-  async sendMemberDisabledMail(params: { to: string; firstName: string; adminEmail: string }): Promise<void> {
-    const { subject, html } = await this.templateService.render('member-disabled', {
+  async sendMemberDisabledMail(params: {
+    to: string;
+    firstName: string;
+    adminEmail: string;
+    automatic?: boolean;
+    reason?: string | null;
+  }): Promise<void> {
+    const templateKey = params.automatic ? 'member-automatically-disabled' : 'member-disabled';
+    const context: Record<string, unknown> = {
       firstName: params.firstName,
       adminEmail: params.adminEmail,
-    });
-    await this.sendMail('member-disabled', { to: params.to, subject, html });
+    };
+    if (!params.automatic) {
+      context.reason = params.reason?.trim() ?? '';
+    }
+    const { subject, html } = await this.templateService.render(templateKey, context);
+    await this.sendMail(templateKey, { to: params.to, subject, html });
   }
 
   async sendAdminMemberDisabledMail(params: {

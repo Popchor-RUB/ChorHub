@@ -9,7 +9,7 @@ import { createHash } from 'crypto';
 import { SentEmailKind, SentEmailStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-const SUBJECT_PREFIX = '[Popchor Mitglieder]';
+const LEGACY_SUBJECT_PREFIX = '[Popchor Mitglieder]';
 const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024;
 const attachmentFields = { id: true, filename: true, contentType: true, size: true } as const;
 
@@ -270,7 +270,9 @@ export class EmailsService {
       idempotencyKey: email.idempotencyKey,
       sentAt: email.sentAt,
       rawSubject: email.subject,
-      subject: email.renderedSubject ?? `${SUBJECT_PREFIX} ${email.subject}`,
+      subject: email.renderedSubject ?? (email.status === SentEmailStatus.SENT
+        ? `${LEGACY_SUBJECT_PREFIX} ${email.subject}`
+        : email.subject),
       markdownContent: email.markdownContent,
       signatureMarkdown: email.signatureMarkdown,
       attachments: email.attachments.map(({ id, filename, contentType, size }) => ({ id, filename, contentType, size })),
@@ -280,7 +282,7 @@ export class EmailsService {
   }
 
   private normalizeSubject(value: string): string {
-    const subject = value?.trim().replace(/^\[Popchor Mitglieder\]\s*/i, '');
+    const subject = value?.trim();
     if (!subject) throw new BadRequestException('Der Betreff darf nicht leer sein');
     return subject;
   }
@@ -292,7 +294,7 @@ export class EmailsService {
     if (!email.sentAt) throw new NotFoundException('E-Mail nicht gefunden');
     return {
       id: email.id,
-      subject: email.renderedSubject ?? `${SUBJECT_PREFIX} ${email.subject}`,
+      subject: email.renderedSubject ?? `${LEGACY_SUBJECT_PREFIX} ${email.subject}`,
       rawSubject: email.subject,
       markdownContent: email.markdownContent,
       signatureMarkdown: email.signatureMarkdown,

@@ -154,13 +154,14 @@ test.describe('Admin mail templates', () => {
     expect(unknownTemplate.status).toBe(404);
 
     const templates = await getCatalog(adminToken);
-    expect(templates).toHaveLength(6);
+    expect(templates).toHaveLength(7);
     expect(templates.map((template) => template.key)).toEqual(expect.arrayContaining([
       'magic-link',
       'invite',
       'push-fallback-reminder',
       'personal-info',
       'member-disabled',
+      'member-automatically-disabled',
       'admin-member-disabled',
     ]));
 
@@ -198,6 +199,28 @@ test.describe('Admin mail templates', () => {
     expect(personalInfo?.previewScenarios.map((scenario) => scenario.id)).toEqual(
       expect.arrayContaining(['personal', 'bulk']),
     );
+    const memberDisabled = templates.find((template) => template.key === 'member-disabled');
+    expect(memberDisabled?.previewScenarios.map((scenario) => scenario.id)).toEqual(
+      expect.arrayContaining(['standard', 'with-reason', 'without-reason']),
+    );
+    const previewMemberDisabled = async (scenarioId: string) => {
+      const response = await fetch(templateUrl('member-disabled', 'preview'), {
+        method: 'POST',
+        headers: adminHeaders(adminToken),
+        body: JSON.stringify({
+          subjectTemplate: memberDisabled!.subjectTemplate,
+          htmlTemplate: memberDisabled!.htmlTemplate,
+          scenarioId,
+        }),
+      });
+      expect(response.ok).toBeTruthy();
+      return response.json() as Promise<TemplatePreview>;
+    };
+    const withReasonPreview = await previewMemberDisabled('with-reason');
+    const withoutReasonPreview = await previewMemberDisabled('without-reason');
+    expect(withReasonPreview.html).toContain('Drei unentschuldigte Fehlzeiten.');
+    expect(withReasonPreview.html).toContain('Deaktivierungsgrund:');
+    expect(withoutReasonPreview.html).not.toContain('Deaktivierungsgrund:');
 
     const original = await getTemplate(adminToken, 'admin-member-disabled');
     const invalidUpdate = await updateTemplate(adminToken, {
@@ -282,7 +305,7 @@ test.describe('Admin mail templates', () => {
     await page.goto('/admin/einstellungen/email-templates');
     const selector = page.getByTestId('admin-mail-template-select').locator('button');
     await selector.click();
-    await page.getByRole('option', { name: 'Persönliche Information' }).click();
+    await page.getByRole('option', { name: 'Info-Mails (persönlich/alle)' }).click();
     const htmlEditor = page.getByTestId('admin-mail-template-html');
     const saveButton = page.getByTestId('admin-mail-template-save');
     const source = [
@@ -361,7 +384,7 @@ test.describe('Admin mail templates', () => {
     const rawSubject = `E2E raw subject ${e2eConfig.runId} ${Date.now()}`;
     const markdownContent = `# ${marker}\n\nThis body verifies custom template delivery.`;
     const signatureMarkdown = 'E2E signature';
-    const customSubjectTemplate = '{{rawSubject}}';
+    const customSubjectTemplate = '{{subject}}';
     const customHtmlTemplate = '<!doctype html><html><body><main><h1>{{rawSubject}}</h1><section>{{{htmlContent}}}</section><footer>{{{htmlSignature}}}</footer></main></body></html>';
     let templateChanged = false;
 
@@ -372,7 +395,7 @@ test.describe('Admin mail templates', () => {
 
       const selector = page.getByTestId('admin-mail-template-select').locator('button');
       await selector.click();
-      await page.getByRole('option', { name: 'Persönliche Information' }).click();
+      await page.getByRole('option', { name: 'Info-Mails (persönlich/alle)' }).click();
 
       await expect(page.getByTestId('admin-mail-template-subject')).toHaveValue(original.subjectTemplate);
       await expect(page.getByTestId('admin-mail-template-preview-frame')).toHaveAttribute('sandbox', '');
@@ -440,7 +463,7 @@ test.describe('Admin mail templates', () => {
       await page.getByRole('option', { name: 'Einladung' }).click();
       await rejectSwitch;
       await expect(page.getByTestId('admin-mail-template-subject')).toHaveValue('Unsaved test draft');
-      await expect(selector).toContainText('Persönliche Information');
+      await expect(selector).toContainText('Info-Mails (persönlich/alle)');
 
       await page.getByTestId('admin-mail-template-subject').fill('Accept this template switch draft');
       await selector.click();
@@ -449,7 +472,7 @@ test.describe('Admin mail templates', () => {
       await acceptSwitch;
       await expect(selector).toContainText('Einladung');
       await selector.click();
-      await page.getByRole('option', { name: 'Persönliche Information' }).click();
+      await page.getByRole('option', { name: 'Info-Mails (persönlich/alle)' }).click();
       await expect(page.getByTestId('admin-mail-template-subject')).toHaveValue(original.subjectTemplate);
 
       await page.getByTestId('admin-mail-template-subject').fill(customSubjectTemplate);
@@ -469,7 +492,7 @@ test.describe('Admin mail templates', () => {
 
       await page.reload();
       await selector.click();
-      await page.getByRole('option', { name: 'Persönliche Information' }).click();
+      await page.getByRole('option', { name: 'Info-Mails (persönlich/alle)' }).click();
       await expect(page.getByTestId('admin-mail-template-subject')).toHaveValue(customSubjectTemplate);
       await expect(page.getByTestId('admin-mail-template-html')).toHaveText(customHtmlTemplate);
 
@@ -493,7 +516,7 @@ test.describe('Admin mail templates', () => {
       await expect(page).toHaveURL(/\/admin\/mitglieder$/);
       await page.goto('/admin/einstellungen/email-templates');
       await selector.click();
-      await page.getByRole('option', { name: 'Persönliche Information' }).click();
+      await page.getByRole('option', { name: 'Info-Mails (persönlich/alle)' }).click();
       await expect(page.getByTestId('admin-mail-template-subject')).toHaveValue(customSubjectTemplate);
 
       await page.goto('/admin/informationen/email');

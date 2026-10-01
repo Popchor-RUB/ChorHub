@@ -28,14 +28,14 @@ describe('EmailsService durable jobs', () => {
 
   afterAll(() => { delete process.env.CHOIR_ADMIN_EMAIL; });
 
-  it('persists bulk message and recipient snapshot, then returns acceptance without SMTP work', async () => {
-    const result = await service.enqueueEmail(SentEmailKind.BULK, ' [Popchor Mitglieder] Sommerfest ', 'Hallo\n', 'Gruß', [], key);
+  it.each(['Sommerfest', '[Popchor Mitglieder] Sommerfest', '[Chor] Sommerfest', '[Popchor Mitglieder]'])('preserves subject %s and recipient snapshot, then returns acceptance without SMTP work', async (subject) => {
+    const result = await service.enqueueEmail(SentEmailKind.BULK, ` ${subject} `, 'Hallo\n', 'Gruß', [], key);
 
     expect(result).toEqual(acceptance);
     expect(prisma.sentEmail.create).toHaveBeenCalledTimes(1);
     expect(prisma.sentEmail.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
-        subject: 'Sommerfest', markdownContent: 'Hallo\n', signatureMarkdown: 'Gruß',
+        subject, markdownContent: 'Hallo\n', signatureMarkdown: 'Gruß',
         status: SentEmailStatus.PENDING, kind: SentEmailKind.BULK,
         recipients: { to: 'admin@choir.test', bcc: ['member@choir.test', 'other@choir.test'] },
         payloadHash: expect.stringMatching(/^[a-f0-9]{64}$/),
@@ -222,7 +222,7 @@ describe('EmailsService durable jobs', () => {
     } as never);
     const result = await service.getJob('job-detail');
     expect(result).toEqual(expect.objectContaining({
-      id: 'job-detail', idempotencyKey: key, rawSubject: 'Subject',
+      id: 'job-detail', idempotencyKey: key, rawSubject: 'Subject', subject: 'Subject',
       attachments: [{ id: 'attachment-1', filename: 'file.pdf', contentType: 'application/pdf', size: 3 }],
       failureCode: null, retryJobId: null,
     }));

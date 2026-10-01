@@ -28,6 +28,7 @@ describe('AdminService', () => {
   let prismaMock: DeepMockProxy<PrismaClient>;
   let mailService: jest.Mocked<MailService>;
   let authService: jest.Mocked<AuthService>;
+  let memberStatusService: jest.Mocked<Pick<MemberStatusService, 'disable' | 'enable'>>;
 
   beforeEach(async () => {
     prismaMock = mockDeep<PrismaClient>();
@@ -45,6 +46,7 @@ describe('AdminService', () => {
       }),
       requestMagicLink: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<AuthService>;
+    memberStatusService = { disable: jest.fn(), enable: jest.fn() };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -52,11 +54,42 @@ describe('AdminService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: MailService, useValue: mailService },
         { provide: AuthService, useValue: authService },
-        { provide: MemberStatusService, useValue: { disable: jest.fn(), enable: jest.fn() } },
+        { provide: MemberStatusService, useValue: memberStatusService },
       ],
     }).compile();
 
     service = module.get(AdminService);
+  });
+
+  describe('updateMemberStatus', () => {
+    it.each([
+      { dto: { disabled: true, reason: undefined }, notifyMember: true, includeReasonInEmail: false },
+      { dto: { disabled: true, notifyMember: false, includeReasonInEmail: true, reason: undefined }, notifyMember: false, includeReasonInEmail: true },
+      { dto: { disabled: true, notifyMember: true, includeReasonInEmail: true, reason: 'Why' }, notifyMember: true, includeReasonInEmail: true },
+    ])('forwards status options with defaults', async ({ dto, notifyMember, includeReasonInEmail }) => {
+      memberStatusService.disable.mockResolvedValue(mockMember() as any);
+      jest.spyOn(service, 'getMemberById').mockResolvedValue(mockMember() as any);
+      await service.updateMemberStatus('member-1', dto);
+
+      expect(memberStatusService.disable).toHaveBeenCalledWith('member-1', dto.reason, false, {
+        notifyMember,
+        includeReasonInEmail,
+      });
+      expect(memberStatusService.enable).not.toHaveBeenCalled();
+    });
+
+    it('ignores notification options when enabling member', async () => {
+      memberStatusService.enable.mockResolvedValue(mockMember() as any);
+      jest.spyOn(service, 'getMemberById').mockResolvedValue(mockMember() as any);
+      await service.updateMemberStatus('member-1', {
+        disabled: false,
+        notifyMember: false,
+        includeReasonInEmail: true,
+      });
+
+      expect(memberStatusService.enable).toHaveBeenCalledWith('member-1');
+      expect(memberStatusService.disable).not.toHaveBeenCalled();
+    });
   });
 
   describe('createMember', () => {

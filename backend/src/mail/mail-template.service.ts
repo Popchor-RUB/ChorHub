@@ -19,6 +19,7 @@ import type {
 } from './mail-template.types';
 import type { UpdateMailTemplateDto } from './update-mail-template.dto';
 import { createMailTemplatePreviewContext } from './mail-template-preview';
+import { upgradeMemberDisabledStockTemplate } from './upgrade-member-disabled-stock-template';
 
 const TEMPLATE_KEYS = MAIL_TEMPLATE_DEFINITIONS.map(({ key }) => key);
 type AstStatement = ReturnType<typeof Handlebars.parse>['body'][number];
@@ -56,6 +57,13 @@ export class MailTemplateService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     const defaults = await loadMailTemplateDefaults();
     await this.prisma.mailTemplate.createMany({ data: defaults, skipDuplicates: true });
+    await upgradeMemberDisabledStockTemplate(
+      async (where, data) => {
+        const result = await this.prisma.mailTemplate.updateMany({ where, data });
+        return result.count;
+      },
+      defaults,
+    );
   }
 
   async list(): Promise<{ templates: MailTemplateDetail[] }> {

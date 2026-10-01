@@ -208,7 +208,12 @@ export const adminMembersApi = {
   },
   list: (status: 'active' | 'disabled' = 'active') =>
     api.get('/admin/members', { params: { status } }),
-  setStatus: (id: string, data: { disabled: boolean; reason?: string }) =>
+  setStatus: (id: string, data: {
+    disabled: boolean;
+    reason?: string;
+    notifyMember?: boolean;
+    includeReasonInEmail?: boolean;
+  }) =>
     api.patch(`/admin/members/${id}/status`, data),
   setComment: (id: string, comment: string) =>
     api.put<{ comment: string | null }>(`/admin/members/${id}/comment`, { comment }),

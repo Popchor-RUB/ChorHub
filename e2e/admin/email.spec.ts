@@ -134,7 +134,7 @@ test.describe('Admin email composer and member archive', () => {
     ).toHaveLength(1);
 
     const sentEmail = matches[0];
-    expect(sentEmail.subject).toBe(`[Popchor Mitglieder] ${subject}`);
+    expect(sentEmail.subject).toBe(subject);
     expect(sentEmail.markdownContent.replace(/\r\n/g, '\n')).toBe(markdownContent);
     expect(sentEmail.signatureMarkdown.replace(/\r\n/g, '\n')).toBe(signatureMarkdown);
     expect(sentEmail.attachments).toEqual([
@@ -190,7 +190,7 @@ test.describe('Admin email composer and member archive', () => {
       const detail = memberPage.getByTestId('member-email-detail');
       await expect(detail).toBeVisible();
       await expect(archive).toHaveCount(0);
-      await expect(detail).toContainText(`[Popchor Mitglieder] ${subject}`);
+      await expect(detail).toContainText(subject);
       await expect(detail).toContainText('Hallo Mitglieder');
       await expect(detail).toContainText('Testinhalt');
       await expect(detail).toContainText('Der Vorstand');

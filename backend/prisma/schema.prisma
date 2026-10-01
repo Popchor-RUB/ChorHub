@@ -63,6 +63,7 @@ model MemberDisableNotice {
   firstName       String   @map("first_name")
   lastName        String   @map("last_name")
   disableReason   String?  @map("disable_reason")
+  includeReasonInEmail Boolean @default(false) @map("include_reason_in_email")
   attempts        Int      @default(0)
   nextAttemptAt   DateTime @default(now()) @map("next_attempt_at")
   claimedAt       DateTime? @map("claimed_at")

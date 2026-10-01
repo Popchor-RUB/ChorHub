@@ -38,7 +38,7 @@ export function createMailTemplatePreviewContext(
     case 'personal-info':
       return scenarioId === 'bulk'
         ? {
-            subject: '[Popchor Mitglieder] Informationen zum Sommerfest',
+            subject: 'Informationen zum Sommerfest',
             rawSubject: 'Informationen zum Sommerfest',
             firstName: '',
             htmlContent: '<p>Bitte melde dich für das Sommerfest an.</p>',
@@ -56,6 +56,12 @@ export function createMailTemplatePreviewContext(
             signatureMarkdown: '',
           };
     case 'member-disabled':
+      return {
+        firstName: 'Alex',
+        adminEmail: 'chor-admin@example.org',
+        reason: scenarioId === 'with-reason' ? 'Drei unentschuldigte Fehlzeiten.' : '',
+      };
+    case 'member-automatically-disabled':
       return { firstName: 'Alex', adminEmail: 'chor-admin@example.org' };
     case 'admin-member-disabled':
       return {

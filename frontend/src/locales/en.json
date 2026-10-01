@@ -168,6 +168,8 @@
     "enable_account": "Enable member",
     "disable_reason": "Reason",
     "disable_reason_optional": "Add an optional reason for disabling this account.",
+    "disable_notify_member": "Notify member by email",
+    "disable_include_reason": "Include reason in email",
     "status_update_failed": "Could not update member status. Please try again.",
     "activity_title": "Activity statistics",
     "activity_description": "Attendance analysis for selected mandatory rehearsals.",

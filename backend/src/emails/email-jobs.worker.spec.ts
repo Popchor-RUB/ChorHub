@@ -36,7 +36,7 @@ describe('EmailJobsWorker', () => {
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
     expect(mail.sendInformationEmail).toHaveBeenCalledWith(expect.objectContaining({
-      to: 'admin@choir.test', bcc: [' MEMBER@choir.test '], subject: '[Popchor Mitglieder] Summer', rawSubject: 'Summer',
+      to: 'admin@choir.test', bcc: [' MEMBER@choir.test '], subject: 'Summer', rawSubject: 'Summer',
     }));
     expect(prisma.sentEmail.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
       data: expect.objectContaining({ status: SentEmailStatus.SENT, renderedSubject: '[Custom] Summer', processingToken: null }),
@@ -48,7 +48,7 @@ describe('EmailJobsWorker', () => {
     await worker.poll();
     expect(prisma.member.findMany).not.toHaveBeenCalled();
     expect(mail.sendInformationEmail).toHaveBeenCalledWith(expect.objectContaining({
-      to: 'admin@choir.test', bcc: [],
+      to: 'admin@choir.test', bcc: [], subject: 'Summer', rawSubject: 'Summer',
     }));
   });
 

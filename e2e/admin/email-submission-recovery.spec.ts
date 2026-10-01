@@ -25,7 +25,7 @@ function makeJob(id: string, subject: string, key: string): MockJob {
     createdAt: '2026-10-01T10:00:00.000Z',
     sentAt: null,
     rawSubject: subject,
-    subject: `[Popchor Mitglieder] ${subject}`,
+    subject,
     markdownContent: 'Recovered E2E message',
     signatureMarkdown: 'E2E signature',
     attachments: [],

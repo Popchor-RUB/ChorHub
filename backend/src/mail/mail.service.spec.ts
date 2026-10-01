@@ -9,6 +9,70 @@ describe('MailService', () => {
     jest.restoreAllMocks();
   });
 
+  it.each([
+    { automatic: undefined, templateKey: 'member-disabled' },
+    { automatic: false, templateKey: 'member-disabled' },
+    { automatic: true, templateKey: 'member-automatically-disabled' },
+  ])('sends member disable mail using $templateKey when automatic=$automatic', async ({ automatic, templateKey }) => {
+    const mailerService = { sendMail: jest.fn().mockResolvedValue(undefined) };
+    const templateService = {
+      render: jest.fn().mockResolvedValue({ subject: 'Disabled', html: '<p>disabled</p>' }),
+    };
+    const module = await Test.createTestingModule({
+      providers: [
+        MailService,
+        { provide: MailerService, useValue: mailerService },
+        { provide: MailTemplateService, useValue: templateService },
+      ],
+    }).compile();
+    const service = module.get(MailService);
+
+    await service.sendMemberDisabledMail({
+      to: 'member@choir.test',
+      firstName: 'Anna',
+      adminEmail: 'admin@choir.test',
+      automatic,
+    });
+
+    expect(templateService.render).toHaveBeenCalledWith(templateKey, automatic
+      ? { firstName: 'Anna', adminEmail: 'admin@choir.test' }
+      : { firstName: 'Anna', adminEmail: 'admin@choir.test', reason: '' });
+    expect(mailerService.sendMail).toHaveBeenCalledWith({
+      to: 'member@choir.test',
+      subject: 'Disabled',
+      html: '<p>disabled</p>',
+    });
+  });
+
+  it('trims manual disable reason and never exposes automatic reason', async () => {
+    const mailerService = { sendMail: jest.fn().mockResolvedValue(undefined) };
+    const templateService = {
+      render: jest.fn().mockResolvedValue({ subject: 'Disabled', html: '<p>disabled</p>' }),
+    };
+    const module = await Test.createTestingModule({
+      providers: [
+        MailService,
+        { provide: MailerService, useValue: mailerService },
+        { provide: MailTemplateService, useValue: templateService },
+      ],
+    }).compile();
+    const service = module.get(MailService);
+
+    await service.sendMemberDisabledMail({
+      to: 'member@choir.test', firstName: 'Anna', adminEmail: 'admin@choir.test', reason: '  Respectful reason  ',
+    });
+    await service.sendMemberDisabledMail({
+      to: 'member@choir.test', firstName: 'Anna', adminEmail: 'admin@choir.test', automatic: true, reason: 'private reason',
+    });
+
+    expect(templateService.render).toHaveBeenNthCalledWith(1, 'member-disabled', {
+      firstName: 'Anna', adminEmail: 'admin@choir.test', reason: 'Respectful reason',
+    });
+    expect(templateService.render).toHaveBeenNthCalledWith(2, 'member-automatically-disabled', {
+      firstName: 'Anna', adminEmail: 'admin@choir.test',
+    });
+  });
+
   it.each([new Error('SMTP connection failed'), 'SMTP connection failed'])(
     'logs send failures and rethrows the original error: %s',
     async (error) => {
@@ -108,7 +172,7 @@ describe('MailService', () => {
     const subject = await service.sendInformationEmail({
       to: 'admin@choir.test',
       bcc: ['member@choir.test'],
-      subject: '[Popchor Mitglieder] Hallo',
+      subject: 'Hallo',
       rawSubject: 'Hallo',
       markdownContent: '**Nachricht**',
       signatureMarkdown: '_Viele Grüße_',
@@ -121,6 +185,9 @@ describe('MailService', () => {
       ],
     });
 
+    expect(templateService.render).toHaveBeenCalledWith('personal-info', expect.objectContaining({
+      subject: 'Hallo', rawSubject: 'Hallo',
+    }));
     expect(subject).toBe('[Popchor Mitglieder] Hallo');
     expect(mailerService.sendMail).toHaveBeenCalledTimes(1);
     expect(mailerService.sendMail).toHaveBeenCalledWith(

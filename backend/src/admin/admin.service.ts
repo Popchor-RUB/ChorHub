@@ -69,7 +69,10 @@ export class AdminService {
 
   async updateMemberStatus(memberId: string, dto: UpdateMemberStatusDto) {
     const member = dto.disabled
-      ? await this.memberStatusService.disable(memberId, dto.reason)
+      ? await this.memberStatusService.disable(memberId, dto.reason, false, {
+          notifyMember: dto.notifyMember ?? true,
+          includeReasonInEmail: dto.includeReasonInEmail ?? false,
+        })
       : await this.memberStatusService.enable(memberId);
     if (!member) throw new NotFoundException('Mitglied nicht gefunden');
     return this.getMemberById(memberId);

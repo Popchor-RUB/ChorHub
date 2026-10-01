@@ -26,7 +26,7 @@ function job(id: string, subject: string, status: JobStatus): JobDto {
     createdAt: '2026-10-01T10:00:00.000Z',
     sentAt: status === 'SENT' ? '2026-10-01T10:00:02.000Z' : null,
     rawSubject: subject,
-    subject: `[Popchor Mitglieder] ${subject}`,
+    subject,
     markdownContent: 'E2E job body',
     signatureMarkdown: 'E2E signature',
     attachments: [],

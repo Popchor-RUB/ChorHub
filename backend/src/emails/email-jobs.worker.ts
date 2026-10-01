@@ -114,7 +114,7 @@ export class EmailJobsWorker implements OnModuleDestroy {
       const renderedSubject = await this.mail.sendInformationEmail({
         to: recipients.to,
         bcc,
-        subject: `[Popchor Mitglieder] ${job.subject}`,
+        subject: job.subject,
         rawSubject: job.subject,
         markdownContent: job.markdownContent,
         signatureMarkdown: job.signatureMarkdown,

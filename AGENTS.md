@@ -11,7 +11,8 @@
 1. Use the Serena mcp tools where possible.
 2. ALWAYS use the caveman skill
 3. ALWAYS use rtk
-4. To debug the frontend of web applications use the playwright MCP
+4. To debug the frontend of web applications use the built-in codex browser support
+5. When asked to use subagents, ALWAYS make an impelmentation plan with GTP6.1-sol high FIRST and use for the implementation later Luna high subagents.
 
 # GLOBAL CODING GUIDELINES
 - Write modular applications consisting out of small files!
@@ -32,6 +33,7 @@ Agent-focused instructions for this repository. Keep changes small, accurate, an
 ## Workflow
 - When changes in `backend/` are made, ensure that unittests still pass (`npm run test`)
 - When changes in `frontend/` are made, ensure that `npm run lint` succeeds
+- When frontend related changes are necessary ALWAYS use the heroui-react skill and heroui mcp!
 - When you are asked to commit something check before if e2e tests from the root directory and unittests from the backend succeed.
 
 ## Coding Guidelines
@@ -154,7 +156,10 @@ npm run test:e2e:report
 - Files in `backend/src/mail/templates/` are startup defaults. Before accepting requests, the backend expands the shared footer into editable default HTML and inserts missing `MailTemplate` rows without replacing existing customizations. `backend/nest-cli.json` copies defaults into `dist/src` during build.
 - Every send renders the current database subject and HTML through the shared mail template renderer with the configured APP_URL. Durable information-mail workers store the rendered subject with the terminal SENT state so archives and job details retain the actual delivered subject. Admin settings edits database rows through JWT-protected `/admin/mail-templates` routes; draft previews use synthetic data and never save or send mail.
 - Template keys, supported placeholders, optional context values, and preview scenarios are defined in the backend registry. Add new templates there with a packaged `.hbs` default; keep seed runs from deleting customized templates.
-- Admin sends choir information mail through `POST /admin/emails` as one message: `TO CHOIR_ADMIN_EMAIL`, `BCC` distinct active-member addresses (admin excluded). Default subjects include `[Popchor Mitglieder]`; admins may customize or remove it through the shared `personal-info` template.
+- Automatic disablement queues member notices with kind `MEMBER_AUTOMATIC` and uses `member-automatically-disabled`; admin disablement queues kind `MEMBER` and uses `member-disabled`. Keep the distinction through retries and restarts; `admin-member-disabled` remains the internal admin notification.
+- Manual disablement accepts `notifyMember` (default `true`) and `includeReasonInEmail` (default `false`). The internal reason and admin notification are retained even when member notification is disabled. Member reason disclosure requires the persisted `MemberDisableNotice.includeReasonInEmail` flag; legacy notices default to `false`. Automatic notices keep their existing behavior.
+- The `member-disabled` template supports an optional escaped `reason` block. Startup upgrades only recognized untouched stock versions using conditional updates; customized subjects, HTML, and footers remain intact. Deploy the notice-sharing migration before the updated backend.
+- Admin sends choir information mail through `POST /admin/emails` as one message: `TO CHOIR_ADMIN_EMAIL`, `BCC` distinct active-member addresses (admin excluded). Composer subjects are trimmed but otherwise preserved; no prefix is added or stripped. Admins may configure a prefix through the shared `personal-info` subject template; the default is `{{subject}}`.
 - Email archives preserve the original composer input and the actual rendered subject. Legacy rows without a rendered subject retain the default prefix when read.
 - Only successfully sent messages appear in admin and member email archives. Every active member can read the full archive, including messages sent before they joined; attachment downloads use authenticated routes.
 - Email attachments are stored with their sent message. Upload limits: 10 files, 5 MB per file, 20 MB total.

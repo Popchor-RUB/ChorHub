@@ -6,6 +6,11 @@ import { MailService } from '../mail/mail.service';
 
 export const AUTOMATIC_DISABLE_REASON = 'Automatisch deaktiviert: drei unentschuldigte Fehlzeiten.';
 
+export interface ManualDisableOptions {
+  notifyMember?: boolean;
+  includeReasonInEmail?: boolean;
+}
+
 @Injectable()
 export class MemberStatusService implements OnApplicationBootstrap {
   private readonly logger = new Logger(MemberStatusService.name);
@@ -25,7 +30,12 @@ export class MemberStatusService implements OnApplicationBootstrap {
     });
   }
 
-  async disable(memberId: string, reason: string | undefined, automatic = false) {
+  async disable(
+    memberId: string,
+    reason: string | undefined,
+    automatic = false,
+    options: ManualDisableOptions = {},
+  ) {
     const member = await this.prisma.member.findUnique({ where: { id: memberId } });
     if (!member) return null;
     if (member.isDisabled) return member;
@@ -33,6 +43,8 @@ export class MemberStatusService implements OnApplicationBootstrap {
     const disableReason = automatic
       ? AUTOMATIC_DISABLE_REASON
       : reason?.trim() || null;
+    const notifyMember = automatic || (options.notifyMember ?? true);
+    const includeReasonInEmail = !automatic && notifyMember && (options.includeReasonInEmail ?? false) && Boolean(disableReason);
     const now = new Date();
     const adminEmail = this.config.getOrThrow<string>('CHOIR_ADMIN_EMAIL');
 
@@ -48,8 +60,8 @@ export class MemberStatusService implements OnApplicationBootstrap {
       await tx.pushSubscription.deleteMany({ where: { memberId } });
       await tx.memberDisableNotice.createMany({
         data: [
-          { memberId, kind: 'MEMBER', recipient: member.email, memberEmail: member.email, firstName: member.firstName, lastName: member.lastName, disableReason },
-          { memberId, kind: 'ADMIN', recipient: adminEmail, memberEmail: member.email, firstName: member.firstName, lastName: member.lastName, disableReason },
+          ...(notifyMember ? [{ memberId, kind: automatic ? 'MEMBER_AUTOMATIC' : 'MEMBER', recipient: member.email, memberEmail: member.email, firstName: member.firstName, lastName: member.lastName, disableReason, includeReasonInEmail }] : []),
+          { memberId, kind: 'ADMIN', recipient: adminEmail, memberEmail: member.email, firstName: member.firstName, lastName: member.lastName, disableReason, includeReasonInEmail: false },
         ],
       });
       return true;
@@ -98,11 +110,13 @@ export class MemberStatusService implements OnApplicationBootstrap {
       if (claim.count !== 1) continue;
 
       try {
-        if (notice.kind === 'MEMBER') {
+        if (notice.kind === 'MEMBER' || notice.kind === 'MEMBER_AUTOMATIC') {
           await this.mailService.sendMemberDisabledMail({
             to: notice.recipient,
             firstName: notice.firstName,
             adminEmail: this.config.getOrThrow<string>('CHOIR_ADMIN_EMAIL'),
+            automatic: notice.kind === 'MEMBER_AUTOMATIC',
+            reason: notice.kind === 'MEMBER' && notice.includeReasonInEmail ? notice.disableReason ?? '' : '',
           });
         } else {
           await this.mailService.sendAdminMemberDisabledMail({

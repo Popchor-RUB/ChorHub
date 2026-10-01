@@ -8,4 +8,12 @@ export class UpdateMemberStatusDto {
   @IsString()
   @MaxLength(500)
   reason?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyMember?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  includeReasonInEmail?: boolean;
 }

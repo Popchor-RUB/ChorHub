@@ -168,6 +168,8 @@
     "enable_account": "Mitglied aktivieren",
     "disable_reason": "Grund",
     "disable_reason_optional": "Optionalen Grund für die Deaktivierung dieses Kontos hinzufügen.",
+    "disable_notify_member": "Mitglied per E-Mail benachrichtigen",
+    "disable_include_reason": "Grund in E-Mail aufnehmen",
     "status_update_failed": "Mitgliedsstatus konnte nicht geändert werden. Bitte erneut versuchen.",
     "activity_title": "Aktivitätsstatistik",
     "activity_description": "Auswertung der Anwesenheit in ausgewählten Pflichtproben.",

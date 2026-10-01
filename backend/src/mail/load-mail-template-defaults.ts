@@ -6,11 +6,11 @@ export async function loadMailTemplateDefaults() {
   const directory = join(__dirname, 'templates');
   const footer = await readFile(join(directory, 'partials', 'footer.hbs'), 'utf8');
   return Promise.all(
-    MAIL_TEMPLATE_DEFINITIONS.map(async ({ key, subjectTemplate }) => ({
+    MAIL_TEMPLATE_DEFINITIONS.map(async ({ key, defaultFileName, subjectTemplate }) => ({
       key,
       subjectTemplate,
       // Store the complete HTML so admins can customize the footer too.
-      htmlTemplate: (await readFile(join(directory, `${key}.hbs`), 'utf8'))
+      htmlTemplate: (await readFile(join(directory, defaultFileName ?? `${key}.hbs`), 'utf8'))
         .replace(/{{>\s*footer\s*}}/g, () => footer),
     })),
   );

@@ -48,6 +48,12 @@ export async function getMailhogMessages(
   );
 }
 
+export async function getMailhogMessagesForRecipient(
+  recipientEmail: string,
+): Promise<MailHogMessage[]> {
+  return fetchMessages(recipientEmail);
+}
+
 export async function waitForMailhogMessages(
   recipientEmail: string,
   subjectMarker: string,
@@ -75,7 +81,7 @@ export async function getMailhogBodyForSubject(
   return decodeQuotedPrintable(messages[0].Content.Body);
 }
 
-function decodeQuotedPrintable(input: string): string {
+export function decodeQuotedPrintable(input: string): string {
   return input
     .replace(/=\r?\n/g, '')
     .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) =>
