@@ -92,7 +92,7 @@ test.describe('Admin email composer and member archive', () => {
     await page.goto('/admin/informationen/email');
     const composer = page.getByTestId('admin-email-composer');
     await expect(composer).toBeVisible();
-    await expect(page.getByTestId('admin-email-prefix')).toContainText('[Popchor Mitglieder]');
+    await expect(page.getByTestId('admin-email-template-hint')).toContainText('Mail-Vorlage');
 
     await page.getByTestId('admin-email-subject').fill(subject);
     await page.getByTestId('admin-email-body-desktop').fill(markdownContent);

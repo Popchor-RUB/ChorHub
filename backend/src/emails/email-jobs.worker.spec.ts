@@ -26,7 +26,7 @@ describe('EmailJobsWorker', () => {
     prisma.sentEmail.updateMany.mockResolvedValue({ count: 1 } as never);
     prisma.sentEmail.findUnique.mockImplementation((() => Promise.resolve(queuedJob() as never)) as never);
     prisma.member.findMany.mockResolvedValue([{ email: 'member@choir.test' }] as never);
-    mail.sendInformationEmail.mockResolvedValue(undefined);
+    mail.sendInformationEmail.mockResolvedValue('[Custom] Summer');
   });
 
   afterEach(() => worker.onModuleDestroy());
@@ -36,10 +36,10 @@ describe('EmailJobsWorker', () => {
 
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
     expect(mail.sendInformationEmail).toHaveBeenCalledWith(expect.objectContaining({
-      to: 'admin@choir.test', bcc: [' MEMBER@choir.test '], subject: '[Popchor Mitglieder] Summer',
+      to: 'admin@choir.test', bcc: [' MEMBER@choir.test '], subject: '[Popchor Mitglieder] Summer', rawSubject: 'Summer',
     }));
     expect(prisma.sentEmail.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ status: SentEmailStatus.SENT, processingToken: null }),
+      data: expect.objectContaining({ status: SentEmailStatus.SENT, renderedSubject: '[Custom] Summer', processingToken: null }),
     }));
   });
 
@@ -91,8 +91,8 @@ describe('EmailJobsWorker', () => {
 
   it('keeps heartbeat alive while SMTP waits and prevents overlapping work', async () => {
     jest.useFakeTimers();
-    let finishSend: (() => void) | undefined;
-    mail.sendInformationEmail.mockReturnValueOnce(new Promise<void>((resolve) => { finishSend = resolve; }));
+    let finishSend: ((subject: string) => void) | undefined;
+    mail.sendInformationEmail.mockReturnValueOnce(new Promise<string>((resolve) => { finishSend = resolve; }));
     const processing = worker.poll();
     await Promise.resolve();
     await Promise.resolve();
@@ -104,7 +104,7 @@ describe('EmailJobsWorker', () => {
       where: expect.objectContaining({ processingToken: expect.any(String) }),
       data: expect.objectContaining({ heartbeatAt: expect.any(Date) }),
     }));
-    finishSend?.();
+    finishSend?.('[Custom] Summer');
     await processing;
     jest.useRealTimers();
   });

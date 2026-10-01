@@ -1,8 +1,8 @@
-import { Test } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
 import { MailerService } from '@nestjs-modules/mailer';
-import { ConfigService } from '@nestjs/config';
 import { MailService } from './mail.service';
+import { MailTemplateService } from './mail-template.service';
 
 describe('MailService', () => {
   afterEach(() => {
@@ -20,7 +20,7 @@ describe('MailService', () => {
         providers: [
           MailService,
           { provide: MailerService, useValue: mailerService },
-          { provide: ConfigService, useValue: { getOrThrow: () => 'https://chorhub.test' } },
+          { provide: MailTemplateService, useValue: { render: jest.fn().mockResolvedValue({ subject: 'Disabled', html: '<p>disabled</p>' }) } },
         ],
       }).compile();
       const service = module.get(MailService);
@@ -44,13 +44,16 @@ describe('MailService', () => {
   it('sends personal info email with template and context', async () => {
     const mailerService = {
       sendMail: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<MailerService>;
+    };
+    const templateService = {
+      render: jest.fn().mockResolvedValue({ subject: 'Betreff', html: '<p>rendered</p>' }),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
         MailService,
         { provide: MailerService, useValue: mailerService },
-        { provide: ConfigService, useValue: { getOrThrow: () => 'https://chorhub.test' } },
+        { provide: MailTemplateService, useValue: templateService },
       ],
     }).compile();
 
@@ -75,17 +78,17 @@ describe('MailService', () => {
       'Markdown Nachricht',
     );
 
+    expect(templateService.render).toHaveBeenCalledWith('personal-info', expect.objectContaining({
+      firstName: 'Anna',
+      subject: 'Betreff',
+      rawSubject: 'Betreff',
+      htmlContent: '<p>Markdown Nachricht</p>\n',
+    }));
     expect(mailerService.sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'anna@choir.de',
         subject: 'Betreff',
-        template: 'personal-info',
-        context: expect.objectContaining({
-          firstName: 'Anna',
-          subject: 'Betreff',
-          htmlContent: '<p>Markdown Nachricht</p>\n',
-          appUrl: 'https://chorhub.test',
-        }),
+        html: '<p>rendered</p>',
       }),
     );
   });
@@ -93,20 +96,20 @@ describe('MailService', () => {
   it('renders admin email body and signature and sends attachments in one message', async () => {
     const mailerService = {
       sendMail: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<MailerService>;
+    };
+    const templateService = {
+      render: jest.fn().mockResolvedValue({ subject: '[Popchor Mitglieder] Hallo', html: '<p>rendered</p>' }),
+    };
     const module = await Test.createTestingModule({
-      providers: [
-        MailService,
-        { provide: MailerService, useValue: mailerService },
-        { provide: ConfigService, useValue: { getOrThrow: () => 'https://chorhub.test' } },
-      ],
+      providers: [MailService, { provide: MailerService, useValue: mailerService }, { provide: MailTemplateService, useValue: templateService }],
     }).compile();
     const service = module.get(MailService);
 
-    await service.sendInformationEmail({
+    const subject = await service.sendInformationEmail({
       to: 'admin@choir.test',
       bcc: ['member@choir.test'],
       subject: '[Popchor Mitglieder] Hallo',
+      rawSubject: 'Hallo',
       markdownContent: '**Nachricht**',
       signatureMarkdown: '_Viele Grüße_',
       attachments: [
@@ -118,17 +121,14 @@ describe('MailService', () => {
       ],
     });
 
+    expect(subject).toBe('[Popchor Mitglieder] Hallo');
     expect(mailerService.sendMail).toHaveBeenCalledTimes(1);
     expect(mailerService.sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'admin@choir.test',
         bcc: ['member@choir.test'],
         subject: '[Popchor Mitglieder] Hallo',
-        template: 'personal-info',
-        context: expect.objectContaining({
-          htmlContent: '<p><strong>Nachricht</strong></p>\n',
-          htmlSignature: '<p><em>Viele Grüße</em></p>\n',
-        }),
+        html: '<p>rendered</p>',
         attachments: [
           expect.objectContaining({
             filename: 'plan.pdf',

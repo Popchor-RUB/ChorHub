@@ -111,15 +111,16 @@ export class EmailJobsWorker implements OnModuleDestroy {
         this.logger.warn(`Email job ${id} lost ownership before SMTP send`);
         return;
       }
-      await this.mail.sendInformationEmail({
+      const renderedSubject = await this.mail.sendInformationEmail({
         to: recipients.to,
         bcc,
         subject: `[Popchor Mitglieder] ${job.subject}`,
+        rawSubject: job.subject,
         markdownContent: job.markdownContent,
         signatureMarkdown: job.signatureMarkdown,
         attachments: job.attachments,
       });
-      const persisted = await this.persistTerminalState(id, token, SentEmailStatus.SENT, null, new Date());
+      const persisted = await this.persistTerminalState(id, token, SentEmailStatus.SENT, null, new Date(), renderedSubject);
       if (persisted) this.logger.log(`Email job ${id} (${job.kind}) sent in ${Date.now() - startedAt}ms`);
       else this.logger.error(`Email job ${id} SMTP accepted; status remains uncertain after ${Date.now() - startedAt}ms`);
     } catch (error) {
@@ -149,13 +150,14 @@ export class EmailJobsWorker implements OnModuleDestroy {
     status: SentEmailStatus,
     failureCode: string | null,
     sentAt: Date | null,
+    renderedSubject: string | null = null,
   ): Promise<boolean> {
     let lastError: unknown;
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
         const result = await this.prisma.sentEmail.updateMany({
           where: { id, status: SentEmailStatus.SENDING, processingToken: token },
-          data: { status, failureCode, sentAt, processingToken: null, heartbeatAt: null },
+          data: { status, failureCode, sentAt, renderedSubject, processingToken: null, heartbeatAt: null },
         });
         return result.count === 1;
       } catch (error) {

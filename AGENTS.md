@@ -112,6 +112,7 @@ npm run test:e2e:report
 ## Testing instructions
 - Backend changes: run `npm run test` in `backend/` (plus focused tests when possible).
 - Frontend changes: run `npm run lint` and `npx tsc -p tsconfig.app.json --noEmit` in `frontend/`.
+- Mail template E2E tests run in the `admin-mail-templates` project after `admin-auth` to prevent shared template edits from racing other mail tests. Tests restore template contents in `finally`; focused runs may use `--project=admin-mail-templates --no-deps` against an isolated stack.
 
 ## Architecture notes
 
@@ -150,9 +151,11 @@ npm run test:e2e:report
 - 401 responses clear session and redirect to login.
 
 ### Email templates
-- Mail templates are in `backend/src/mail/templates/`.
-- `backend/nest-cli.json` copies templates into `dist/src` during build.
-- Admin sends choir information mail through `POST /admin/emails` as one message: `TO CHOIR_ADMIN_EMAIL`, `BCC` distinct active-member addresses (admin excluded), subject prefixed with `[Popchor Mitglieder]`.
+- Files in `backend/src/mail/templates/` are startup defaults. Before accepting requests, the backend expands the shared footer into editable default HTML and inserts missing `MailTemplate` rows without replacing existing customizations. `backend/nest-cli.json` copies defaults into `dist/src` during build.
+- Every send renders the current database subject and HTML through the shared mail template renderer with the configured APP_URL. Durable information-mail workers store the rendered subject with the terminal SENT state so archives and job details retain the actual delivered subject. Admin settings edits database rows through JWT-protected `/admin/mail-templates` routes; draft previews use synthetic data and never save or send mail.
+- Template keys, supported placeholders, optional context values, and preview scenarios are defined in the backend registry. Add new templates there with a packaged `.hbs` default; keep seed runs from deleting customized templates.
+- Admin sends choir information mail through `POST /admin/emails` as one message: `TO CHOIR_ADMIN_EMAIL`, `BCC` distinct active-member addresses (admin excluded). Default subjects include `[Popchor Mitglieder]`; admins may customize or remove it through the shared `personal-info` template.
+- Email archives preserve the original composer input and the actual rendered subject. Legacy rows without a rendered subject retain the default prefix when read.
 - Only successfully sent messages appear in admin and member email archives. Every active member can read the full archive, including messages sent before they joined; attachment downloads use authenticated routes.
 - Email attachments are stored with their sent message. Upload limits: 10 files, 5 MB per file, 20 MB total.
 - Admin bulk and test sends require `Idempotency-Key` and return HTTP 202 after persisting a PostgreSQL-backed job. Admin job status and manual retries live under `/admin/emails/jobs`; test jobs never appear in member or sent-email archives.

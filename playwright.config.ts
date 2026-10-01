@@ -29,6 +29,16 @@ export default defineConfig({
     {
       name: 'admin-auth',
       testDir: './e2e/admin',
+      testIgnore: '**/mail-templates.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: authStatePaths.admin,
+      },
+    },
+    {
+      name: 'admin-mail-templates',
+      testMatch: '**/admin/mail-templates.spec.ts',
+      dependencies: ['admin-auth'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: authStatePaths.admin,

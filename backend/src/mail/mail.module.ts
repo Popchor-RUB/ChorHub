@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { join } from 'path';
 import { MailService } from './mail.service';
 import { MailQueueService } from './mail-queue.service';
+import { MailTemplateService } from './mail-template.service';
 
 function parseBooleanEnv(value: string | undefined, fallback = false): boolean {
   if (value === undefined) {
@@ -46,20 +45,12 @@ function parseBooleanEnv(value: string | undefined, fallback = false): boolean {
           defaults: {
             from: config.get<string>('MAIL_FROM', 'noreply@chorhub.de'),
           },
-          template: {
-            dir: join(__dirname, 'templates'),
-            adapter: new HandlebarsAdapter(),
-            options: { strict: true },
-          },
-          options: {
-            partials: { dir: join(__dirname, 'templates', 'partials') },
-          },
         };
       },
       inject: [ConfigService],
     }),
   ],
-  providers: [MailService, MailQueueService],
-  exports: [MailService, MailQueueService],
+  providers: [MailService, MailQueueService, MailTemplateService],
+  exports: [MailService, MailQueueService, MailTemplateService],
 })
 export class MailModule {}

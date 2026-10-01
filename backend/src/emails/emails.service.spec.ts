@@ -173,6 +173,38 @@ describe('EmailsService durable jobs', () => {
     await expect(service.getAttachment('test-job', 'attachment')).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it.each([
+    ['[Custom] Subject', '[Custom] Subject'],
+    ['Subject', 'Subject'],
+    [null, '[Popchor Mitglieder] Subject'],
+  ])('returns delivered subject %s in archive and job details', async (renderedSubject, expectedSubject) => {
+    const email = {
+      ...acceptance,
+      status: SentEmailStatus.SENT,
+      sentAt: new Date(),
+      subject: 'Subject',
+      renderedSubject,
+      markdownContent: 'Body',
+      signatureMarkdown: '',
+      failureCode: null,
+      idempotencyKey: key,
+      attachments: [],
+      retryJob: null,
+    };
+    prisma.sentEmail.findMany.mockResolvedValue([email] as never);
+    prisma.sentEmail.findFirst.mockResolvedValue(email as never);
+    prisma.sentEmail.findUnique.mockResolvedValue(email as never);
+
+    const archive = await service.listSentEmails();
+    const detail = await service.getSentEmail(email.id);
+    const job = await service.getJob(email.id);
+    expect(archive[0].subject).toBe(expectedSubject);
+    expect(detail.subject).toBe(expectedSubject);
+    expect(job.subject).toBe(expectedSubject);
+    expect(detail.rawSubject).toBe('Subject');
+    expect(job.rawSubject).toBe('Subject');
+  });
+
   it('returns safe job DTO without recipient snapshot or attachment bytes', async () => {
     prisma.sentEmail.findUnique.mockResolvedValue({
       ...acceptance,

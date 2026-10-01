@@ -259,7 +259,7 @@ export class EmailsService {
 
   private toJobDetail(email: {
     id: string; kind: SentEmailKind; status: SentEmailStatus; createdAt: Date; sentAt: Date | null;
-    subject: string; markdownContent: string; signatureMarkdown: string; failureCode: string | null;
+    subject: string; renderedSubject: string | null; markdownContent: string; signatureMarkdown: string; failureCode: string | null;
     idempotencyKey: string | null; attachments: EmailAttachmentMetadata[]; retryJob?: { id: string } | null;
   }) {
     return {
@@ -270,7 +270,7 @@ export class EmailsService {
       idempotencyKey: email.idempotencyKey,
       sentAt: email.sentAt,
       rawSubject: email.subject,
-      subject: `${SUBJECT_PREFIX} ${email.subject}`,
+      subject: email.renderedSubject ?? `${SUBJECT_PREFIX} ${email.subject}`,
       markdownContent: email.markdownContent,
       signatureMarkdown: email.signatureMarkdown,
       attachments: email.attachments.map(({ id, filename, contentType, size }) => ({ id, filename, contentType, size })),
@@ -286,13 +286,13 @@ export class EmailsService {
   }
 
   private toArchiveEntry(email: {
-    id: string; subject: string; markdownContent: string; signatureMarkdown: string;
+    id: string; subject: string; renderedSubject: string | null; markdownContent: string; signatureMarkdown: string;
     sentAt: Date | null; attachments: EmailAttachmentMetadata[];
   }): EmailArchiveEntry {
     if (!email.sentAt) throw new NotFoundException('E-Mail nicht gefunden');
     return {
       id: email.id,
-      subject: `${SUBJECT_PREFIX} ${email.subject}`,
+      subject: email.renderedSubject ?? `${SUBJECT_PREFIX} ${email.subject}`,
       rawSubject: email.subject,
       markdownContent: email.markdownContent,
       signatureMarkdown: email.signatureMarkdown,

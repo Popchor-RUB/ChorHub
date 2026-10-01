@@ -227,11 +227,11 @@ export function EmailInfoPage() {
 
           <TextField className="w-full" value={subject} onChange={setSubject} isReadOnly={readOnly} isRequired>
             <Label>{t('info.email_subject_label')}</Label>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <span className="shrink-0 rounded-md bg-surface-secondary px-2 py-1.5 text-sm font-medium" data-testid="admin-email-prefix">[Popchor Mitglieder]</span>
-              <Input className="min-w-0 flex-1" data-testid="admin-email-subject" placeholder={t('info.email_subject_placeholder')} onChange={(event) => { setSubject(event.target.value); setSubmissionKey(null); setSuccess(null); }} />
-            </div>
+            <Input className="min-w-0 text-base" data-testid="admin-email-subject" placeholder={t('info.email_subject_placeholder')} onChange={(event) => { setSubject(event.target.value); setSubmissionKey(null); setSuccess(null); }} />
           </TextField>
+          <p className="-mt-3 text-sm text-muted" data-testid="admin-email-template-hint">
+            {t('info.email_template_hint')}
+          </p>
 
           <section className="flex flex-col gap-2">
             <MarkdownEditor value={content} onChange={(value) => { setContent(value); setSubmissionKey(null); setSuccess(null); }} onSave={() => undefined} hideSaveButton readOnly={readOnly} fieldLabel={t('info.email_content_label')} fieldTestId="admin-email-body" />

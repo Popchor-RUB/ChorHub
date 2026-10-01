@@ -14,6 +14,9 @@ import type {
   VoiceAttendanceRecord,
   MemberRehearsalEntry,
   VoiceAdminVoice,
+  MailTemplate,
+  MailTemplateKey,
+  MailTemplatePreview,
 } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { withBasePath } from '../utils/basePath';
@@ -332,6 +335,17 @@ export const adminPushApi = {
   getStats: () => api.get<{ subscriberCount: number }>('/push/admin/stats'),
   sendToAll: (title: string, body: string, url?: string) =>
     api.post('/push/admin/send', { title, body, url }),
+};
+
+export const adminMailTemplatesApi = {
+  list: () => api.get<{ templates: MailTemplate[] }>('/admin/mail-templates'),
+  update: (key: MailTemplateKey, input: { subjectTemplate: string; htmlTemplate: string }) =>
+    api.put<MailTemplate>(`/admin/mail-templates/${key}`, input),
+  preview: (key: MailTemplateKey, input: {
+    subjectTemplate: string;
+    htmlTemplate: string;
+    scenarioId?: string;
+  }) => api.post<MailTemplatePreview>(`/admin/mail-templates/${key}/preview`, input),
 };
 
 export const pushApi = {
