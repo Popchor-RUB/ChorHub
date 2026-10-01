@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,8 +12,9 @@ export interface ManualDisableOptions {
 }
 
 @Injectable()
-export class MemberStatusService implements OnApplicationBootstrap {
+export class MemberStatusService implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger(MemberStatusService.name);
+  private pendingNoticeDispatch: Promise<void> | undefined;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -85,7 +86,18 @@ export class MemberStatusService implements OnApplicationBootstrap {
   }
 
   @Cron('*/30 * * * * *')
-  async dispatchPendingNotices(): Promise<void> {
+  dispatchPendingNotices(): Promise<void> {
+    this.pendingNoticeDispatch ??= this.deliverPendingNotices().finally(() => {
+      this.pendingNoticeDispatch = undefined;
+    });
+    return this.pendingNoticeDispatch;
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.pendingNoticeDispatch;
+  }
+
+  private async deliverPendingNotices(): Promise<void> {
     const now = new Date();
     const expiredClaim = new Date(now.getTime() - 5 * 60_000);
     const notices = await this.prisma.memberDisableNotice.findMany({

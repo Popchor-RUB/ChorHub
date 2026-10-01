@@ -34,6 +34,32 @@ describe('MemberStatusService', () => {
     service = new MemberStatusService(prisma, config, mail);
   });
 
+  it('shares an active notice dispatch and waits for it during shutdown', async () => {
+    let finishQuery: ((notices: MemberDisableNotice[]) => void) | undefined;
+    const query = new Promise<MemberDisableNotice[]>((resolve) => {
+      finishQuery = resolve;
+    });
+    prisma.memberDisableNotice.findMany.mockReturnValueOnce({
+      then: query.then.bind(query),
+      catch: query.catch.bind(query),
+      finally: query.finally.bind(query),
+      [Symbol.toStringTag]: 'PrismaPromise',
+    });
+    const dispatch = service.dispatchPendingNotices();
+    expect(service.dispatchPendingNotices()).toBe(dispatch);
+    let closed = false;
+    const shutdown = service.onModuleDestroy().then(() => { closed = true; });
+    await Promise.resolve();
+    expect(closed).toBe(false);
+    finishQuery?.([]);
+    await Promise.all([dispatch, shutdown]);
+    expect(closed).toBe(true);
+    expect(prisma.memberDisableNotice.findMany).toHaveBeenCalledTimes(1);
+    prisma.memberDisableNotice.findMany.mockResolvedValueOnce([]);
+    await service.dispatchPendingNotices();
+    expect(prisma.memberDisableNotice.findMany).toHaveBeenCalledTimes(2);
+  });
+
   it.each([
     { automatic: false, reason: 'Admin decision', options: {}, memberNotice: true, shareReason: false },
     { automatic: false, reason: 'Admin decision', options: { notifyMember: false, includeReasonInEmail: true }, memberNotice: false, shareReason: false },

@@ -21,7 +21,7 @@ interface FallbackMailJob {
 export class RehearsalReminderTask {
   private readonly logger = new Logger(RehearsalReminderTask.name);
   private static readonly FALLBACK_MAIL_INTERVAL_MS = 60_000;
-  private static readonly FALLBACK_MAIL_QUEUE = 'push-fallback-reminder';
+  static readonly FALLBACK_MAIL_QUEUE = 'push-fallback-reminder';
 
   constructor(
     private readonly prisma: PrismaService,

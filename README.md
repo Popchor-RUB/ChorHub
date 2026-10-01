@@ -167,6 +167,10 @@ npm run admin -- <Befehl>
 | `invite` | Einladungen an Mitglieder senden, die sich noch nie eingeloggt haben (`lastLoginAt` ist `null`). |
 | `invite --all` | Einladungen an **alle** Mitglieder senden, unabhängig vom Login-Status. |
 | `mailtemplate <Vorlage> <Mitglied-E-Mail> [Szenario]` | Gespeicherte E-Mail-Vorlage an das angegebene bestehende Mitglied senden. |
+| `task reminder` | Erinnerungen für die nächsten sieben Tage sofort ausführen, einschließlich Push und E-Mail-Fallback. |
+| `task automatic-disable` | Automatische Deaktivierung wegen drei unentschuldigter Fehlzeiten sofort ausführen. |
+
+`task` verwendet dieselben Regeln und das aktuelle Datum wie die geplanten Läufe. Es versendet echte Erinnerungen bzw. deaktiviert berechtigte Mitglieder und legt Benachrichtigungen an. Wiederholte Erinnerungsläufe können erneut Nachrichten senden. Der Prozess wartet auf die gedrosselte Erinnerungs-E-Mail-Warteschlange und laufende Deaktivierungsbenachrichtigungen; ausstehende Deaktivierungsbenachrichtigungen werden dauerhaft gespeichert und vom Backend weiterverarbeitet. Es werden keine zusätzlichen Cron-Timer gestartet und kein vorheriger Build benötigt.
 
 Beim Versand über `invite`/`invite --all` wird auf maximal **1 E-Mail pro Sekunde** begrenzt und ein Fortschrittsbalken angezeigt.
 

@@ -79,6 +79,7 @@ npm run test:cov
 npx tsc --noEmit
 npm run admin -- <command>
 ```
+- Manual scheduled tasks: `npm run admin -- task reminder` or `npm run admin -- task automatic-disable`. These use current-date scheduled rules and perform real sends/status changes. The isolated runner starts no cron timers and drains reminder mail before closing.
 
 ### Prisma (`backend/`)
 ```bash

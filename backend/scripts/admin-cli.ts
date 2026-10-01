@@ -9,6 +9,7 @@
  *   npm run admin -- invite [--all]
  *   npm run admin -- impersonate <member-email>
  *   npm run admin -- mailtemplate <template> <user e-mail> [scenario]
+ *   npm run admin -- task <reminder|automatic-disable>
  *
  * Or directly:
  *   npx tsx scripts/admin-cli.ts create <username> [password]
@@ -33,6 +34,7 @@ import { randomBytes } from 'crypto';
 import * as readline from 'readline';
 import * as nodemailer from 'nodemailer';
 import { requireSingleMailbox } from '../src/common/single-mailbox';
+import { triggerScheduledTask } from './admin-cli-tasks';
 
 const prisma = new PrismaService();
 const cliMail = new AdminCliMailService(prisma, new ConfigService({
@@ -77,6 +79,7 @@ function usage(): never {
   console.error('  npm run admin -- invite [--all]');
   console.error('  npm run admin -- impersonate <member-email>');
   console.error('  npm run admin -- mailtemplate <template> <user e-mail> [scenario]');
+  console.error('  npm run admin -- task <reminder|automatic-disable>');
   for (const { key, previewScenarios } of MAIL_TEMPLATE_DEFINITIONS) {
     console.error(`  ${key}: ${previewScenarios.map(({ id }) => id).join(', ')}`);
   }
@@ -319,6 +322,10 @@ async function main(): Promise<void> {
   const [, , command, ...args] = process.argv;
 
   switch (command) {
+    case 'task':
+      if (args.length !== 1 || (args[0] !== 'reminder' && args[0] !== 'automatic-disable')) usage();
+      await triggerScheduledTask(args[0]);
+      break;
     case 'create':
       if (!args[0]) usage();
       await createAdmin(args[0], args[1]);
