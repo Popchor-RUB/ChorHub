@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Button, Spinner } from '@heroui/react';
+import { Button, Spinner, Tabs } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { useAdminMailTemplates } from '../../../hooks/useAdminMailTemplates';
 import { MailTemplateEditor } from './MailTemplateEditor';
 import { MailTemplatePreviewPanel } from './MailTemplatePreviewPanel';
 import { MailTemplateSelector } from './MailTemplateSelector';
+import { MailTemplateSplitPane } from './MailTemplateSplitPane';
 
 export function AdminMailTemplatesSection() {
   const { t, i18n } = useTranslation();
@@ -41,48 +42,53 @@ export function AdminMailTemplatesSection() {
             </p>
           </div>
 
-          <div className="grid w-full grid-cols-2 gap-2 sm:hidden" role="group" aria-label={t('settings.mail_templates.mobile_view_label')}>
-            <Button
-              className="min-h-11 text-base"
-              variant={mobilePanel === 'editor' ? 'primary' : 'secondary'}
-              aria-pressed={mobilePanel === 'editor'}
-              data-testid="admin-mail-template-mobile-editor"
-              onPress={() => setMobilePanel('editor')}
-            >
-              {t('settings.mail_templates.editor_tab')}
-            </Button>
-            <Button
-              className="min-h-11 text-base"
-              variant={mobilePanel === 'preview' ? 'primary' : 'secondary'}
-              aria-pressed={mobilePanel === 'preview'}
-              data-testid="admin-mail-template-mobile-preview"
-              onPress={() => setMobilePanel('preview')}
-            >
-              {t('settings.mail_templates.preview_tab')}
-            </Button>
-          </div>
+          <Tabs
+            className="sm:hidden"
+            selectedKey={mobilePanel}
+            onSelectionChange={(key) => {
+              if (key === 'editor' || key === 'preview') setMobilePanel(key);
+            }}
+          >
+            <Tabs.ListContainer>
+              <Tabs.List aria-label={t('settings.mail_templates.mobile_view_label')}>
+                <Tabs.Tab id="editor" data-testid="admin-mail-template-mobile-editor">
+                  {t('settings.mail_templates.editor_tab')}
+                  <Tabs.Indicator />
+                </Tabs.Tab>
+                <Tabs.Tab id="preview" data-testid="admin-mail-template-mobile-preview">
+                  {t('settings.mail_templates.preview_tab')}
+                  <Tabs.Indicator />
+                </Tabs.Tab>
+              </Tabs.List>
+            </Tabs.ListContainer>
+          </Tabs>
 
-          <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-            <div className={`${mobilePanel === 'editor' ? '' : 'hidden '}min-w-0 sm:block`}>
-              <MailTemplateEditor
-                subject={templates.draft.subjectTemplate}
-                html={templates.draft.htmlTemplate}
-                placeholders={templates.template.placeholders}
-                templateKey={templates.template.key}
-                onSubjectChange={templates.updateSubject}
-                onHtmlChange={templates.updateHtml}
-                saving={templates.saving}
-              />
-            </div>
-            <div className={`${mobilePanel === 'preview' ? '' : 'hidden '}min-w-0 sm:block`}>
-              <MailTemplatePreviewPanel
-                preview={templates.previewState}
-                scenarios={templates.template.previewScenarios}
-                scenarioId={templates.scenarioId}
-                onScenarioChange={templates.setScenarioId}
-              />
-            </div>
-          </div>
+          <MailTemplateSplitPane
+            separatorLabel={t('settings.mail_templates.splitter_label')}
+            left={
+              <div className={`${mobilePanel === 'editor' ? '' : 'hidden '}min-w-0 sm:block`}>
+                <MailTemplateEditor
+                  subject={templates.draft.subjectTemplate}
+                  html={templates.draft.htmlTemplate}
+                  placeholders={templates.template.placeholders}
+                  templateKey={templates.template.key}
+                  onSubjectChange={templates.updateSubject}
+                  onHtmlChange={templates.updateHtml}
+                  saving={templates.saving}
+                />
+              </div>
+            }
+            right={
+              <div className={`${mobilePanel === 'preview' ? '' : 'hidden '}min-w-0 sm:block`}>
+                <MailTemplatePreviewPanel
+                  preview={templates.previewState}
+                  scenarios={templates.template.previewScenarios}
+                  scenarioId={templates.scenarioId}
+                  onScenarioChange={templates.setScenarioId}
+                />
+              </div>
+            }
+          />
 
           <div className="flex min-w-0 flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-h-6 text-sm" aria-live="polite">

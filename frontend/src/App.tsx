@@ -30,6 +30,8 @@ const RehearsalOverviewPage = lazy(() => import('./pages/admin/RehearsalOverview
 const PushNotificationsPage = lazy(() => import('./pages/admin/PushNotificationsPage').then((module) => ({ default: module.PushNotificationsPage })));
 const OptionsPage = lazy(() => import('./pages/admin/OptionsPage').then((module) => ({ default: module.OptionsPage })));
 
+const AdminMailTemplatesPage = lazy(() => import('./pages/admin/AdminMailTemplatesPage').then((module) => ({ default: module.AdminMailTemplatesPage })));
+
 function LoadingScreen() {
   return <div className="min-h-[30vh] flex items-center justify-center text-muted text-sm">Lädt...</div>;
 }
@@ -84,6 +86,7 @@ const router = createBrowserRouter(
         { path: 'informationen/email', element: <LazyPage><EmailInfoPage /></LazyPage> },
         { path: 'benachrichtigungen', element: <LazyPage><PushNotificationsPage /></LazyPage> },
         { path: 'einstellungen', element: <LazyPage><OptionsPage /></LazyPage> },
+        { path: 'einstellungen/email-templates', element: <LazyPage><AdminMailTemplatesPage /></LazyPage> },
       ],
     },
 

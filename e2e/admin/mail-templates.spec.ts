@@ -211,6 +211,148 @@ test.describe('Admin mail templates', () => {
     expect(afterInvalidUpdate.htmlTemplate).toBe(original.htmlTemplate);
   });
 
+  test('uses a full-width desktop workspace with an accessible resizable split', async ({ page }) => {
+    await page.goto('/admin/einstellungen/email-templates');
+    const workspace = page.getByTestId('admin-mail-templates');
+    const editor = page.getByTestId('admin-mail-template-editor');
+    const preview = page.getByTestId('admin-mail-template-preview');
+    const splitter = page.getByTestId('admin-mail-template-splitter');
+    await expect(editor).toBeVisible();
+
+    for (const width of [1280, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      const workspaceBounds = await workspace.boundingBox();
+      const editorBounds = await editor.boundingBox();
+      const previewBounds = await preview.boundingBox();
+      expect(workspaceBounds).not.toBeNull();
+      expect(editorBounds).not.toBeNull();
+      expect(previewBounds).not.toBeNull();
+      expect(workspaceBounds!.width).toBeGreaterThanOrEqual(width - 64);
+      expect(previewBounds!.x).toBeGreaterThan(editorBounds!.x + editorBounds!.width);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    }
+
+    await expect(splitter).toHaveAttribute('role', 'separator');
+    await expect(splitter).toHaveAttribute('aria-orientation', 'vertical');
+    const initialValue = Number(await splitter.getAttribute('aria-valuenow'));
+    const initialEditorWidth = (await editor.boundingBox())!.width;
+    const splitterBounds = (await splitter.boundingBox())!;
+    const gripX = splitterBounds.x + splitterBounds.width / 2;
+    const gripY = splitterBounds.y + Math.min(splitterBounds.height / 2, 100);
+    await page.mouse.move(gripX, gripY);
+    await page.mouse.down();
+    await page.mouse.move(gripX + 160, gripY, { steps: 12 });
+    await page.mouse.up();
+    await expect.poll(async () => (await editor.boundingBox())!.width).toBeGreaterThan(initialEditorWidth + 100);
+    expect(Number(await splitter.getAttribute('aria-valuenow'))).toBeGreaterThan(initialValue);
+
+    await splitter.focus();
+    const draggedValue = Number(await splitter.getAttribute('aria-valuenow'));
+    await splitter.press('ArrowLeft');
+    await expect.poll(async () => Number(await splitter.getAttribute('aria-valuenow'))).toBeLessThan(draggedValue);
+    const reducedValue = Number(await splitter.getAttribute('aria-valuenow'));
+    await splitter.press('ArrowRight');
+    await expect.poll(async () => Number(await splitter.getAttribute('aria-valuenow'))).toBeGreaterThan(reducedValue);
+    await splitter.press('Home');
+    await expect.poll(async () => Number(await splitter.getAttribute('aria-valuenow'))).toBe(
+      Number(await splitter.getAttribute('aria-valuemin')),
+    );
+    await splitter.press('End');
+    await expect.poll(async () => Number(await splitter.getAttribute('aria-valuenow'))).toBe(
+      Number(await splitter.getAttribute('aria-valuemax')),
+    );
+
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await expect.poll(async () => (await editor.boundingBox())!.width).toBeGreaterThanOrEqual(319);
+    await expect.poll(async () => (await preview.boundingBox())!.width).toBeGreaterThanOrEqual(319);
+    await splitter.press('Home');
+    const retainedValue = await splitter.getAttribute('aria-valuenow');
+    await page.getByTestId('admin-mail-template-select').locator('button').click();
+    await page.getByRole('option', { name: 'Einladung' }).click();
+    await expect(splitter).toHaveAttribute('aria-valuenow', retainedValue!);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(splitter).toBeHidden();
+    await expect(editor).toBeVisible();
+    await expect(preview).toBeHidden();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+
+  test('highlights markup and preserves multiline drafts through undo, redo, and template switching', async ({ page }) => {
+    await page.goto('/admin/einstellungen/email-templates');
+    const selector = page.getByTestId('admin-mail-template-select').locator('button');
+    await selector.click();
+    await page.getByRole('option', { name: 'Persönliche Information' }).click();
+    const htmlEditor = page.getByTestId('admin-mail-template-html');
+    const saveButton = page.getByTestId('admin-mail-template-save');
+    const source = [
+      '<!doctype html>',
+      '<style>p { color: #336699; }</style>',
+      '<!-- Highlighted comment -->',
+      '<p class="message">{{rawSubject}}</p>',
+      '{{#if htmlSignature}}<footer>{{{htmlSignature}}}</footer>{{/if}}',
+      '',
+    ].join('\n');
+    const waitForDraftPreview = (htmlTemplate: string) => page.waitForResponse((response) => {
+      if (response.request().method() !== 'POST'
+        || !new URL(response.url()).pathname.endsWith('/admin/mail-templates/personal-info/preview')) return false;
+      const draft = response.request().postDataJSON() as { htmlTemplate: string };
+      return draft.htmlTemplate === htmlTemplate;
+    });
+
+    const previewPromise = waitForDraftPreview(source);
+    await htmlEditor.fill(source);
+    expect((await previewPromise).ok()).toBeTruthy();
+    await expect(htmlEditor).toHaveAttribute('role', 'textbox');
+    await expect(htmlEditor).toHaveAttribute('aria-multiline', 'true');
+    await expect(htmlEditor.locator('.cm-handlebars').filter({ hasText: '{{rawSubject}}' })).toBeVisible();
+    await expect(htmlEditor.locator('.cm-handlebars-triple')).toBeVisible();
+    await expect(htmlEditor.locator('.cm-handlebars-block')).toHaveCount(2);
+    const highlightedTokens = await htmlEditor.evaluate((element) => {
+      const tokens = Array.from(element.querySelectorAll('.cm-line span'));
+      const colorFor = (text: string) => {
+        const token = tokens.find((candidate) => candidate.textContent === text);
+        return token ? getComputedStyle(token).color : null;
+      };
+      return {
+        plain: getComputedStyle(element).color,
+        tag: colorFor('p'),
+        css: colorFor('color'),
+        attributeValue: colorFor('"message"'),
+      };
+    });
+    expect(highlightedTokens.tag).not.toBeNull();
+    expect(highlightedTokens.css).not.toBeNull();
+    expect(highlightedTokens.attributeValue).not.toBeNull();
+    expect(highlightedTokens.tag).not.toBe(highlightedTokens.plain);
+    expect(highlightedTokens.css).not.toBe(highlightedTokens.plain);
+    expect(highlightedTokens.attributeValue).not.toBe(highlightedTokens.plain);
+    await expect(saveButton).toBeEnabled();
+
+    await htmlEditor.press('ControlOrMeta+End');
+    const editedSource = `${source}<!-- Undo probe -->`;
+    const editedPreviewPromise = waitForDraftPreview(editedSource);
+    await page.keyboard.insertText('<!-- Undo probe -->');
+    expect((await editedPreviewPromise).ok()).toBeTruthy();
+    const undoPreviewPromise = waitForDraftPreview(source);
+    await htmlEditor.press('ControlOrMeta+z');
+    expect((await undoPreviewPromise).ok()).toBeTruthy();
+    const redoPreviewPromise = waitForDraftPreview(editedSource);
+    await htmlEditor.press(process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+y');
+    expect((await redoPreviewPromise).ok()).toBeTruthy();
+
+    await selector.click();
+    const acceptSwitch = page.waitForEvent('dialog').then((dialog) => dialog.accept());
+    await page.getByRole('option', { name: 'Einladung' }).click();
+    await acceptSwitch;
+    await htmlEditor.press('ControlOrMeta+z');
+    await expect(saveButton).toBeDisabled();
+    await expect(htmlEditor).not.toContainText('Undo probe');
+    await htmlEditor.press('Escape');
+    await htmlEditor.press('Tab');
+    await expect(page.getByTestId('admin-mail-template-splitter')).toBeFocused();
+  });
+
   test('saves templates, guards dirty navigation, and sends with rendered subject', async ({ page }) => {
     const adminToken = await getAdminToken();
     const member = await getFirstMember(adminToken);
@@ -224,7 +366,7 @@ test.describe('Admin mail templates', () => {
     let templateChanged = false;
 
     try {
-      await page.goto('/admin/einstellungen');
+      await page.goto('/admin/einstellungen/email-templates');
       const section = page.getByTestId('admin-mail-templates');
       await expect(section).toBeVisible();
 
@@ -258,7 +400,8 @@ test.describe('Admin mail templates', () => {
       expect(desktopLayout.previewLeft).toBeGreaterThan(desktopLayout.editorLeft);
 
       await page.setViewportSize({ width: 390, height: 844 });
-      await expect(page.getByTestId('admin-mail-template-mobile-editor')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByTestId('admin-mail-template-mobile-editor')).toHaveAttribute('role', 'tab');
+      await expect(page.getByTestId('admin-mail-template-mobile-editor')).toHaveAttribute('aria-selected', 'true');
       await expect(page.getByTestId('admin-mail-template-editor')).toBeVisible();
       await expect(page.getByTestId('admin-mail-template-preview')).toBeHidden();
       const mobileWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -328,7 +471,7 @@ test.describe('Admin mail templates', () => {
       await selector.click();
       await page.getByRole('option', { name: 'Persönliche Information' }).click();
       await expect(page.getByTestId('admin-mail-template-subject')).toHaveValue(customSubjectTemplate);
-      await expect(page.getByTestId('admin-mail-template-html')).toHaveValue(customHtmlTemplate);
+      await expect(page.getByTestId('admin-mail-template-html')).toHaveText(customHtmlTemplate);
 
       await page.getByTestId('admin-mail-template-subject').fill('Discard this draft');
       await page.getByTestId('admin-mail-template-discard').click();
@@ -339,7 +482,7 @@ test.describe('Admin mail templates', () => {
       const rejectNavigation = page.waitForEvent('dialog').then((dialog) => dialog.dismiss());
       await page.getByRole('link', { name: 'Mitglieder' }).click();
       await rejectNavigation;
-      await expect(page).toHaveURL(/\/admin\/einstellungen$/);
+      await expect(page).toHaveURL(/\/admin\/einstellungen\/email-templates$/);
       await expect(page.getByTestId('admin-mail-template-subject')).toHaveValue('Cancel navigation draft');
       await page.getByTestId('admin-mail-template-discard').click();
 
@@ -348,7 +491,7 @@ test.describe('Admin mail templates', () => {
       await page.getByRole('link', { name: 'Mitglieder' }).click();
       await acceptNavigation;
       await expect(page).toHaveURL(/\/admin\/mitglieder$/);
-      await page.goto('/admin/einstellungen');
+      await page.goto('/admin/einstellungen/email-templates');
       await selector.click();
       await page.getByRole('option', { name: 'Persönliche Information' }).click();
       await expect(page.getByTestId('admin-mail-template-subject')).toHaveValue(customSubjectTemplate);

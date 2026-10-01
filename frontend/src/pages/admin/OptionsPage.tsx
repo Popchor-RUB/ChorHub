@@ -9,7 +9,6 @@ import {
   useOverlayState,
 } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
-import { AdminMailTemplatesSection } from '../../components/admin/mail-templates/AdminMailTemplatesSection';
 import { choirVoicesApi } from '../../services/api';
 import type { ChoirVoice } from '../../types';
 
@@ -210,8 +209,6 @@ export function OptionsPage() {
           </div>
         )}
       </section>
-
-      <AdminMailTemplatesSection />
 
       {/* Add modal */}
       <Modal.Backdrop isOpen={addModal.isOpen} onOpenChange={addModal.setOpen}>

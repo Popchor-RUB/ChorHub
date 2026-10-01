@@ -10,9 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-html": "^6.4.12",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
     "@heroicons/react": "^2.2.0",
     "@heroui/react": "^3.2.6",
     "@heroui/styles": "^3.2.6",
+    "@lezer/highlight": "^1.2.5",
     "@react-aria/i18n": "^3.13.1",
     "@tailwindcss/vite": "^4.2.0",
     "@zxing/browser": "^0.1.5",

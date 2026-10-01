@@ -1,11 +1,10 @@
-import { Fragment, useCallback } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useCallback } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@heroui/react';
 import {
   UsersIcon,
   MusicalNoteIcon,
   CheckCircleIcon,
-  Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import type { ComponentType, SVGProps } from 'react';
@@ -15,6 +14,7 @@ import { ThemeToggle } from '../../components/ThemeToggle';
 import { useIdleTimeout } from '../../hooks/useIdleTimeout';
 import { LanguageSwitcher } from '../../components/LanguageSwitcher';
 import { InformationMenu } from '../../components/admin/InformationMenu';
+import { SettingsMenu } from '../../components/admin/SettingsMenu';
 
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -29,12 +29,12 @@ const navItemDefs: NavItemDef[] = [
   { to: '/admin/mitglieder', labelKey: 'nav.members', mobileLabelKey: 'nav.members', icon: UsersIcon },
   { to: '/admin/proben', labelKey: 'nav.rehearsals', mobileLabelKey: 'nav.rehearsals', icon: MusicalNoteIcon },
   { to: '/admin/anwesenheit', labelKey: 'nav.attendance', mobileLabelKey: 'nav.attendance', icon: CheckCircleIcon },
-  { to: '/admin/einstellungen', labelKey: 'nav.settings', mobileLabelKey: 'nav.settings_short', icon: Cog6ToothIcon },
 ];
 
 export function AdminLayout() {
   const { adminSession, logoutAdmin } = useAuthStore();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { t } = useTranslation();
 
   const handleLogout = () => {
@@ -61,20 +61,19 @@ export function AdminLayout() {
         </div>
         <ul className="hidden items-center justify-center gap-4 md:flex">
           {navItemDefs.map((item) => (
-            <Fragment key={item.to}>
-              {item.to === '/admin/einstellungen' && <li><InformationMenu /></li>}
-              <li>
-                <NavLink
-                  to={item.to}
-                  className={({ isActive }) =>
-                    isActive ? 'text-accent font-medium' : 'text-muted hover:text-foreground'
-                  }
-                >
-                  {t(item.labelKey)}
-                </NavLink>
-              </li>
-            </Fragment>
+            <li key={item.to}>
+              <NavLink
+                to={item.to}
+                className={({ isActive }) =>
+                  isActive ? 'text-accent font-medium' : 'text-muted hover:text-foreground'
+                }
+              >
+                {t(item.labelKey)}
+              </NavLink>
+            </li>
           ))}
+          <li><InformationMenu /></li>
+          <li><SettingsMenu /></li>
         </ul>
         <ul className="flex items-center justify-end gap-1.5">
           <li>
@@ -111,22 +110,22 @@ export function AdminLayout() {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {navItemDefs.map((item) => (
-          <Fragment key={item.to}>
-            {item.to === '/admin/einstellungen' && <InformationMenu mobile />}
-            <NavLink
-              to={item.to}
-              className={({ isActive }) =>
-                `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-accent font-semibold' : 'text-muted'}`
-              }
-            >
-              <item.icon className="w-6 h-6 mb-0.5" />
-              <span>{t(item.mobileLabelKey)}</span>
-            </NavLink>
-          </Fragment>
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex-1 flex flex-col items-center py-2 text-center text-xs ${isActive ? 'text-accent font-semibold' : 'text-muted'}`
+            }
+          >
+            <item.icon className="w-6 h-6 mb-0.5" />
+            <span>{t(item.mobileLabelKey)}</span>
+          </NavLink>
         ))}
+        <InformationMenu mobile />
+        <SettingsMenu mobile />
       </nav>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 md:pb-8">
+      <main className={`${pathname === '/admin/einstellungen/email-templates' ? 'w-full max-w-none px-4 sm:px-6 lg:px-8' : 'mx-auto max-w-5xl px-4'} py-6 pb-24 md:pb-8`}>
         <Outlet />
       </main>
     </div>

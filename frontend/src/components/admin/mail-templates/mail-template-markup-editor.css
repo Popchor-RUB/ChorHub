@@ -1,0 +1,81 @@
+.mail-template-markup-editor {
+  min-width: 0;
+  min-height: 58svh;
+  max-height: 78svh;
+  overflow: auto;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium, 0.75rem);
+  background: var(--background);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.mail-template-markup-editor .cm-editor {
+  min-height: inherit;
+  background: transparent;
+  outline: none;
+}
+
+.mail-template-markup-editor .cm-scroller {
+  min-height: inherit;
+  overflow: visible;
+}
+
+.mail-template-markup-editor .cm-content {
+  padding: 0.75rem 0;
+  caret-color: var(--foreground);
+}
+
+.mail-template-markup-editor .cm-line {
+  padding: 0 1rem;
+}
+
+.mail-template-markup-editor .cm-gutters {
+  min-width: 3rem;
+  border-right: 1px solid var(--border);
+}
+
+.mail-template-markup-editor .cm-lineNumbers .cm-gutterElement {
+  padding: 0 0.75rem;
+}
+
+.mail-template-markup-editor .cm-focused {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: -2px;
+}
+
+.mail-template-markup-editor .cm-handlebars {
+  color: var(--warning-soft-foreground, #a16207);
+  background: color-mix(in srgb, var(--warning-soft, #fef3c7) 18%, transparent);
+  border-radius: 0.2rem;
+}
+
+.mail-template-markup-editor .cm-handlebars-block {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.mail-template-markup-editor .cm-handlebars-triple {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+@media (min-width: 640px) {
+  .mail-template-markup-editor {
+    min-height: 34rem;
+    font-size: 0.8125rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mail-template-markup-editor {
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+
+  .mail-template-markup-editor:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+}

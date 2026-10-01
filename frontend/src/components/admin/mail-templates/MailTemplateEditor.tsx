@@ -1,6 +1,8 @@
-import { Input, Label, TextArea, TextField } from '@heroui/react';
+import { Description, Input, Label, TextField } from '@heroui/react';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MailTemplatePlaceholderHelp } from './MailTemplatePlaceholderHelp';
+import { MailTemplateMarkupEditor } from './MailTemplateMarkupEditor';
 import type { MailTemplateKey, MailTemplatePlaceholder } from '../../../types';
 
 interface MailTemplateEditorProps {
@@ -15,6 +17,9 @@ interface MailTemplateEditorProps {
 
 export function MailTemplateEditor({ subject, html, placeholders, templateKey, onSubjectChange, onHtmlChange, saving = false }: MailTemplateEditorProps) {
   const { t } = useTranslation();
+  const htmlEditorId = useId();
+  const htmlLabelId = useId();
+  const htmlKeyboardHintId = useId();
 
   return (
     <div className="flex min-w-0 flex-col gap-5" data-testid="admin-mail-template-editor">
@@ -28,20 +33,22 @@ export function MailTemplateEditor({ subject, html, placeholders, templateKey, o
         />
       </TextField>
 
-      <TextField className="w-full" value={html} onChange={onHtmlChange}>
-        <Label>{t('settings.mail_templates.html_label')}</Label>
-        <TextArea
-          aria-label={t('settings.mail_templates.html_label')}
-          autoCapitalize="off"
-          autoComplete="off"
-          autoCorrect="off"
-          className="min-h-[58svh] resize-y font-mono text-base leading-6 sm:min-h-[34rem] sm:text-sm"
-          data-testid="admin-mail-template-html"
+      <div className="flex w-full min-w-0 flex-col gap-2">
+        <Label id={htmlLabelId} htmlFor={htmlEditorId}>{t('settings.mail_templates.html_label')}</Label>
+        <MailTemplateMarkupEditor
+          id={htmlEditorId}
+          label={t('settings.mail_templates.html_label')}
+          labelId={htmlLabelId}
+          descriptionId={htmlKeyboardHintId}
+          value={html}
+          onChange={onHtmlChange}
           disabled={saving}
-          spellCheck={false}
-          wrap="off"
+          templateKey={templateKey}
         />
-      </TextField>
+        <Description id={htmlKeyboardHintId}>
+          {t('settings.mail_templates.html_editor_keyboard_hint')}
+        </Description>
+      </div>
 
       <MailTemplatePlaceholderHelp placeholders={placeholders} templateKey={templateKey} />
     </div>
