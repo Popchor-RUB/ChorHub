@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { attendanceApi, memberAuthApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { DisabledAccountNotice } from '../../components/auth/DisabledAccountNotice';
+import { AttendanceResponseResult } from '../../components/auth/AttendanceResponseResult';
 import { getDisabledAccountContact } from '../../utils/authErrors';
+import type { AttendanceResponse } from '../../types';
 
 const isAttendanceResponse = (value: string | null): value is 'CONFIRMED' | 'DECLINED' =>
   value === 'CONFIRMED' || value === 'DECLINED';
@@ -16,10 +18,13 @@ export function MagicLinkVerifyPage() {
   const { setMemberSession } = useAuthStore();
   const [error, setError] = useState('');
   const [disabledContactEmail, setDisabledContactEmail] = useState<string | null>(null);
+  const [attendanceResult, setAttendanceResult] = useState<AttendanceResponse | 'FAILED' | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
+    let active = true;
     void Promise.resolve().then(async () => {
+      if (!active) return;
       const token = searchParams.get('token');
       if (!token) {
         setError(t('auth.error_no_token'));
@@ -31,6 +36,7 @@ export function MagicLinkVerifyPage() {
 
       try {
         const res = await memberAuthApi.verifyMagicLink(token);
+        if (!active) return;
         const { token: rawToken, member } = res.data;
         setMemberSession({
           token: rawToken,
@@ -42,18 +48,22 @@ export function MagicLinkVerifyPage() {
         if (rehearsalId && isAttendanceResponse(response)) {
           try {
             await attendanceApi.setPlan(rehearsalId, response);
+            if (active) setAttendanceResult(response);
           } catch {
-            // Keep login successful even when RSVP action can no longer be applied.
+            if (active) setAttendanceResult('FAILED');
           }
+          return;
         }
 
         navigate('/proben', { replace: true });
       } catch (error) {
+        if (!active) return;
         const contactEmail = getDisabledAccountContact(error);
         setError(contactEmail ? t('auth.error_member_disabled') : t('auth.error_invalid_link'));
         setDisabledContactEmail(contactEmail);
       }
     });
+    return () => { active = false; };
   }, [navigate, searchParams, setMemberSession, t]);
 
   return (
@@ -67,6 +77,8 @@ export function MagicLinkVerifyPage() {
                 ? <DisabledAccountNotice message={error} contactEmail={disabledContactEmail} />
                 : <p className="text-muted text-sm">{error}</p>}
             </div>
+          ) : attendanceResult ? (
+            <AttendanceResponseResult result={attendanceResult} />
           ) : (
             <div className="flex flex-col items-center gap-4">
               <Spinner size="lg" />

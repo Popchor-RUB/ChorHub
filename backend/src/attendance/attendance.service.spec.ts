@@ -89,6 +89,52 @@ describe('AttendanceService', () => {
     });
   });
 
+  describe.each([90, null])('attendance deadline with duration %s', (durationMinutes) => {
+    const start = new Date('2030-01-01T19:30:00.000Z');
+    const duration = durationMinutes ?? 120;
+
+    describe.each(['CONFIRMED', 'DECLINED', 'DELETE'] as const)('%s plan', (action) => {
+      it.each([
+        { label: 'before start', offset: -1, allowed: true },
+        { label: 'at start', offset: 0, allowed: true },
+        { label: 'during rehearsal', offset: 30 * 60_000, allowed: true },
+        { label: 'just before end', offset: duration * 60_000 - 1, allowed: true },
+        { label: 'at end', offset: duration * 60_000, allowed: false },
+        { label: 'after end', offset: duration * 60_000 + 1, allowed: false },
+      ])('$label', async ({ offset, allowed }) => {
+        jest.useFakeTimers().setSystemTime(new Date(start.getTime() + offset));
+        prismaMock.rehearsal.findUnique.mockResolvedValue({
+          ...mockRehearsal,
+          date: start,
+          durationMinutes,
+        });
+        const result = action === 'DELETE'
+          ? service.deleteAttendancePlan('member-1', 'rehearsal-1')
+          : service.setAttendancePlan('member-1', 'rehearsal-1', { response: action });
+
+        if (allowed) {
+          await result;
+          if (action === 'DELETE') {
+            expect(prismaMock.attendancePlan.deleteMany).toHaveBeenCalledWith({
+              where: { memberId: 'member-1', rehearsalId: 'rehearsal-1' },
+            });
+          } else {
+            expect(prismaMock.attendancePlan.upsert).toHaveBeenCalledWith(
+              expect.objectContaining({
+                create: expect.objectContaining({ response: action }),
+                update: { response: action },
+              }),
+            );
+          }
+        } else {
+          await expect(result).rejects.toThrow(ForbiddenException);
+          expect(prismaMock.attendancePlan.upsert).not.toHaveBeenCalled();
+          expect(prismaMock.attendancePlan.deleteMany).not.toHaveBeenCalled();
+        }
+      });
+    });
+  });
+
   describe('getRecordsForRehearsal', () => {
     const rehearsalA = { ...mockRehearsal, id: 'r-a', date: new Date('2025-01-01') };
     const rehearsalB = { ...mockRehearsal, id: 'r-b', date: new Date('2025-02-01') };

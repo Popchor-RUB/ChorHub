@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useDateLocale } from '../../hooks/useDateLocale';
+import { getAttendancePlanDeadline } from '../../utils/attendancePlanDeadline';
 import { formatDateTimeNoWeekday, formatDateTimeShort, formatTime } from '../../utils/dateFormatting';
 
 interface Props {
@@ -20,8 +21,8 @@ export function RehearsalCard({ rehearsal, onUpdated, readOnly = false }: Props)
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
 
-  const hasStarted = new Date(rehearsal.date) <= new Date();
-  const buttonsDisabled = readOnly || hasStarted;
+  const hasEnded = getAttendancePlanDeadline(rehearsal) <= Date.now();
+  const buttonsDisabled = readOnly || hasEnded;
   const endTime = rehearsal.durationMinutes
     ? formatTime(
         new Date(new Date(rehearsal.date).getTime() + rehearsal.durationMinutes * 60_000),

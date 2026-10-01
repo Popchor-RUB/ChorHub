@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, membersApi, choirVoicesApi, memberCalendarApi } from '../../services/api';
 import { RehearsalCard } from '../../components/rehearsal/RehearsalCard';
 import type { ChoirVoice, Member, Rehearsal } from '../../types';
+import { getAttendancePlanDeadline } from '../../utils/attendancePlanDeadline';
 
 export function RehearsalsPage() {
   const [rehearsals, setRehearsals] = useState<Rehearsal[]>([]);
@@ -83,8 +84,11 @@ export function RehearsalsPage() {
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const upcoming = rehearsals.filter((r) => new Date(r.date) >= startOfToday).reverse();
-  const past = rehearsals.filter((r) => new Date(r.date) < startOfToday);
+  const now = Date.now();
+  const isUpcoming = (rehearsal: Rehearsal) =>
+    new Date(rehearsal.date) >= startOfToday || getAttendancePlanDeadline(rehearsal) > now;
+  const upcoming = rehearsals.filter(isUpcoming).reverse();
+  const past = rehearsals.filter((r) => !isUpcoming(r));
   const visibleUpcoming = showAllRehearsals ? upcoming : upcoming.slice(0, 4);
   const hasHiddenRehearsals = upcoming.length > visibleUpcoming.length;
 

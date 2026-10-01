@@ -1,8 +1,101 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, devices } from '@playwright/test';
 import { createMember, getAdminToken, getFirstMember, setMemberDisabled } from './helpers/api';
 import { clearMailHog, getLatestMailBody, getLatestMagicLinkCode } from './helpers/mailhog';
 
 // Runs in the 'no-auth' project — no storageState injected
+
+test.describe('Reminder attendance response on iOS', () => {
+  test.use({
+    userAgent: devices['iPhone 13'].userAgent,
+    viewport: devices['iPhone 13'].viewport,
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/auth/magic-link/verify?token=reminder-token', (route) => route.fulfill({
+      json: {
+        token: 'member-token',
+        member: { id: 'reminder-member', firstName: 'Reminder', lastName: 'Test' },
+      },
+    }));
+  });
+
+  for (const [response, message] of [
+    ['CONFIRMED', 'Du hast für die Probe zugesagt.'],
+    ['DECLINED', 'Du hast für die Probe abgesagt.'],
+  ] as const) {
+    test(`${response} waits for save then shows confirmation without install guide`, async ({ page }) => {
+      const submissions: string[] = [];
+      let releaseSave: () => void = () => {};
+      const saveAllowed = new Promise<void>((resolve) => { releaseSave = resolve; });
+      await page.route('**/attendance/plans/reminder-rehearsal', async (route) => {
+        expect(route.request().method()).toBe('PUT');
+        expect(route.request().headers()['x-member-token']).toBe('member-token');
+        submissions.push(route.request().postDataJSON().response);
+        await saveAllowed;
+        await route.fulfill({ json: { response } });
+      });
+
+      await page.goto(`/auth/verify?token=reminder-token&rehearsalId=reminder-rehearsal&response=${response}`);
+      await expect.poll(() => submissions.length).toBe(1);
+      await expect(page.getByText('Anmeldung wird verarbeitet...')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Rückmeldung gespeichert', exact: true })).not.toBeVisible();
+      releaseSave();
+
+      await expect(page.getByRole('heading', { name: 'Rückmeldung gespeichert', exact: true })).toBeVisible();
+      await expect(page.getByText(message, { exact: true })).toBeVisible();
+      await expect(page.getByText('Du kannst diese Seite jetzt schließen.')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Probenübersicht öffnen' })).toBeVisible();
+      await expect(page.getByText('ChorHub installieren', { exact: true })).not.toBeVisible();
+      await expect(page).toHaveURL(/\/auth\/verify\?/);
+      expect(submissions).toEqual([response]);
+    });
+  }
+
+  test('failed save shows failure without success confirmation or install guide', async ({ page }) => {
+    await page.route('**/attendance/plans/reminder-rehearsal', (route) => route.fulfill({
+      status: 404,
+      json: { message: 'Rehearsal not found' },
+    }));
+
+    await page.goto('/auth/verify?token=reminder-token&rehearsalId=reminder-rehearsal&response=CONFIRMED');
+
+    await expect(page.getByRole('heading', { name: 'Rückmeldung nicht gespeichert' })).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText('Bitte öffne die Probenübersicht');
+    await expect(page.getByRole('heading', { name: 'Rückmeldung gespeichert', exact: true })).not.toBeVisible();
+    await expect(page.getByText('ChorHub installieren', { exact: true })).not.toBeVisible();
+    await expect(page).toHaveURL(/\/auth\/verify\?/);
+  });
+
+  test('invalid reminder token shows login error without saving attendance', async ({ page }) => {
+    let submitted = false;
+    await page.route('**/auth/magic-link/verify?token=reminder-token', (route) => route.fulfill({
+      status: 403,
+      json: { message: 'Invalid token' },
+    }));
+    await page.route('**/attendance/plans/**', (route) => {
+      submitted = true;
+      return route.fulfill({ json: {} });
+    });
+
+    await page.goto('/auth/verify?token=reminder-token&rehearsalId=reminder-rehearsal&response=CONFIRMED');
+
+    await expect(page.getByText('Anmeldung fehlgeschlagen', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Rückmeldung gespeichert', exact: true })).not.toBeVisible();
+    expect(submitted).toBe(false);
+  });
+
+  test('regular magic link still opens member area and install guide', async ({ page }) => {
+    await page.route('**/members/me', (route) => route.fulfill({ json: { voiceAdminVoices: [] } }));
+    await page.route('**/rehearsals?all=true', (route) => route.fulfill({ json: [] }));
+
+    await page.goto('/auth/verify?token=reminder-token');
+
+    await expect(page).toHaveURL(/\/proben$/);
+    await expect(page.getByText('ChorHub installieren', { exact: true })).toBeVisible();
+  });
+});
 
 test.describe('Admin login', () => {
   test('valid credentials redirect to /admin/mitglieder', async ({ page }) => {

@@ -62,7 +62,14 @@
     "login_failed": "Anmeldung fehlgeschlagen",
     "error_no_token": "Kein Token in der URL gefunden.",
     "error_invalid_link": "Der Anmeldelink ist ungültig. Bitte fordere einen neuen an.",
-    "processing": "Anmeldung wird verarbeitet..."
+    "processing": "Anmeldung wird verarbeitet...",
+    "attendance_saved": "Rückmeldung gespeichert",
+    "attendance_confirmed": "Du hast für die Probe zugesagt.",
+    "attendance_declined": "Du hast für die Probe abgesagt.",
+    "attendance_close_hint": "Du kannst diese Seite jetzt schließen.",
+    "attendance_failed": "Rückmeldung nicht gespeichert",
+    "error_attendance_response": "Deine Rückmeldung konnte nicht gespeichert werden. Bitte öffne die Probenübersicht und versuche es dort erneut.",
+    "open_rehearsals": "Probenübersicht öffnen"
   },
   "rehearsals": {
     "title": "Proben",

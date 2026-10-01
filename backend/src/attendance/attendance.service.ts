@@ -8,10 +8,7 @@ export class AttendanceService {
   constructor(private readonly prisma: PrismaService) {}
 
   async setAttendancePlan(memberId: string, rehearsalId: string, dto: SetAttendancePlanDto) {
-    const rehearsal = await this.ensureRehearsalExists(rehearsalId);
-    if (rehearsal.date <= new Date()) {
-      throw new ForbiddenException('Probe hat bereits begonnen oder ist vergangen');
-    }
+    await this.ensureAttendancePlanOpen(rehearsalId);
     return this.prisma.attendancePlan.upsert({
       where: { memberId_rehearsalId: { memberId, rehearsalId } },
       create: { memberId, rehearsalId, response: dto.response },
@@ -20,10 +17,7 @@ export class AttendanceService {
   }
 
   async deleteAttendancePlan(memberId: string, rehearsalId: string) {
-    const rehearsal = await this.ensureRehearsalExists(rehearsalId);
-    if (rehearsal.date <= new Date()) {
-      throw new ForbiddenException('Probe hat bereits begonnen oder ist vergangen');
-    }
+    await this.ensureAttendancePlanOpen(rehearsalId);
     await this.prisma.attendancePlan.deleteMany({
       where: { memberId, rehearsalId },
     });
@@ -251,6 +245,14 @@ export class AttendanceService {
       }
     }
     return lastAttendedMap;
+  }
+
+  private async ensureAttendancePlanOpen(rehearsalId: string) {
+    const rehearsal = await this.ensureRehearsalExists(rehearsalId);
+    const deadline = rehearsal.date.getTime() + (rehearsal.durationMinutes ?? 120) * 60_000;
+    if (deadline <= Date.now()) {
+      throw new ForbiddenException('Probe ist bereits beendet');
+    }
   }
 
   private async ensureRehearsalExists(rehearsalId: string) {

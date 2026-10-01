@@ -62,7 +62,14 @@
     "login_failed": "Login failed",
     "error_no_token": "No token found in the URL.",
     "error_invalid_link": "The login link is invalid. Please request a new one.",
-    "processing": "Processing login..."
+    "processing": "Processing login...",
+    "attendance_saved": "Response saved",
+    "attendance_confirmed": "You have confirmed attendance for the rehearsal.",
+    "attendance_declined": "You have declined attendance for the rehearsal.",
+    "attendance_close_hint": "You can now close this page.",
+    "attendance_failed": "Response not saved",
+    "error_attendance_response": "Your response could not be saved. Please open the rehearsal overview and try again there.",
+    "open_rehearsals": "Open rehearsal overview"
   },
   "rehearsals": {
     "title": "Rehearsals",

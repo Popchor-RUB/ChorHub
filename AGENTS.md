@@ -125,6 +125,7 @@ npm run test:e2e:report
 - `MemberLoginCode.hashedCode` (6-digit code, expires after 15 minutes).
 - `POST /auth/magic-link/verify-code` consumes code and returns member token.
 - `GET /auth/magic-link/verify` validates magic-link token and returns member token.
+- Reminder magic links with `rehearsalId` and a valid `response` save the attendance plan and stay on the public verification page to show success or failure. Do not redirect these actions into the member layout or show the iOS install guide automatically; ordinary magic links still open `/proben`.
 - Frontend persists member token in Zustand (`chorhub-auth`) and sends it via `X-Member-Token`.
 - `MemberTokenGuard` also accepts `Authorization: Bearer <token>`.
 - Disabled members cannot request or use magic links/codes or member tokens. Disabling revokes all member login tokens/codes and push subscriptions. `CHOIR_ADMIN_EMAIL` supplies the contact address shown at login and the admin notification recipient.
@@ -139,6 +140,7 @@ npm run test:e2e:report
 
 ### Attendance model
 - `AttendancePlan`: member intent (`CONFIRMED`/`DECLINED`), upserted by `PUT /attendance/plans/:rehearsalId`.
+- Members can create, change, or delete attendance plans until the rehearsal ends (start plus duration; 120 minutes when duration is absent). At the exact end time, changes are blocked. Ongoing overnight rehearsals remain editable in the member UI after midnight.
 - `AttendanceRecord`: admin-confirmed attendance, replaced by `PUT /attendance/records/:rehearsalId` (delete + create).
 - The daily 06:00 Europe/Berlin disable task counts past, non-optional rehearsals after member creation only when the rehearsal has at least one attendance record. A member without a record and without a `DECLINED` plan has an unexcused absence. Three cumulative absences disable the account; reenabled members keep their history and can be disabled again on the next run.
 

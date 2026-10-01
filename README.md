@@ -151,7 +151,7 @@ npm run test:e2e:ui
 
 ## Admin-CLI
 
-Das Skript `backend/scripts/admin-cli.ts` verwaltet Admin-Benutzer und kann Einladungs-E-Mails an Mitglieder versenden.
+Das Skript `backend/scripts/admin-cli.ts` verwaltet Admin-Benutzer und kann alle E-Mail-Vorlagen an Mitglieder versenden.
 
 ```bash
 cd backend
@@ -166,8 +166,25 @@ npm run admin -- <Befehl>
 | `list` | Alle Admins auflisten. |
 | `invite` | Einladungen an Mitglieder senden, die sich noch nie eingeloggt haben (`lastLoginAt` ist `null`). |
 | `invite --all` | Einladungen an **alle** Mitglieder senden, unabhängig vom Login-Status. |
+| `mailtemplate <Vorlage> <Mitglied-E-Mail> [Szenario]` | Gespeicherte E-Mail-Vorlage an das angegebene bestehende Mitglied senden. |
 
 Beim Versand über `invite`/`invite --all` wird auf maximal **1 E-Mail pro Sekunde** begrenzt und ein Fortschrittsbalken angezeigt.
+
+`mailtemplate` und `invite` verwenden die aktuellen Datenbank-Vorlagen einschließlich angepasstem Betreff und Footer. Fehlende Vorlagen werden aus den Standarddateien ergänzt.
+
+Unterstützte Vorlagen und Szenarien (jeweils erstes Szenario ist Standard):
+
+| Vorlage | Szenarien |
+|---------|-----------|
+| `invite` | `standard` |
+| `magic-link` | `standard` |
+| `push-fallback-reminder` | `with-actions`, `without-actions`, `generic-login` |
+| `personal-info` | `personal`, `bulk` |
+| `member-disabled` | `standard`, `with-reason`, `without-reason` |
+| `member-automatically-disabled` | `standard` |
+| `admin-member-disabled` | `standard` |
+
+`invite` und `magic-link` erzeugen echte Zugangsdaten; deaktivierte Mitglieder erhalten keine Zugangsdaten. Alle anderen Vorlagen senden Beispieldaten mit dem Namen des Empfängers und ändern weder Mitgliedsstatus noch Anwesenheit. Erinnerungsaktionen enthalten synthetische Vorschau-Links; sie buchen keine Zu- oder Absage. Auch `bulk` und `admin-member-disabled` senden nur an das angegebene Mitglied. Versand benötigt `SMTP_HOST` und die üblichen SMTP-Einstellungen; Kontaktadresse und Footer verwenden `CHOIR_ADMIN_EMAIL` bzw. `APP_URL`.
 
 **Beispiele:**
 
@@ -192,6 +209,12 @@ npm run admin -- invite
 
 # Einladungen an alle Mitglieder senden
 npm run admin -- invite --all
+
+# Deaktivierungsvorlage mit Beispielgrund senden
+npm run admin -- mailtemplate member-disabled alex@example.org with-reason
+
+# Persönliche Informationsvorlage senden
+npm run admin -- mailtemplate personal-info alex@example.org
 ```
 
 > **Hinweis:** `DATABASE_URL` muss gesetzt sein (z. B. über `.env.backend`). Im Docker-Betrieb kann der Befehl auch direkt im Container ausgeführt werden:
