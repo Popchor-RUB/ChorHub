@@ -8,14 +8,14 @@
  *   npm run admin -- passwd <username>
  *   npm run admin -- invite [--all]
  *   npm run admin -- impersonate <member-email>
- *   npm run admin -- mailtemplate <template> <user e-mail>
+ *   npm run admin -- mailtemplate <template> <user e-mail> [scenario]
  *
  * Or directly:
  *   npx tsx scripts/admin-cli.ts create <username> [password]
  *   npx tsx scripts/admin-cli.ts passwd <username>
  *   npx tsx scripts/admin-cli.ts invite [--all]
  *   npx tsx scripts/admin-cli.ts impersonate <member-email>
- *   npx tsx scripts/admin-cli.ts mailtemplate <template> <user e-mail>
+ *   npx tsx scripts/admin-cli.ts mailtemplate <template> <user e-mail> [scenario]
  *
  * If no password is supplied for "create" or "passwd", a secure random one is generated
  * and printed to stdout.
@@ -24,21 +24,20 @@
  */
 
 import 'dotenv/config';
-import { PrismaClient } from '../src/generated/prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { AdminCliMailService } from '../src/mail/admin-cli-mail.service';
+import { MAIL_TEMPLATE_DEFINITIONS } from '../src/mail/mail-template.catalog';
 import * as bcrypt from 'bcrypt';
-import { createHash, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
 import * as readline from 'readline';
-import { readFile } from 'fs/promises';
-import { resolve } from 'path';
-import * as Handlebars from 'handlebars';
 import * as nodemailer from 'nodemailer';
 import { requireSingleMailbox } from '../src/common/single-mailbox';
 
-type SupportedMailTemplate = 'invite' | 'magic-link';
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaService();
+const cliMail = new AdminCliMailService(prisma, new ConfigService({
+  APP_URL: process.env.APP_URL ?? 'http://localhost:5173',
+}));
 
 function promptPassword(prompt: string): Promise<string> {
   return new Promise((resolve) => {
@@ -71,14 +70,17 @@ function promptPassword(prompt: string): Promise<string> {
 
 function usage(): never {
   console.error('Usage:');
-  console.error('  npx ts-node scripts/admin-cli.ts create <username> [password]');
-  console.error('  npx ts-node scripts/admin-cli.ts delete <username>');
-  console.error('  npx ts-node scripts/admin-cli.ts list');
-  console.error('  npx ts-node scripts/admin-cli.ts passwd <username>');
-  console.error('  npx ts-node scripts/admin-cli.ts invite [--all]');
-  console.error('  npx ts-node scripts/admin-cli.ts impersonate <member-email>');
-  console.error('  npx ts-node scripts/admin-cli.ts mailtemplate <template> <user e-mail>');
-  console.error('  templates: invite, magic-link');
+  console.error('  npm run admin -- create <username> [password]');
+  console.error('  npm run admin -- delete <username>');
+  console.error('  npm run admin -- list');
+  console.error('  npm run admin -- passwd <username>');
+  console.error('  npm run admin -- invite [--all]');
+  console.error('  npm run admin -- impersonate <member-email>');
+  console.error('  npm run admin -- mailtemplate <template> <user e-mail> [scenario]');
+  for (const { key, previewScenarios } of MAIL_TEMPLATE_DEFINITIONS) {
+    console.error(`  ${key}: ${previewScenarios.map(({ id }) => id).join(', ')}`);
+  }
+  console.error('  First scenario is the default. Non-auth templates send sample data only.');
   process.exit(1);
 }
 
@@ -112,77 +114,6 @@ async function getMemberByEmail(email: string) {
   });
 }
 
-async function renderTemplate(template: SupportedMailTemplate, context: Record<string, string>) {
-  const templateSource = await readFile(
-    resolve(process.cwd(), `src/mail/templates/${template}.hbs`),
-    'utf8',
-  );
-  return Handlebars.compile(templateSource, { strict: true })(context);
-}
-
-async function buildInviteMail(member: { id: string; firstName: string; lastName: string; email: string }) {
-  const rawToken = await createMemberSessionToken(member.id);
-  const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
-  return {
-    subject: 'Willkommen bei ChorHub - Dein Zugangslink',
-    html: await renderTemplate('invite', {
-      firstName: member.firstName,
-      lastName: member.lastName,
-      magicUrl: `${appUrl}/auth/verify?token=${rawToken}`,
-    }),
-  };
-}
-
-async function buildMagicLinkMail(member: { id: string; firstName: string; email: string }) {
-  const rawToken = randomBytes(32).toString('hex');
-  const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-  const rawCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const hashedCode = createHash('sha256').update(rawCode).digest('hex');
-  const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-  await prisma.$transaction(async (tx) => {
-    const active = await tx.member.updateMany({
-      where: { id: member.id, isDisabled: false },
-      data: { updatedAt: new Date() },
-    });
-    if (active.count !== 1) throw new Error('Member account is disabled or missing');
-    await tx.memberLoginCode.deleteMany({
-      where: { memberId: member.id, expiresAt: { lt: new Date() } },
-    });
-    await tx.memberLoginToken.create({
-      data: { memberId: member.id, hashedToken },
-    });
-    await tx.memberLoginCode.create({
-      data: { memberId: member.id, hashedCode, expiresAt: codeExpiresAt },
-    });
-  });
-
-  const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
-  return {
-    subject: 'Dein ChorHub Anmeldelink',
-    html: await renderTemplate('magic-link', {
-      firstName: member.firstName,
-      magicUrl: `${appUrl}/auth/verify?token=${rawToken}`,
-      rawToken,
-      loginCode: rawCode,
-    }),
-  };
-}
-
-async function createMemberSessionToken(memberId: string): Promise<string> {
-  const rawToken = randomBytes(32).toString('hex');
-  const hashedToken = createHash('sha256').update(rawToken).digest('hex');
-  await prisma.$transaction(async (tx) => {
-    const active = await tx.member.updateMany({
-      where: { id: memberId, isDisabled: false },
-      data: { updatedAt: new Date() },
-    });
-    if (active.count !== 1) throw new Error('Member account is disabled or missing');
-    await tx.memberLoginToken.create({ data: { memberId, hashedToken } });
-  });
-  return rawToken;
-}
-
 function buildMemberVerifyUrl(rawToken: string): string {
   const appUrl = (process.env.APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
   return `${appUrl}/auth/verify?token=${rawToken}`;
@@ -195,7 +126,7 @@ async function impersonateMember(email: string): Promise<void> {
     process.exit(1);
   }
 
-  const rawToken = await createMemberSessionToken(member.id);
+  const { rawToken } = await cliMail.createSessionCredentials(member.id);
   const verifyUrl = buildMemberVerifyUrl(rawToken);
 
   console.log('════════════════════════════════════════');
@@ -207,7 +138,8 @@ async function impersonateMember(email: string): Promise<void> {
   console.log('════════════════════════════════════════');
 }
 
-async function sendTemplateMail(template: SupportedMailTemplate, email: string): Promise<void> {
+async function sendTemplateMail(template: string, email: string, scenarioId?: string): Promise<void> {
+  cliMail.validate(template, scenarioId);
   const member = await getMemberByEmail(email);
   if (!member) {
     console.error(`Error: no member found for e-mail "${email}".`);
@@ -217,18 +149,7 @@ async function sendTemplateMail(template: SupportedMailTemplate, email: string):
   const recipient = requireSingleMailbox(member.email);
   const transporter = getMailTransporter();
   const from = process.env.MAIL_FROM ?? 'noreply@chorhub.de';
-  const mail =
-    template === 'invite'
-      ? await buildInviteMail(member)
-      : template === 'magic-link'
-        ? await buildMagicLinkMail(member)
-        : null;
-
-  if (!mail) {
-    console.error(`Error: unsupported template "${template}".`);
-    console.error('Supported templates: invite, magic-link');
-    process.exit(1);
-  }
+  const mail = await cliMail.build(template, member, scenarioId);
 
   await transporter.sendMail({
     from,
@@ -366,7 +287,7 @@ async function inviteMembers(sendToAll: boolean): Promise<void> {
 
     try {
       const recipient = requireSingleMailbox(member.email);
-      const mail = await buildInviteMail(member);
+      const mail = await cliMail.build('invite', member);
       await transporter.sendMail({
         from,
         to: recipient,
@@ -422,7 +343,8 @@ async function main(): Promise<void> {
       break;
     case 'mailtemplate':
       if (!args[0] || !args[1]) usage();
-      await sendTemplateMail(args[0] as SupportedMailTemplate, args[1]);
+      if (args.length > 3) usage();
+      await sendTemplateMail(args[0], args[1], args[2]);
       break;
     default:
       usage();
