@@ -12,6 +12,7 @@ describe('EmailsService', () => {
   const sentEmail = {
     id: 'mail-1',
     subject: 'Sommerfest',
+    renderedSubject: null,
     markdownContent: 'Hallo zusammen',
     signatureMarkdown: 'Viele Grüße',
     status: SentEmailStatus.PENDING,
@@ -58,11 +59,12 @@ describe('EmailsService', () => {
       member('MEMBER@choir.test'),
       member('other@choir.test'),
     ]);
-    mailService.sendInformationEmail.mockResolvedValue(undefined);
+    mailService.sendInformationEmail.mockResolvedValue('[Popchor Mitglieder] Sommerfest');
     prisma.sentEmail.update.mockResolvedValue({
       ...sentEmail,
       status: SentEmailStatus.SENT,
       sentAt,
+      renderedSubject: '[Popchor Mitglieder] Sommerfest',
       attachments: [],
     } as Prisma.SentEmailGetPayload<{ include: { attachments: true } }>);
 
@@ -78,12 +80,16 @@ describe('EmailsService', () => {
         to: 'admin@choir.test',
         bcc: ['member@choir.test', 'other@choir.test'],
         subject: '[Popchor Mitglieder] Sommerfest',
+        rawSubject: 'Sommerfest',
         markdownContent: 'Hallo zusammen',
         signatureMarkdown: 'Viele Grüße',
       }),
     );
     expect(result.subject).toBe('[Popchor Mitglieder] Sommerfest');
     expect(result.rawSubject).toBe('Sommerfest');
+    expect(prisma.sentEmail.update).toHaveBeenLastCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ renderedSubject: '[Popchor Mitglieder] Sommerfest' }),
+    }));
   });
 
   it('stores attachment bytes and marks the email failed when sending fails', async () => {
@@ -126,15 +132,16 @@ describe('EmailsService', () => {
     const signatureMarkdown = '\n**Viele Grüße**\n';
     prisma.sentEmail.create.mockResolvedValue(sentEmailWithAttachments);
     prisma.member.findMany.mockResolvedValue([member('member@choir.test')]);
-    mailService.sendInformationEmail.mockResolvedValue(undefined);
+    mailService.sendInformationEmail.mockResolvedValue('[Custom] Subject');
     prisma.sentEmail.update.mockResolvedValue({
       ...sentEmail,
       status: SentEmailStatus.SENT,
       sentAt: new Date(),
+      renderedSubject: '[Custom] Subject',
       attachments: [],
     } as Prisma.SentEmailGetPayload<{ include: { attachments: true } }>);
 
-    await service.sendEmail('Subject', markdownContent, signatureMarkdown, []);
+    const result = await service.sendEmail('Subject', markdownContent, signatureMarkdown, []);
 
     expect(prisma.sentEmail.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -142,8 +149,9 @@ describe('EmailsService', () => {
       }),
     );
     expect(mailService.sendInformationEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ markdownContent, signatureMarkdown }),
+      expect.objectContaining({ markdownContent, signatureMarkdown, rawSubject: 'Subject' }),
     );
+    expect(result.subject).toBe('[Custom] Subject');
   });
 
   it('rejects empty fields and oversized attachment sets before storing', async () => {

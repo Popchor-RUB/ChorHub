@@ -124,11 +124,13 @@ export class EmailsService {
       include: { attachments: true },
     });
 
+    let renderedSubject: string;
     try {
-      await this.mailService.sendInformationEmail({
+      renderedSubject = await this.mailService.sendInformationEmail({
         to: adminEmail,
         bcc,
         subject: `${SUBJECT_PREFIX} ${subject}`,
+        rawSubject: subject,
         markdownContent: content,
         signatureMarkdown: signature,
         attachments: email.attachments,
@@ -143,7 +145,7 @@ export class EmailsService {
 
     const sentEmail = await this.prisma.sentEmail.update({
       where: { id: email.id },
-      data: { status: SentEmailStatus.SENT, sentAt: new Date() },
+      data: { status: SentEmailStatus.SENT, sentAt: new Date(), renderedSubject },
       include: {
         attachments: { select: { id: true, filename: true, contentType: true, size: true } },
       },
@@ -162,6 +164,7 @@ export class EmailsService {
   private toArchiveEntry(email: {
     id: string;
     subject: string;
+    renderedSubject: string | null;
     markdownContent: string;
     signatureMarkdown: string;
     sentAt: Date | null;
@@ -172,7 +175,7 @@ export class EmailsService {
     }
     return {
       id: email.id,
-      subject: `${SUBJECT_PREFIX} ${email.subject}`,
+      subject: email.renderedSubject ?? `${SUBJECT_PREFIX} ${email.subject}`,
       rawSubject: email.subject,
       markdownContent: email.markdownContent,
       signatureMarkdown: email.signatureMarkdown,

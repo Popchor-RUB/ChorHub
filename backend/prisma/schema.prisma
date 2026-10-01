@@ -203,6 +203,7 @@ model PersonalInfoEntry {
 model SentEmail {
   id               String             @id @default(uuid())
   subject          String
+  renderedSubject  String?            @map("rendered_subject")
   markdownContent  String              @map("markdown_content")
   signatureMarkdown String             @default("") @map("signature_markdown")
   status           SentEmailStatus     @default(PENDING)
@@ -212,6 +213,16 @@ model SentEmail {
 
   @@index([status, sentAt])
   @@map("sent_emails")
+}
+
+model MailTemplate {
+  key             String   @id
+  subjectTemplate String   @map("subject_template")
+  htmlTemplate    String   @map("html_template")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("mail_templates")
 }
 
 model SentEmailAttachment {

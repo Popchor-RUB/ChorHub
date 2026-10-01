@@ -7,6 +7,50 @@ export interface ChoirVoice {
   memberCount?: number;
 }
 
+export type MailTemplateKey =
+  | 'magic-link'
+  | 'invite'
+  | 'push-fallback-reminder'
+  | 'personal-info'
+  | 'member-disabled'
+  | 'admin-member-disabled';
+
+export interface LocalizedText {
+  de: string;
+  en: string;
+}
+
+export interface MailTemplatePlaceholder {
+  name: string;
+  description: LocalizedText;
+  example: string;
+  syntax: string;
+  optional?: boolean;
+  scope?: string;
+}
+
+export interface MailTemplatePreviewScenario {
+  id: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+}
+
+export interface MailTemplate {
+  key: MailTemplateKey;
+  name: LocalizedText;
+  description: LocalizedText;
+  subjectTemplate: string;
+  htmlTemplate: string;
+  updatedAt: string | null;
+  placeholders: MailTemplatePlaceholder[];
+  previewScenarios: MailTemplatePreviewScenario[];
+}
+
+export interface MailTemplatePreview {
+  subject: string;
+  html: string;
+}
+
 export interface Member {
   id: string;
   firstName: string;
