@@ -10,6 +10,8 @@
  *   npm run admin -- impersonate <member-email>
  *   npm run admin -- mailtemplate <template> <user e-mail> [scenario]
  *   npm run admin -- task <reminder|automatic-disable>
+ *   npm run admin -- backup [output-directory]
+ *   npm run admin -- anonymize
  *
  * Or directly:
  *   npx tsx scripts/admin-cli.ts create <username> [password]
@@ -35,6 +37,8 @@ import * as readline from 'readline';
 import * as nodemailer from 'nodemailer';
 import { requireSingleMailbox } from '../src/common/single-mailbox';
 import { triggerScheduledTask } from './admin-cli-tasks';
+import { backupDatabase } from '../src/admin-cli/backup-database';
+import { anonymizeMembers } from '../src/admin-cli/anonymize-members';
 
 const prisma = new PrismaService();
 const cliMail = new AdminCliMailService(prisma, new ConfigService({
@@ -80,6 +84,8 @@ function usage(): never {
   console.error('  npm run admin -- impersonate <member-email>');
   console.error('  npm run admin -- mailtemplate <template> <user e-mail> [scenario]');
   console.error('  npm run admin -- task <reminder|automatic-disable>');
+  console.error('  npm run admin -- backup [output-directory]');
+  console.error('  npm run admin -- anonymize');
   for (const { key, previewScenarios } of MAIL_TEMPLATE_DEFINITIONS) {
     console.error(`  ${key}: ${previewScenarios.map(({ id }) => id).join(', ')}`);
   }
@@ -322,6 +328,14 @@ async function main(): Promise<void> {
   const [, , command, ...args] = process.argv;
 
   switch (command) {
+    case 'backup':
+      if (args.length > 1) usage();
+      console.log(`Backup created: ${await backupDatabase(process.env.DATABASE_URL, args[0])}`);
+      break;
+    case 'anonymize':
+      if (args.length !== 0) usage();
+      console.log(`Anonymized ${await anonymizeMembers(prisma)} members.`);
+      break;
     case 'task':
       if (args.length !== 1 || (args[0] !== 'reminder' && args[0] !== 'automatic-disable')) usage();
       await triggerScheduledTask(args[0]);

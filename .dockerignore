@@ -2,3 +2,6 @@
 .e2e-runs
 playwright-report
 test-results
+**/backups
+**/.backup-*
+**/chorhub-backup-*.sql.zip

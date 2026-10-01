@@ -40,7 +40,7 @@ describe('MailTemplateService', () => {
       skipDuplicates: true,
     });
     expect(prisma.mailTemplate.createMany.mock.calls[0]?.[0]?.data).toHaveLength(7);
-    expect(prisma.mailTemplate.updateMany).toHaveBeenCalledTimes(2);
+    expect(prisma.mailTemplate.updateMany).toHaveBeenCalledTimes(3);
   });
 
   it.each([
@@ -205,6 +205,23 @@ describe('MailTemplateService', () => {
     expect(prisma.mailTemplate.upsert).not.toHaveBeenCalled();
     expect(prisma.mailTemplate.createMany).not.toHaveBeenCalled();
     expect(prisma.mailTemplate.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('renders reminder response links in the same table row', async () => {
+    const defaults = await loadMailTemplateDefaults();
+    const template = defaults.find(({ key }) => key === 'push-fallback-reminder')!;
+    const actions = service.preview('push-fallback-reminder', template, 'with-actions');
+    const rows = actions.html.match(/<tr\b[^>]*>(?:(?!<tr\b)[\s\S])*?<\/tr>/g) ?? [];
+    const buttonRows = rows.filter((html) => html.includes('Ich komme</a>'));
+
+    expect(buttonRows.length).toBeGreaterThan(0);
+    for (const html of buttonRows) {
+      expect(html).toContain('Ich komme nicht</a>');
+      expect(html.match(/<td\b/g)).toHaveLength(3);
+      expect(html).toContain('width="8"');
+      expect(html).toContain('href="https://chorhub.example/preview/confirm"');
+      expect(html).toContain('href="https://chorhub.example/preview/decline"');
+    }
   });
 
   it('validates every synthetic scenario before updating stored content', async () => {

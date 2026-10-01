@@ -35,6 +35,9 @@ frontend/dist/
 
 # Database
 pgdata/
+backups/
+.backup-*/
+chorhub-backup-*.sql.zip
 
 # E2E tests
 e2e/.auth/

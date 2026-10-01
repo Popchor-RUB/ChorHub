@@ -80,6 +80,7 @@ npx tsc --noEmit
 npm run admin -- <command>
 ```
 - Manual scheduled tasks: `npm run admin -- task reminder` or `npm run admin -- task automatic-disable`. These use current-date scheduled rules and perform real sends/status changes. The isolated runner starts no cron timers and drains reminder mail before closing.
+- Admin CLI `backup [output-directory]` creates a dated full SQL dump ZIP (default `backups/`; requires compatible `pg_dump` and `zip`). `anonymize` atomically replaces member emails with SHA-256 and both name fields with SHA-256 of `firstName lastName`; comments, disable reasons, IDs, and relationships remain intact. Other tables are untouched; back up before running, and note repeated runs rehash existing values.
 
 ### Prisma (`backend/`)
 ```bash
@@ -160,6 +161,7 @@ npm run test:e2e:report
 - Admin CLI `mailtemplate <key> <member-email> [scenario]` supports every registered template and scenario using saved database templates. Invite/login sends create real credentials; other templates use synthetic scenario data without changing attendance or member status. All CLI template sends target only the specified existing member.
 - Every send renders the current database subject and HTML through the shared mail template renderer with the configured APP_URL. Durable information-mail workers store the rendered subject with the terminal SENT state so archives and job details retain the actual delivered subject. Admin settings edits database rows through JWT-protected `/admin/mail-templates` routes; draft previews use synthetic data and never save or send mail.
 - Template keys, supported placeholders, optional context values, and preview scenarios are defined in the backend registry. Add new templates there with a packaged `.hbs` default; keep seed runs from deleting customized templates.
+- Reminder response buttons share one presentation-table row with an explicit spacer cell for email-client compatibility. Startup upgrades only the exact previous stock reminder subject and expanded HTML; customized templates remain unchanged.
 - Automatic disablement queues member notices with kind `MEMBER_AUTOMATIC` and uses `member-automatically-disabled`; admin disablement queues kind `MEMBER` and uses `member-disabled`. Keep the distinction through retries and restarts; `admin-member-disabled` remains the internal admin notification.
 - Manual disablement accepts `notifyMember` (default `true`) and `includeReasonInEmail` (default `false`). The internal reason and admin notification are retained even when member notification is disabled. Member reason disclosure requires the persisted `MemberDisableNotice.includeReasonInEmail` flag; legacy notices default to `false`. Automatic notices keep their existing behavior.
 - The `member-disabled` template supports an optional escaped `reason` block. Startup upgrades only recognized untouched stock versions using conditional updates; customized subjects, HTML, and footers remain intact. Deploy the notice-sharing migration before the updated backend.

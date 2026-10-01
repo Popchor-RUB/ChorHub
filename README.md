@@ -164,11 +164,17 @@ npm run admin -- <Befehl>
 | `passwd <Benutzername>` | Passwort ändern. Das neue Passwort wird interaktiv abgefragt (keine Eingabe = Zufallspasswort generieren). Das Passwort erscheint **nicht** in der Shell-History. |
 | `delete <Benutzername>` | Admin löschen. |
 | `list` | Alle Admins auflisten. |
+| `backup [Zielverzeichnis]` | Vollständigen PostgreSQL-SQL-Dump als ZIP speichern; Standard: `backups/` im aktuellen Arbeitsverzeichnis. Dateiname enthält UTC-Datum, Uhrzeit und einen eindeutigen Zusatz. |
+| `anonymize` | E-Mail, Vor- und Nachname aller Mitglieder atomar anonymisieren: E-Mail durch SHA-256 ersetzen, Vor- und Nachname jeweils durch SHA-256 von `Vorname Nachname`. Kommentare und Deaktivierungsgründe bleiben unverändert. |
 | `invite` | Einladungen an Mitglieder senden, die sich noch nie eingeloggt haben (`lastLoginAt` ist `null`). |
 | `invite --all` | Einladungen an **alle** Mitglieder senden, unabhängig vom Login-Status. |
 | `mailtemplate <Vorlage> <Mitglied-E-Mail> [Szenario]` | Gespeicherte E-Mail-Vorlage an das angegebene bestehende Mitglied senden. |
 | `task reminder` | Erinnerungen für die nächsten sieben Tage sofort ausführen, einschließlich Push und E-Mail-Fallback. |
 | `task automatic-disable` | Automatische Deaktivierung wegen drei unentschuldigter Fehlzeiten sofort ausführen. |
+
+`backup` benötigt `pg_dump` (mindestens die PostgreSQL-Version des Servers) und `zip` im PATH; beide sind in den Backend-Docker-Images enthalten. Der SQL-Dump umfasst die vollständige Datenbank einschließlich Anhängen, aber keine clusterweiten Rollen. Nach erfolgreicher Komprimierung wird der unkomprimierte Dump entfernt. Die ZIP-Datei erhält Dateirechte `0600`.
+
+`anonymize` verändert die konfigurierte Datenbank unwiderruflich; vorher `backup` ausführen. Die Hashes sind ungesalzenes SHA-256 der gespeicherten Werte in UTF-8; die E-Mail wird als reine Hex-Zeichenfolge ohne Domain gespeichert. Wiederholte Aufrufe hashen die bereits ersetzten Werte erneut. IDs, Beziehungen, Kommentare und Deaktivierungsgründe bleiben erhalten; `updatedAt` wird aktualisiert. Andere Tabellen (z. B. gespeicherte E-Mails und Deaktivierungsbenachrichtigungen) werden nicht anonymisiert.
 
 `task` verwendet dieselben Regeln und das aktuelle Datum wie die geplanten Läufe. Es versendet echte Erinnerungen bzw. deaktiviert berechtigte Mitglieder und legt Benachrichtigungen an. Wiederholte Erinnerungsläufe können erneut Nachrichten senden. Der Prozess wartet auf die gedrosselte Erinnerungs-E-Mail-Warteschlange und laufende Deaktivierungsbenachrichtigungen; ausstehende Deaktivierungsbenachrichtigungen werden dauerhaft gespeichert und vom Backend weiterverarbeitet. Es werden keine zusätzlichen Cron-Timer gestartet und kein vorheriger Build benötigt.
 

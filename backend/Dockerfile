@@ -1,4 +1,5 @@
 FROM node:22-alpine AS development
+RUN apk add --no-cache postgresql-client zip
 WORKDIR /app/backend
 COPY backend/package*.json ./
 RUN npm install
@@ -17,6 +18,7 @@ RUN npx prisma generate
 RUN npm run build
 
 FROM node:22-alpine AS production
+RUN apk add --no-cache postgresql-client zip
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app/backend
 COPY --from=build /app/backend ./
