@@ -19,8 +19,7 @@ import type {
 } from './mail-template.types';
 import type { UpdateMailTemplateDto } from './update-mail-template.dto';
 import { createMailTemplatePreviewContext } from './mail-template-preview';
-import { upgradeMemberDisabledStockTemplate } from './upgrade-member-disabled-stock-template';
-import { upgradeReminderStockTemplate } from './upgrade-reminder-stock-template';
+import { upgradeKnownMailTemplateDefaults } from './upgrade-known-mail-template-defaults';
 
 const TEMPLATE_KEYS = MAIL_TEMPLATE_DEFINITIONS.map(({ key }) => key);
 type AstStatement = ReturnType<typeof Handlebars.parse>['body'][number];
@@ -58,20 +57,14 @@ export class MailTemplateService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     const defaults = await loadMailTemplateDefaults();
     await this.prisma.mailTemplate.createMany({ data: defaults, skipDuplicates: true });
-    await upgradeMemberDisabledStockTemplate(
-      async (where, data) => {
-        const result = await this.prisma.mailTemplate.updateMany({ where, data });
-        return result.count;
-      },
-      defaults,
-    );
-    await upgradeReminderStockTemplate(
-      async (where, data) => {
-        const result = await this.prisma.mailTemplate.updateMany({ where, data });
-        return result.count;
-      },
-      defaults,
-    );
+    const storedTemplates = await this.prisma.mailTemplate.findMany({
+      where: { key: { in: defaults.map(({ key }) => key) } },
+      select: { key: true, htmlTemplate: true },
+    });
+    await upgradeKnownMailTemplateDefaults(defaults, storedTemplates, async (where, data) => {
+      const result = await this.prisma.mailTemplate.updateMany({ where, data });
+      return result.count;
+    });
   }
 
   async list(): Promise<{ templates: MailTemplateDetail[] }> {

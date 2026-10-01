@@ -27,7 +27,7 @@ describe('MailTemplateService', () => {
 
   it('imports packaged defaults with conflict-safe inserts', async () => {
     prisma.mailTemplate.createMany.mockResolvedValue({ count: 7 });
-    prisma.mailTemplate.updateMany.mockResolvedValue({ count: 0 });
+    prisma.mailTemplate.findMany.mockResolvedValue([]);
 
     await service.onModuleInit();
 
@@ -40,56 +40,25 @@ describe('MailTemplateService', () => {
       skipDuplicates: true,
     });
     expect(prisma.mailTemplate.createMany.mock.calls[0]?.[0]?.data).toHaveLength(7);
-    expect(prisma.mailTemplate.updateMany).toHaveBeenCalledTimes(3);
-  });
-
-  it.each([
-    'Dein Zugang zu ChorHub wurde deaktiviert. Bitte wende dich per E-Mail an die Chor-Admins, um deinen Zugang zu klären oder wieder aktivieren zu lassen.',
-    'Dein Zugang zu ChorHub wurde deaktiviert. Bitte wende dich per E-Mail an das Orga-Team, um deinen Zugang zu klären oder wieder aktivieren zu lassen.',
-  ])('upgrades only exact expanded stock template with legacy contact copy: %s', async (contactText) => {
-    const defaults = await loadMailTemplateDefaults();
-    const current = defaults.find(({ key }) => key === 'member-disabled')!;
-    const oldHtml = current.htmlTemplate
-      .replace(/\n\s*{{#if reason}}[\s\S]*?{{\/if}}\n/, '\n')
-      .replace(
-        '<p style="margin:0 0 16px;">Dein Zugang zu ChorHub wurde deaktiviert. Bitte wende dich per E-Mail an das Orga-Team, um deinen Zugang zu klären oder wieder aktivieren zu lassen.</p>',
-        `<p style="margin:0 0 16px;">${contactText}</p>`,
-      );
-    prisma.mailTemplate.updateMany.mockResolvedValue({ count: 1 });
-
-    await service.onModuleInit();
-
-    expect(oldHtml).toContain('ChorHub öffnen');
-    expect(oldHtml).not.toContain('{{> footer}}');
-    expect(prisma.mailTemplate.updateMany).toHaveBeenCalledWith({
-      where: {
-        key: 'member-disabled',
-        subjectTemplate: current.subjectTemplate,
-        htmlTemplate: oldHtml,
-      },
-      data: {
-        subjectTemplate: current.subjectTemplate,
-        htmlTemplate: current.htmlTemplate,
-      },
+    expect(prisma.mailTemplate.findMany).toHaveBeenCalledWith({
+      where: { key: { in: MAIL_TEMPLATE_DEFINITIONS.map(({ key }) => key) } },
+      select: { key: true, htmlTemplate: true },
     });
+    expect(prisma.mailTemplate.updateMany).not.toHaveBeenCalled();
   });
 
-  it('uses a compare-and-swap predicate over subject and full HTML for stock upgrades', async () => {
-    prisma.mailTemplate.updateMany.mockResolvedValue({ count: 0 });
+  it('preserves customized stored HTML and subjects during startup', async () => {
+    const defaults = await loadMailTemplateDefaults();
+    const current = defaults.find(({ key }) => key === 'magic-link')!;
+    const customHtml = `${current.htmlTemplate}<!-- admin change -->`;
+    prisma.mailTemplate.findMany.mockResolvedValue([
+      row('magic-link', 'Custom subject', customHtml),
+      row('member-disabled', 'Dein ChorHub Zugang wurde deaktiviert', defaults.find(({ key }) => key === 'member-disabled')!.htmlTemplate),
+    ]);
 
     await service.onModuleInit();
 
-    const attemptedUpgrade = prisma.mailTemplate.updateMany.mock.calls[0]?.[0];
-    expect(attemptedUpgrade?.where).toEqual(expect.objectContaining({
-      key: 'member-disabled',
-      subjectTemplate: 'Dein ChorHub Zugang wurde deaktiviert',
-      htmlTemplate: expect.stringContaining('die Chor-Admins'),
-    }));
-    expect(attemptedUpgrade?.data).toEqual(expect.objectContaining({
-      htmlTemplate: expect.stringContaining('{{#if reason}}'),
-    }));
-    // Full subject and HTML equality in where makes both customizations and concurrent edits safe.
-    expect(Object.keys(attemptedUpgrade?.where ?? {}).sort()).toEqual(['htmlTemplate', 'key', 'subjectTemplate']);
+    expect(prisma.mailTemplate.updateMany).not.toHaveBeenCalled();
   });
 
   it('propagates startup import failure', async () => {
@@ -97,6 +66,13 @@ describe('MailTemplateService', () => {
     prisma.mailTemplate.createMany.mockRejectedValue(databaseError);
 
     await expect(service.onModuleInit()).rejects.toBe(databaseError);
+  });
+
+  it('propagates startup read failure', async () => {
+    const readError = new Error('database read failed');
+    prisma.mailTemplate.createMany.mockResolvedValue({ count: 7 });
+    prisma.mailTemplate.findMany.mockRejectedValueOnce(readError);
+    await expect(service.onModuleInit()).rejects.toBe(readError);
   });
 
   it('renders all packaged defaults across their synthetic scenarios', async () => {

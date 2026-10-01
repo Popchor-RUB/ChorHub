@@ -30,6 +30,7 @@ describe("AdminCliMailService", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    prisma.mailTemplate.findMany.mockResolvedValue([]);
     prisma.mailTemplate.updateMany.mockResolvedValue({ count: 0 });
     prisma.member.updateMany.mockResolvedValue({ count: 1 });
     jest

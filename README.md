@@ -232,6 +232,18 @@ npm run admin -- mailtemplate personal-info alex@example.org
 > docker compose exec backend npm run admin -- list
 > ```
 
+### Mailvorlagen aktualisieren
+
+Beim Start ersetzt das Backend den HTML-Inhalt einer gespeicherten Vorlage, wenn dessen exakter SHA-256-Hash für diesen Vorlagenschlüssel registriert ist. Verglichen wird vollständiges UTF-8-HTML nach Einfügen des gemeinsamen Footers. Unbekannte oder angepasste Inhalte bleiben erhalten; Betreff aus der Datenbank bleibt unverändert. Das anfängliche Hash-Register enthält nur aktuelle Vorlagen aus dem Arbeitsstand, keine älteren Versionen. Änderungen am Betreff in den Quelldateien gelten nur für neu angelegte Datenbankeinträge.
+
+Nach Änderungen an Vorlagen oder Footer Hashes ergänzen und Vorlagenänderung sowie `backend/src/mail/mail-template-hashes.ts` gemeinsam committen. `--append` behält bereits registrierte ältere Hashes bei und ergänzt aktuelle; Footer-Änderungen ändern Hashes aller betroffenen Vorlagen. `--check` prüft nur und schreibt nichts.
+
+```bash
+cd backend
+npm run mail:template-hashes -- --append
+npm run mail:template-hashes -- --check
+```
+
 ## Umgebungsvariablen
 
 Secrets und Konfiguration sind auf mehrere `.env`-Dateien aufgeteilt, die von `setup-secrets.sh` generiert werden. Beispiel-Templates liegen als `*.example`-Dateien im Repository.
