@@ -10,7 +10,10 @@ import { createMailTemplatePreviewContext } from './mail-template-preview';
 
 describe('MailTemplateService', () => {
   const prisma = mockDeep<PrismaService>();
-  const config = new ConfigService({ APP_URL: 'https://chorhub.test' });
+  const config = new ConfigService({
+    APP_URL: 'https://chorhub.test',
+    CHOIR_ADMIN_EMAIL: 'admins@chorhub.test',
+  });
   const service = new MailTemplateService(prisma, config);
 
   function row(key: string, subjectTemplate: string, htmlTemplate: string) {
@@ -86,7 +89,12 @@ describe('MailTemplateService', () => {
         }, scenario.id);
         expect(result.subject).toBeTruthy();
         expect(result.html).toContain('ChorHub öffnen');
-        expect(result.html).toContain('https://chorhub.example');
+        expect(result.html).toContain('href="https://chorhub.test"');
+        if (definition.placeholders.some(({ name }) => name === 'adminEmail')) {
+          expect(result.html).toContain('href="mailto:admins@chorhub.test"');
+          expect(result.html).toContain('>admins@chorhub.test</a>');
+          expect(result.html).not.toContain('chor-admin@example.org');
+        }
         expect(htmlTemplate).not.toContain('{{>');
         prisma.mailTemplate.findUnique.mockResolvedValue(row(definition.key, definition.subjectTemplate, htmlTemplate));
         const delivered = await service.render(definition.key, createMailTemplatePreviewContext(definition.key, scenario.id));
@@ -94,6 +102,23 @@ describe('MailTemplateService', () => {
       }
     }
   });
+
+  it.each(['member-disabled', 'member-automatically-disabled'])(
+    'uses the configured admin address in %s preview subjects and HTML',
+    (key) => {
+      const definition = MAIL_TEMPLATE_DEFINITIONS.find((template) => template.key === key)!;
+      for (const scenario of definition.previewScenarios) {
+        const result = service.preview(key, {
+          subjectTemplate: 'Contact {{adminEmail}}',
+          htmlTemplate: '<p>{{firstName}} <a href="mailto:{{adminEmail}}">{{adminEmail}}</a></p>',
+        }, scenario.id);
+        expect(result.subject).toBe('Contact admins@chorhub.test');
+        expect(result.html).toContain('Alex');
+        expect(result.html).toContain('href="mailto:admins@chorhub.test"');
+        expect(prisma.mailTemplate.upsert).not.toHaveBeenCalled();
+      }
+    },
+  );
 
   it('loads database version on each send render and escapes HTML placeholders', async () => {
     prisma.mailTemplate.findUnique

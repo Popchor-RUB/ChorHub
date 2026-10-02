@@ -103,7 +103,7 @@ export class MailTemplateService implements OnModuleInit {
       this.renderTemplates(
         definition.key,
         dto,
-        createMailTemplatePreviewContext(definition.key, scenario.id),
+        this.createPreviewContext(definition.key, scenario.id),
       );
     }
     const row = await this.prisma.mailTemplate.upsert({
@@ -123,7 +123,15 @@ export class MailTemplateService implements OnModuleInit {
     const definition = this.getDefinition(key);
     this.validateTemplates(definition.key, dto);
     const scenario = this.getScenario(definition.previewScenarios, scenarioId);
-    return this.renderTemplates(definition.key, dto, createMailTemplatePreviewContext(definition.key, scenario.id));
+    return this.renderTemplates(definition.key, dto, this.createPreviewContext(definition.key, scenario.id));
+  }
+
+  private createPreviewContext(key: MailTemplateKey, scenarioId: string): Record<string, unknown> {
+    const context = createMailTemplatePreviewContext(key, scenarioId);
+    if ('adminEmail' in context) {
+      context.adminEmail = this.config.getOrThrow<string>('CHOIR_ADMIN_EMAIL');
+    }
+    return { ...context, appUrl: this.config.getOrThrow<string>('APP_URL') };
   }
 
   async render(key: MailTemplateKey, context: Record<string, unknown>): Promise<MailRenderResult> {
