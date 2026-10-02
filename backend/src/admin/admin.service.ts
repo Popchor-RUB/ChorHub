@@ -18,6 +18,7 @@ interface CsvRow {
   lastName: string;
   email: string;
   choirVoice?: string;
+  comment?: string;
 }
 
 @Injectable()
@@ -151,6 +152,9 @@ export class AdminService {
         choirVoiceId = voice.id;
       }
 
+      const commentData =
+        row.comment === undefined ? {} : { internalComment: row.comment.trim() || null };
+
       try {
         const existing = await this.prisma.member.findUnique({ where: { email } });
 
@@ -161,11 +165,13 @@ export class AdminService {
             lastName: row.lastName,
             email,
             choirVoiceId,
+            ...commentData,
           },
           update: {
             firstName: row.firstName,
             lastName: row.lastName,
             choirVoiceId,
+            ...commentData,
           },
         });
 

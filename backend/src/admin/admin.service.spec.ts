@@ -308,6 +308,57 @@ describe('AdminService', () => {
       expect(mailService.sendMemberInvite).toHaveBeenCalledTimes(1);
     });
 
+    it.each([
+      { delimiter: ',', existing: false },
+      { delimiter: ';', existing: false },
+      { delimiter: ',', existing: true },
+      { delimiter: ';', existing: true },
+    ])('imports an internal comment with $delimiter (existing: $existing)', async ({ delimiter, existing }) => {
+      const csv = Buffer.from(
+        ['firstName', 'lastName', 'email', 'comment'].join(delimiter) + '\n' +
+        ['Anna', 'Müller', 'anna@choir.de', '"  Note, with; delimiters and ""quotes""\nsecond line  "'].join(delimiter) + '\n',
+      );
+      prismaMock.member.findUnique.mockResolvedValue(
+        existing ? mockMember({ internalComment: 'Old comment' }) : null,
+      );
+      prismaMock.member.upsert.mockResolvedValue(mockMember());
+
+      const result = await service.importMembersFromCsv(csv);
+
+      expect(result).toEqual({ created: existing ? 0 : 1, updated: existing ? 1 : 0, failed: [] });
+      expect(prismaMock.member.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ internalComment: 'Note, with; delimiters and "quotes"\nsecond line' }),
+          update: expect.objectContaining({ internalComment: 'Note, with; delimiters and "quotes"\nsecond line' }),
+        }),
+      );
+    });
+
+    it.each(['', '   '])('clears an internal comment for a blank CSV value %j', async (comment) => {
+      const csv = Buffer.from(`firstName;lastName;email;comment\nAnna;Müller;anna@choir.de;"${comment}"\n`);
+      prismaMock.member.findUnique.mockResolvedValue(mockMember({ internalComment: 'Old comment' }));
+      prismaMock.member.upsert.mockResolvedValue(mockMember());
+
+      expect(await service.importMembersFromCsv(csv)).toEqual({ created: 0, updated: 1, failed: [] });
+      expect(prismaMock.member.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ internalComment: null }),
+          update: expect.objectContaining({ internalComment: null }),
+        }),
+      );
+    });
+
+    it('preserves an existing internal comment when the CSV column is absent', async () => {
+      const csv = Buffer.from('firstName;lastName;email\nAnna;Müller;anna@choir.de\n');
+      prismaMock.member.findUnique.mockResolvedValue(mockMember({ internalComment: 'Keep this comment' }));
+      prismaMock.member.upsert.mockResolvedValue(mockMember());
+
+      expect(await service.importMembersFromCsv(csv)).toEqual({ created: 0, updated: 1, failed: [] });
+      const [upsert] = prismaMock.member.upsert.mock.calls[0];
+      expect(upsert.create).not.toHaveProperty('internalComment');
+      expect(upsert.update).not.toHaveProperty('internalComment');
+    });
+
     it('imports comma-delimited CSV with a quoted comma in a name', async () => {
       const csv = Buffer.from(
         '\uFEFFfirstName,lastName,email,choirVoice\nAnna,"Müller, Jr.",anna@choir.de,SOPRAN\n',

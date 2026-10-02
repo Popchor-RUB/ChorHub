@@ -193,6 +193,7 @@
     "activity_no_rehearsals": "Keine vergangenen Pflichtproben vorhanden.",
     "activity_load_failed": "Aktivitätsstatistik konnte nicht geladen werden.",
     "import_description": "Laden Sie eine CSV-Datei hoch mit den Spalten:",
+    "import_comment_hint": "Die optionale Spalte comment setzt den internen Mitgliedskommentar. Ein leerer Wert löscht ihn; ohne die Spalte bleiben vorhandene Kommentare erhalten.",
     "import_valid_voices": "Gültige Stimmgruppen:",
     "import_drop": "CSV-Datei hier ablegen oder klicken zum Auswählen",
     "import_btn": "Importieren",

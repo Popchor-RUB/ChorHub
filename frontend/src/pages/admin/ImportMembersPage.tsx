@@ -62,8 +62,9 @@ export function ImportMembersPage() {
         <Card.Content className="gap-4">
           <p className="text-sm text-muted">
             {t('members.import_description')}{' '}
-            <code className="bg-surface-secondary px-1 rounded">firstName, lastName, email, choirVoice</code>
+            <code className="bg-surface-secondary px-1 rounded">firstName, lastName, email, choirVoice, comment</code>
           </p>
+          <p className="text-xs text-muted">{t('members.import_comment_hint')}</p>
           {voices.length > 0 && (
             <p className="text-xs text-muted">
               {t('members.import_valid_voices')}{' '}

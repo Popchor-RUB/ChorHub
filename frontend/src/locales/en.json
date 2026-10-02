@@ -193,6 +193,7 @@
     "activity_no_rehearsals": "No past mandatory rehearsals available.",
     "activity_load_failed": "Could not load activity statistics.",
     "import_description": "Upload a CSV file with the columns:",
+    "import_comment_hint": "The optional comment column sets the internal member comment. An empty value clears it; omitting the column keeps existing comments.",
     "import_valid_voices": "Valid voices:",
     "import_drop": "Drop CSV file here or click to select",
     "import_btn": "Import",
