@@ -18,7 +18,7 @@ test.describe('Member Cloud', () => {
       await expect(page.getByRole('link', { name: 'Cloud', exact: true })).toBeVisible();
       if (width < 640) {
         const navigation = page.getByTestId('member-bottom-nav');
-        await expect(navigation.getByRole('link')).toHaveCount(6);
+        await expect(navigation.getByRole('link')).toHaveCount(5);
         await expect(navigation.getByTestId('voice-admin-nav')).toBeVisible();
         const links = navigation.getByRole('link');
         for (const link of await links.all()) {
