@@ -246,6 +246,7 @@
     "unexcused_warning": "{{count}}x unentschuldigt gefehlt"
   },
   "checkin": {
+    "back_to_rehearsals": "Zurück zu den Proben",
     "member_title": "QR-Code Checkin",
     "member_hint": "Zeige diesen QR-Code bei der Anmeldung vor.",
     "member_qr_alt": "Check-in QR-Code",

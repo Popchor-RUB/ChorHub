@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { checkinApi } from '../../services/api';
@@ -122,6 +124,10 @@ export function MemberQrCheckinPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Link to="/proben" className="link self-start gap-2">
+        <ArrowLeftIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
+        {t('checkin.back_to_rehearsals')}
+      </Link>
       <h1 className="text-2xl font-bold">{t('checkin.member_title')}</h1>
       <p className="text-sm text-muted">{t('checkin.member_hint')}</p>
 
