@@ -14,7 +14,8 @@ import { useEffect, useState } from 'react';
 
 export function MemberLayout() {
   const { memberSession, logoutMember } = useAuthStore();
-  const [grantSnapshot, setGrantSnapshot] = useState<{ pathname: string; voices: VoiceAdminVoice[] } | null>(null);
+  const memberToken = memberSession?.token;
+  const [grantSnapshot, setGrantSnapshot] = useState<{ token: string; voices: VoiceAdminVoice[] } | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const isCloudPage = location.pathname === '/cloud';
@@ -22,16 +23,18 @@ export function MemberLayout() {
   const { visible: showGuide, forced: guideForced, dismiss: dismissGuide } = useIOSInstallGuide('chorhub-ios-guide-member');
 
   useEffect(() => {
+    if (!memberToken) return;
     let active = true;
     membersApi.me().then((response) => {
-      if (active) setGrantSnapshot({ pathname: location.pathname, voices: response.data.voiceAdminVoices ?? [] });
+      if (active) setGrantSnapshot({ token: memberToken, voices: response.data.voiceAdminVoices ?? [] });
     }).catch(() => {
-      if (active) setGrantSnapshot({ pathname: location.pathname, voices: [] });
+      if (active) setGrantSnapshot({ token: memberToken, voices: [] });
     });
     return () => { active = false; };
-  }, [location.pathname]);
+  }, [location.pathname, memberToken]);
 
-  const voiceAdminVoices = grantSnapshot?.pathname === location.pathname ? grantSnapshot.voices : [];
+  // Keep this member's grants visible while navigation refreshes them.
+  const voiceAdminVoices = grantSnapshot?.token === memberToken ? grantSnapshot?.voices ?? [] : [];
 
   const handleLogout = () => {
     logoutMember();
