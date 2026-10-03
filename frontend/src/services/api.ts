@@ -17,6 +17,7 @@ import type {
   MailTemplate,
   MailTemplateKey,
   MailTemplatePreview,
+  AppSetting,
 } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { withBasePath } from '../utils/basePath';
@@ -249,6 +250,14 @@ export const generalInfoApi = {
   get: () => api.get('/general-info'),
   update: (markdownContent: string, sendPushNotification = false) =>
     api.patch('/general-info', { markdownContent, sendPushNotification }),
+};
+
+export const settingsApi = {
+  list: () => api.get<{ settings: AppSetting[] }>('/settings'),
+  get: (key: string) => api.get<AppSetting>(`/settings/${encodeURIComponent(key)}`),
+  set: (key: string, value: string) =>
+    api.put<AppSetting>(`/settings/${encodeURIComponent(key)}`, { value }),
+  delete: (key: string) => api.delete(`/settings/${encodeURIComponent(key)}`),
 };
 
 export const personalInfoApi = {

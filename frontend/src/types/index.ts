@@ -201,6 +201,11 @@ export interface GeneralInfo {
   updatedAt: string;
 }
 
+export interface AppSetting {
+  key: string;
+  value: string | null;
+}
+
 export interface PersonalInfo {
   id: string | null;
   memberId: string | null;

@@ -157,6 +157,11 @@ npm run test:e2e:report
 - `X-Member-Token: <raw>` when member session exists.
 - 401 responses clear session and redirect to login.
 
+### Settings and member Cloud
+- `Settings` is a generic string key/value store. `GET /settings` and `PUT`/`DELETE /settings/:key` require an admin JWT; authenticated members may read only explicitly allowlisted keys through `GET /settings/:key`. Missing keys return a null value. Seed runs preserve settings.
+- `cloud.url` is initially the only member-readable key. Its value must be an absolute HTTP/HTTPS URL without embedded credentials; deleting the key clears the Cloud configuration. Other settings may contain empty strings. Add member-readable keys and per-key validators explicitly when extending the store.
+- Members always see the Cloud tab. The Cloud iframe fills available viewport space while the top header and mobile bottom navigation remain accessible. External cloud providers must allow framing; ChorHub does not proxy providers or forward its credentials.
+
 ### Email templates
 - Files in `backend/src/mail/templates/` are startup defaults. Before accepting requests, the backend expands the shared footer into editable default HTML and inserts missing `MailTemplate` rows. For existing rows, startup replaces HTML only when its exact expanded HTML SHA-256 hash is registered for that template; unknown or customized HTML stays intact, and stored subjects are preserved. The hash registry starts with current working-tree defaults only; no older versions are backfilled. `backend/nest-cli.json` copies defaults into `dist/src` during build.
 - Admin CLI `mailtemplate <key> <member-email> [scenario]` supports every registered template and scenario using saved database templates. Invite/login sends create real credentials; other templates use synthetic scenario data without changing attendance or member status. All CLI template sends target only the specified existing member.

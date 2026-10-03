@@ -15,6 +15,7 @@
     "notifications_short": "Mitteil.",
     "qr_checkin": "QR-Code Checkin",
     "qr_short": "QR",
+    "cloud": "Cloud",
     "settings_short": "Einst.",
     "logout": "Abmelden",
     "admin_badge": "Admin"
@@ -385,6 +386,24 @@
     "personal_validation_placeholder_name_required": "Bitte den Namen für jeden Placeholder ausfüllen.",
     "personal_validation_placeholder_file_required": "Bitte für jeden Placeholder eine Textdatei hochladen.",
     "personal_validation_placeholder_rows_mismatch": "Die Zeilenanzahl der Placeholder-Datei muss {{count}} entsprechen."
+  },
+  "cloud": {
+    "admin_menu": "Cloud",
+    "admin_title": "Cloud-Einstellungen",
+    "admin_description": "Lege die Cloud-Adresse fest, die Mitgliedern angezeigt wird.",
+    "url_label": "Cloud-Adresse",
+    "url_placeholder": "https://cloud.example.org",
+    "url_help": "Erlaubt sind absolute HTTP- oder HTTPS-Adressen ohne Zugangsdaten. Die Cloud muss Einbettung durch ChorHub erlauben; bei ChorHub über HTTPS muss auch diese Adresse HTTPS nutzen. Leer lassen, um die Einrichtung zu löschen.",
+    "url_invalid": "Gib eine gültige HTTP- oder HTTPS-Adresse ohne Zugangsdaten ein.",
+    "save": "Speichern",
+    "saved": "Cloud-Adresse gespeichert.",
+    "save_error": "Cloud-Adresse konnte nicht gespeichert werden.",
+    "loading": "Cloud wird geladen …",
+    "load_error": "Cloud-Einstellungen konnten nicht geladen werden.",
+    "settings_load_error": "Cloud-Einstellungen konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "empty": "Die Cloud ist noch nicht konfiguriert.",
+    "frame_title": "Chor-Cloud"
   },
   "push": {
     "title": "Push-Benachrichtigungen",

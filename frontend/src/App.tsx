@@ -12,6 +12,7 @@ const AdminLayout = lazy(() => import('./pages/admin/AdminLayout').then((module)
 const InformationenPage = lazy(() => import('./pages/member/DashboardPage').then((module) => ({ default: module.InformationenPage })));
 const RehearsalsPage = lazy(() => import('./pages/member/RehearsalsPage').then((module) => ({ default: module.RehearsalsPage })));
 const MemberSettingsPage = lazy(() => import('./pages/member/MemberSettingsPage').then((module) => ({ default: module.MemberSettingsPage })));
+const MemberCloudPage = lazy(() => import('./pages/member/MemberCloudPage').then((module) => ({ default: module.MemberCloudPage })));
 const MemberQrCheckinPage = lazy(() => import('./pages/member/MemberQrCheckinPage').then((module) => ({ default: module.MemberQrCheckinPage })));
 const VoiceAdminAttendancePage = lazy(() => import('./pages/member/VoiceAdminAttendancePage').then((module) => ({ default: module.VoiceAdminAttendancePage })));
 
@@ -31,6 +32,7 @@ const PushNotificationsPage = lazy(() => import('./pages/admin/PushNotifications
 const OptionsPage = lazy(() => import('./pages/admin/OptionsPage').then((module) => ({ default: module.OptionsPage })));
 
 const AdminMailTemplatesPage = lazy(() => import('./pages/admin/AdminMailTemplatesPage').then((module) => ({ default: module.AdminMailTemplatesPage })));
+const AdminCloudSettingsPage = lazy(() => import('./pages/admin/AdminCloudSettingsPage').then((module) => ({ default: module.AdminCloudSettingsPage })));
 
 function LoadingScreen() {
   return <div className="min-h-[30vh] flex items-center justify-center text-muted text-sm">Lädt...</div>;
@@ -60,6 +62,7 @@ const router = createBrowserRouter(
         { path: 'anwesenheit', element: <LazyPage><VoiceAdminAttendancePage /></LazyPage> },
         { path: 'informationen', element: <LazyPage><InformationenPage /></LazyPage> },
         { path: 'einstellungen', element: <LazyPage><MemberSettingsPage /></LazyPage> },
+        { path: 'cloud', element: <LazyPage><MemberCloudPage /></LazyPage> },
       ],
     },
 
@@ -87,6 +90,7 @@ const router = createBrowserRouter(
         { path: 'benachrichtigungen', element: <LazyPage><PushNotificationsPage /></LazyPage> },
         { path: 'einstellungen', element: <LazyPage><OptionsPage /></LazyPage> },
         { path: 'einstellungen/email-templates', element: <LazyPage><AdminMailTemplatesPage /></LazyPage> },
+        { path: 'einstellungen/cloud', element: <LazyPage><AdminCloudSettingsPage /></LazyPage> },
       ],
     },
 

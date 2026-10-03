@@ -3,6 +3,7 @@ import { AdminNavigationMenu } from './AdminNavigationMenu';
 
 const settingsLinks = [
   { id: 'voices', path: '/admin/einstellungen', labelKey: 'voice.section_title' },
+  { id: 'cloud', path: '/admin/einstellungen/cloud', labelKey: 'cloud.admin_menu' },
   { id: 'mail-templates', path: '/admin/einstellungen/email-templates', labelKey: 'nav.mail_templates' },
 ];
 

@@ -15,6 +15,7 @@
     "notifications_short": "Notif.",
     "qr_checkin": "QR-Code Checkin",
     "qr_short": "QR",
+    "cloud": "Cloud",
     "settings_short": "Sett.",
     "logout": "Log out",
     "admin_badge": "Admin"
@@ -385,6 +386,24 @@
     "personal_validation_placeholder_name_required": "Please fill in each placeholder name.",
     "personal_validation_placeholder_file_required": "Please upload one text file per placeholder.",
     "personal_validation_placeholder_rows_mismatch": "Placeholder file row count must match {{count}}."
+  },
+  "cloud": {
+    "admin_menu": "Cloud",
+    "admin_title": "Cloud settings",
+    "admin_description": "Set the cloud address shown to members.",
+    "url_label": "Cloud address",
+    "url_placeholder": "https://cloud.example.org",
+    "url_help": "Use an absolute HTTP or HTTPS address without credentials. The cloud must allow embedding by ChorHub; if ChorHub uses HTTPS, this address must use HTTPS too. Leave blank to clear the configuration.",
+    "url_invalid": "Enter a valid HTTP or HTTPS address without credentials.",
+    "save": "Save",
+    "saved": "Cloud address saved.",
+    "save_error": "Cloud address could not be saved.",
+    "loading": "Loading cloud…",
+    "load_error": "Cloud settings could not be loaded.",
+    "settings_load_error": "Cloud settings could not be loaded.",
+    "retry": "Try again",
+    "empty": "Cloud is not configured yet.",
+    "frame_title": "Choir cloud"
   },
   "push": {
     "title": "Push Notifications",

@@ -8,6 +8,14 @@ datasource db {
   provider = "postgresql"
 }
 
+model Settings {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
 enum AttendanceResponse {
   CONFIRMED
   DECLINED

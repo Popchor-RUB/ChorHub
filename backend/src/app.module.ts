@@ -17,6 +17,7 @@ import { ChoirVoicesModule } from './choir-voices/choir-voices.module';
 import { GlobalAuthGuard } from './auth/guards/global-auth.guard';
 import { CheckinModule } from './checkin/checkin.module';
 import { EmailsModule } from './emails/emails.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { EmailsModule } from './emails/emails.module';
     ChoirVoicesModule,
     CheckinModule,
     EmailsModule,
+    SettingsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: GlobalAuthGuard },
