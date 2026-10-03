@@ -32,9 +32,9 @@ export function AdminNavigationMenu({
         aria-label={t(labelKey)}
         className={mobile
           ? `h-auto min-w-0 flex-1 flex-col gap-0 rounded-none border-0 bg-transparent py-2 text-xs shadow-none data-[hovered=true]:bg-transparent ${isActive ? 'text-accent font-semibold' : 'text-muted'}`
-          : `h-auto min-w-0 gap-1 rounded-none border-0 bg-transparent p-0 text-base shadow-none data-[hovered=true]:bg-transparent ${isActive ? 'text-accent font-medium' : 'text-muted hover:text-foreground'}`}
+          : `h-auto min-w-0 gap-1.5 rounded-none border-0 bg-transparent p-0 text-base shadow-none data-[hovered=true]:bg-transparent ${isActive ? 'text-accent font-medium' : 'text-muted hover:text-foreground'}`}
       >
-        {mobile && <Icon className="mb-0.5 h-6 w-6" />}
+        <Icon aria-hidden="true" className={mobile ? 'mb-0.5 h-6 w-6' : 'h-5 w-5 shrink-0'} />
         {t(mobile ? mobileLabelKey : labelKey)}
         {!mobile && <ChevronDownIcon className="h-4 w-4" />}
       </Button>

@@ -65,9 +65,10 @@ export function AdminLayout() {
               <NavLink
                 to={item.to}
                 className={({ isActive }) =>
-                  isActive ? 'text-accent font-medium' : 'text-muted hover:text-foreground'
+                  `inline-flex items-center gap-1.5 ${isActive ? 'text-accent font-medium' : 'text-muted hover:text-foreground'}`
                 }
               >
+                <item.icon aria-hidden="true" className="h-5 w-5 shrink-0" />
                 {t(item.labelKey)}
               </NavLink>
             </li>

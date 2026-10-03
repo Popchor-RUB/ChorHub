@@ -54,9 +54,10 @@ export function MemberLayout() {
             <NavLink
               to="/proben"
               className={({ isActive }) =>
-                isActive ? 'text-accent font-medium' : 'text-muted'
+                `inline-flex items-center gap-1.5 ${isActive ? 'text-accent font-medium' : 'text-muted'}`
               }
             >
+              <MusicalNoteIcon aria-hidden="true" className="h-5 w-5 shrink-0" />
               {t('nav.rehearsals')}
             </NavLink>
           </li>
@@ -64,17 +65,19 @@ export function MemberLayout() {
             <NavLink
               to="/informationen"
               className={({ isActive }) =>
-                isActive ? 'text-accent font-medium' : 'text-muted'
+                `inline-flex items-center gap-1.5 ${isActive ? 'text-accent font-medium' : 'text-muted'}`
               }
             >
+              <InformationCircleIcon aria-hidden="true" className="h-5 w-5 shrink-0" />
               {t('nav.information')}
             </NavLink>
           </li>
           <li>
             <NavLink
               to="/cloud"
-              className={({ isActive }) => isActive ? 'text-accent font-medium' : 'text-muted'}
+              className={({ isActive }) => `inline-flex items-center gap-1.5 ${isActive ? 'text-accent font-medium' : 'text-muted'}`}
             >
+              <CloudIcon aria-hidden="true" className="h-5 w-5 shrink-0" />
               {t('nav.cloud')}
             </NavLink>
           </li>
@@ -82,8 +85,9 @@ export function MemberLayout() {
             <NavLink
               to="/anwesenheit"
               data-testid="voice-admin-nav"
-              className={({ isActive }) => isActive ? 'text-accent font-medium' : 'text-muted'}
+              className={({ isActive }) => `inline-flex items-center gap-1.5 ${isActive ? 'text-accent font-medium' : 'text-muted'}`}
             >
+              <ClipboardDocumentCheckIcon aria-hidden="true" className="h-5 w-5 shrink-0" />
               {t('nav.voice_admin')}
             </NavLink>
           </li>}
