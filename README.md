@@ -52,6 +52,20 @@ Das Skript generiert alle benötigten `.env`-Dateien und Symlinks:
 
 ### 2a. Lokale Entwicklung
 
+Nach der einmaligen Einrichtung startet `npm run dev` im Repository-Root beide
+Server und bei Bedarf die lokale Docker-Infrastruktur. Wenn `tmux` installiert
+ist, laufen die Server in einer getrennten Session mit den Fenstern `frontend`
+und `backend`; das Terminal öffnet die Session automatisch. Innerhalb von tmux
+wechselt der Aufruf zur Dev-Session. Erneute Aufrufe verwenden
+die Session weiter und starten fehlende oder beendete Fenster neu. Jeder
+Checkout erhält eine eigene Session.
+
+Ohne interaktives Terminal laufen die Server getrennt weiter. Der Start zeigt
+Befehle zum Öffnen und Beenden der Session. In tmux wechselt
+`Ctrl+B`, danach `N` zwischen Fenstern; `Ctrl+B`, danach `D` trennt die Ansicht,
+während die Server weiterlaufen. Ohne tmux laufen beide Server wie bisher im
+aktuellen Terminal und werden mit `Ctrl+C` beendet.
+
 Nur Datenbank und MailHog als Docker-Container starten, Backend und Frontend nativ ausführen:
 
 ```bash

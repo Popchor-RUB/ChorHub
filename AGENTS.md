@@ -108,6 +108,7 @@ npm run test:e2e:report
 ```
 
 ## Dev environment tips
+- Root `npm run dev` starts or reuses a checkout-specific tmux session with `frontend` and `backend` windows when tmux is installed. It automatically attaches in an interactive terminal or switches clients when already inside tmux; noninteractive runs leave the session detached. It prints attach/switch and stop commands. Missing or exited windows restart on the next run. Without tmux, both servers run in the foreground with shared shutdown handling.
 - Run `./setup-secrets.sh` before first local startup to generate required `.env*` files and symlinks.
 - `cd backend && npm run start:dev` runs `backend/scripts/start-dev-with-lan.cjs`, which auto-runs `prisma generate` and sets LAN-friendly `APP_URL`/`CORS_ORIGINS`.
 - Root `tsconfig.json` is for Playwright/E2E files. Frontend app type checks must use `frontend/tsconfig.app.json`.

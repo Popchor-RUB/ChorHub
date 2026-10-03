@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { connect } from "node:net";
+import { startTmuxDevServers } from "./dev-tmux.mjs";
 
 const DATABASE_WAIT_TIMEOUT_MS = 30_000;
 const DATABASE_RETRY_INTERVAL_MS = 500;
@@ -207,6 +208,35 @@ async function main() {
   }
 
   console.log(`Database available at ${endpoint.host}:${endpoint.port}.`);
+  const npmCommand = process.env.npm_execpath
+    ? [process.execPath, process.env.npm_execpath]
+    : [NPM_COMMAND];
+  const session = startTmuxDevServers(process.cwd(), npmCommand);
+  if (session) {
+    console.log(`Development servers running in tmux session ${session}.`);
+    console.log(
+      `View logs: tmux ${process.env.TMUX ? "switch-client" : "attach-session"} -t ${session}`,
+    );
+    console.log(`Stop servers: tmux kill-session -t ${session}`);
+    if (process.env.TMUX || (process.stdin.isTTY && process.stdout.isTTY)) {
+      const result = spawnSync(
+        "tmux",
+        [
+          process.env.TMUX ? "switch-client" : "attach-session",
+          "-t",
+          `=${session}`,
+        ],
+        { stdio: "inherit" },
+      );
+      if (result.error) throw result.error;
+      process.exitCode = result.status ?? 1;
+    }
+    return;
+  }
+
+  console.log(
+    "tmux not installed. Running development servers in this terminal.",
+  );
   runDevServers();
 }
 
