@@ -74,7 +74,10 @@ export function MemberOverviewPage() {
     setSelectedMember(member);
     setIsDetailOpen(true);
   }, []);
-  const closeDetail = useCallback(() => setIsDetailOpen(false), []);
+  const closeDetail = useCallback(() => {
+    setIsDetailOpen(false);
+    setRefreshKey((key) => key + 1);
+  }, []);
 
   const handleExport = async () => {
     setExporting(true);

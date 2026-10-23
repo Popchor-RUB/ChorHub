@@ -506,6 +506,7 @@
     "attended": "✓ present",
     "excused_short": "excused",
     "unexcused_short": "✗ unexcused abs.",
+    "absence_not_counted": "– absence not counted",
     "no_member_data": "No member data.",
     "edit_mode_toggle": "Edit",
     "edit_mode_done": "Done",

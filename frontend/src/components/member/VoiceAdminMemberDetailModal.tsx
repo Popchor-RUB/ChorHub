@@ -127,6 +127,7 @@ export function VoiceAdminMemberDetailModal({ member, isOpen, onClose, onAccessR
                 onSaveError={() => setSaveError(true)}
                 saveAttendancePlan={saveAttendancePlan}
                 saveAttendanceRecord={saveAttendanceRecord}
+                loadRehearsals={voiceAdminAttendanceApi.getMemberRehearsals}
               />
             ) : null}
             {saveError && <p className="mt-3 text-danger text-sm">{t('attendance.save_failed')}</p>}

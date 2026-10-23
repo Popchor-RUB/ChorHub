@@ -29,13 +29,13 @@ export function getEuropeBerlinStartOfDay(date = new Date()): Date {
   return new Date(Date.UTC(year, month - 1, day) - offsetMinutes * 60_000);
 }
 
-export function countUnexcusedAbsences(params: {
+export function getUnexcusedAbsenceRehearsalIds(params: {
   memberCreatedAt: Date;
   rehearsals: CountableRehearsal[];
   attendedRehearsalIds: Iterable<string>;
   declinedRehearsalIds: Iterable<string>;
   now?: Date;
-}): number {
+}): string[] {
   const now = params.now ?? getEuropeBerlinStartOfDay();
   const attended = new Set(params.attendedRehearsalIds);
   const declined = new Set(params.declinedRehearsalIds);
@@ -46,5 +46,9 @@ export function countUnexcusedAbsences(params: {
     rehearsal.date >= params.memberCreatedAt &&
     !attended.has(rehearsal.id) &&
     !declined.has(rehearsal.id),
-  ).length;
+  ).map((rehearsal) => rehearsal.id);
+}
+
+export function countUnexcusedAbsences(params: Parameters<typeof getUnexcusedAbsenceRehearsalIds>[0]): number {
+  return getUnexcusedAbsenceRehearsalIds(params).length;
 }

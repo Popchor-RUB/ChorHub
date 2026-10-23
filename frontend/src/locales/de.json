@@ -506,6 +506,7 @@
     "attended": "✓ anwesend",
     "excused_short": "entschuldigt",
     "unexcused_short": "✗ unentsch. gefehlt",
+    "absence_not_counted": "– Fehlzeit nicht gewertet",
     "no_member_data": "Keine Mitgliederdaten.",
     "edit_mode_toggle": "Bearbeiten",
     "edit_mode_done": "Fertig",

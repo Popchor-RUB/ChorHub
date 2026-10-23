@@ -146,6 +146,7 @@ npm run test:e2e:report
 - `AttendancePlan`: member intent (`CONFIRMED`/`DECLINED`), upserted by `PUT /attendance/plans/:rehearsalId`.
 - Members can create, change, or delete attendance plans until the rehearsal ends (start plus duration; 120 minutes when duration is absent). At the exact end time, changes are blocked. Ongoing overnight rehearsals remain editable in the member UI after midnight.
 - `AttendanceRecord`: admin-confirmed attendance, replaced by `PUT /attendance/records/:rehearsalId` (delete + create).
+- Admin and voice-admin member rehearsal rows expose `isUnexcusedAbsence`, calculated by the same backend rule as member overview counts. Use this field for absence totals and row labels; reload rehearsal rows after attendance edits because adding the first or removing the last record changes whether a rehearsal counts. Attendance checklist badges refresh backend overview counts after edits and during polling.
 - The daily 06:00 Europe/Berlin disable task counts past, non-optional rehearsals after member creation only when the rehearsal has at least one attendance record. A member without a record and without a `DECLINED` plan has an unexcused absence. Three cumulative absences disable the account; reenabled members keep their history and can be disabled again on the next run.
 
 ### Prisma v7 specifics

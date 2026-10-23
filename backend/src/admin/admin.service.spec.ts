@@ -707,20 +707,28 @@ describe('AdminService', () => {
   });
 
   describe('getMemberRehearsals', () => {
+    beforeEach(() => {
+      prismaMock.member.findUnique.mockResolvedValue(mockMember({ createdAt: new Date('2025-01-01') }));
+    });
+
     const mockRehearsalRow = (overrides: {
       attendanceRecords?: { id: string }[];
       attendancePlans?: { response: string }[];
       isOptional?: boolean;
+      attendanceRecordCount?: number;
     } = {}) => ({
       id: 'rehearsal-1',
       date: new Date('2025-06-01'),
       title: 'Probe 1',
       description: null,
+      location: null,
+      durationMinutes: null,
       isOptional: overrides.isOptional ?? false,
       createdAt: new Date(),
       updatedAt: new Date(),
       attendanceRecords: overrides.attendanceRecords ?? [],
       attendancePlans: overrides.attendancePlans ?? [],
+      _count: { attendanceRecords: overrides.attendanceRecordCount ?? 1 },
     });
 
     it('returns attended=true when member has a record', async () => {
@@ -783,6 +791,58 @@ describe('AdminService', () => {
       expect(result[1]).toMatchObject({ attended: false, plan: 'DECLINED' });
       expect(result[2]).toMatchObject({ attended: false, plan: 'CONFIRMED' });
       expect(result[3]).toMatchObject({ attended: false, plan: null });
+    });
+
+    it.each([
+      { name: 'before joining', createdAt: '2025-06-01T00:00:00.001Z', expected: false },
+      { name: 'at joining', createdAt: '2025-06-01T00:00:00.000Z', expected: true },
+      { name: 'after joining', createdAt: '2025-05-31T23:59:59.999Z', expected: true },
+    ])('classifies a recorded absence $name consistently with overview counts', async ({ createdAt, expected }) => {
+      prismaMock.member.findUnique.mockResolvedValue(mockMember({ createdAt: new Date(createdAt) }));
+      prismaMock.rehearsal.findMany.mockResolvedValue([mockRehearsalRow()]);
+
+      const result = await service.getMemberRehearsals('member-1');
+
+      expect(result[0].isUnexcusedAbsence).toBe(expected);
+      expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        include: expect.objectContaining({ _count: { select: { attendanceRecords: true } } }),
+      }));
+    });
+
+    it.each([
+      { name: 'unrecorded', attendanceRecordCount: 0 },
+      { name: 'optional', isOptional: true },
+      { name: 'attended', attendanceRecords: [{ id: 'record' }] },
+      { name: 'declined', attendancePlans: [{ response: 'DECLINED' }] },
+    ])('does not classify $name rehearsals as unexcused', async (overrides) => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([mockRehearsalRow(overrides)]);
+
+      const result = await service.getMemberRehearsals('member-1');
+
+      expect(result[0].isUnexcusedAbsence).toBe(false);
+    });
+
+    it('does not count today or future rehearsals before the Berlin day boundary', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2025-06-01T23:30:00Z'));
+      try {
+        prismaMock.rehearsal.findMany.mockResolvedValue([
+          { ...mockRehearsalRow(), id: 'yesterday', date: new Date('2025-06-01T21:59:59.999Z') },
+          { ...mockRehearsalRow(), id: 'midnight', date: new Date('2025-06-01T22:00:00Z') },
+          { ...mockRehearsalRow(), id: 'today', date: new Date('2025-06-01T23:00:00Z') },
+          { ...mockRehearsalRow(), id: 'future', date: new Date('2025-06-03T18:00:00Z') },
+        ]);
+
+        const result = await service.getMemberRehearsals('member-1');
+
+        expect(result.filter((row) => row.isUnexcusedAbsence).map((row) => row.id)).toEqual(['yesterday']);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('rejects unknown members', async () => {
+      prismaMock.member.findUnique.mockResolvedValue(null);
+      await expect(service.getMemberRehearsals('missing')).rejects.toThrow('Mitglied nicht gefunden');
     });
   });
 

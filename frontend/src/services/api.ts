@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { InternalAxiosRequestConfig } from 'axios';
 import type {
   MemberActivityStats,
+  MemberOverview,
   MemberCheckinQr,
   PersonalInfo,
   PersonalInfoConfig,
@@ -208,7 +209,7 @@ export const adminMembersApi = {
     });
   },
   list: (status: 'active' | 'disabled' = 'active') =>
-    api.get('/admin/members', { params: { status } }),
+    api.get<MemberOverview[]>('/admin/members', { params: { status } }),
   setStatus: (id: string, data: {
     disabled: boolean;
     reason?: string;
@@ -223,7 +224,7 @@ export const adminMembersApi = {
   export: () => api.get('/admin/members/export', { responseType: 'blob' }),
   search: (q: string) => api.get(`/admin/members/search?q=${encodeURIComponent(q)}`),
   history: (id: string) => api.get(`/admin/members/${id}/history`),
-  rehearsals: (id: string) => api.get(`/admin/members/${id}/rehearsals`),
+  rehearsals: (id: string) => api.get<MemberRehearsalEntry[]>(`/admin/members/${id}/rehearsals`),
   sendInvite: (id: string) => api.post(`/admin/members/${id}/send-invite`),
   sendLogin: (id: string) => api.post(`/admin/members/${id}/send-login`),
   setVoiceAdminVoices: (id: string, voiceIds: string[]) =>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, useOverlayState } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { rehearsalsApi, attendanceApi, adminMembersApi } from '../../services/api';
@@ -6,7 +6,7 @@ import { CreateMemberModal } from '../../components/member/CreateMemberModal';
 import { MemberDetailModal } from '../../components/member/MemberDetailModal';
 import { QrScannerModal, type QrScanResult } from '../../components/attendance/QrScannerModal';
 import { QrScanResultModal } from '../../components/attendance/QrScanResultModal';
-import type { Rehearsal, AttendanceRecord, MemberOverview } from '../../types';
+import type { Rehearsal, AttendanceRecord } from '../../types';
 import { VoiceGroupList } from '../../components/common/VoiceGroupList';
 import type { VoiceGroupData } from '../../components/common/VoiceGroupList';
 import { useCollapsedVoices } from '../../hooks/useCollapsedVoices';
@@ -63,6 +63,21 @@ export function AttendancePage() {
   const [emailByMemberId, setEmailByMemberId] = useState<Record<string, string>>({});
 
   const { t, i18n } = useTranslation();
+  const memberInfoRequestRef = useRef(0);
+
+  const refreshMemberInfo = useCallback(async () => {
+    const requestId = ++memberInfoRequestRef.current;
+    try {
+      // The checklist includes disabled members too.
+      const responses = await Promise.all([adminMembersApi.list(), adminMembersApi.list('disabled')]);
+      if (requestId !== memberInfoRequestRef.current) return;
+      const members = responses.flatMap((res) => res.data);
+      setUnexcusedByMemberId(Object.fromEntries(members.map((m) => [m.id, m.unexcusedAbsenceCount])));
+      setEmailByMemberId(Object.fromEntries(members.map((m) => [m.id, m.email])));
+    } catch {
+      if (requestId === memberInfoRequestRef.current) setSaveError(t('common.error_generic'));
+    }
+  }, [t]);
 
   // Stable refs to avoid stale closures
   const recordsRef = useRef(records);
@@ -74,12 +89,8 @@ export function AttendancePage() {
 
   useEffect(() => {
     rehearsalsApi.getAll().then((res) => setRehearsals(res.data as Rehearsal[]));
-    adminMembersApi.list().then((res) => {
-      const members = res.data as MemberOverview[];
-      setUnexcusedByMemberId(Object.fromEntries(members.map((m) => [m.id, m.unexcusedAbsenceCount])));
-      setEmailByMemberId(Object.fromEntries(members.map((m) => [m.id, m.email])));
-    });
-  }, []);
+    void refreshMemberInfo();
+  }, [refreshMemberInfo]);
 
   useEffect(() => {
     if (!selectedRehearsalId) {
@@ -91,23 +102,25 @@ export function AttendancePage() {
     setVoiceFilter(null);
     collapseAll([]);
     setFocusedMemberId(null);
+    void refreshMemberInfo();
     attendanceApi.getRecords(selectedRehearsalId).then((res) => {
       setRecords(res.data as AttendanceRecord[]);
       setLoadingRecords(false);
     });
-  }, [collapseAll, selectedRehearsalId]);
+  }, [collapseAll, refreshMemberInfo, selectedRehearsalId]);
 
   // Poll for remote changes every 5 s so multiple admins stay in sync
   useEffect(() => {
     if (!selectedRehearsalId) return;
     const interval = setInterval(() => {
-      if (savingRef.current) return;
+      if (savingRef.current || scanRecordSaving || isMemberOpen) return;
+      void refreshMemberInfo();
       attendanceApi.getRecords(selectedRehearsalId).then((res) => {
         if (!savingRef.current) setRecords(res.data as AttendanceRecord[]);
       });
     }, 5000);
     return () => clearInterval(interval);
-  }, [selectedRehearsalId]);
+  }, [isMemberOpen, refreshMemberInfo, scanRecordSaving, selectedRehearsalId]);
 
   const filteredRecords = records.filter((r) => {
     const q = nameFilter.toLowerCase();
@@ -157,6 +170,7 @@ export function AttendancePage() {
 
     try {
       await attendanceApi.setRecord(selectedRehearsalIdRef.current, memberId, !currentlyAttended);
+      await refreshMemberInfo();
     } catch {
       setRecords((prev) =>
         prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),
@@ -174,6 +188,7 @@ export function AttendancePage() {
     await attendanceApi.setRecord(selectedRehearsalIdRef.current, memberId, true);
     const res = await attendanceApi.getRecords(selectedRehearsalIdRef.current);
     setRecords(res.data as AttendanceRecord[]);
+    await refreshMemberInfo();
   };
 
   const { ctrlHeld } = useAttendanceKeyboard({
@@ -254,6 +269,7 @@ export function AttendancePage() {
 
     try {
       await attendanceApi.setRecord(selectedRehearsalIdRef.current, memberId, !currentlyAttended);
+      await refreshMemberInfo();
     } catch {
       setRecords((prev) =>
         prev.map((r) => (r.id === memberId ? { ...r, attended: currentlyAttended } : r)),
@@ -384,7 +400,10 @@ export function AttendancePage() {
             setRecords((current) => current.map((record) => record.id === memberId ? { ...record, internalComment: comment } : record));
             setSelectedMember((current) => current?.id === memberId ? { ...current, internalComment: comment } : current);
           }}
-          onClose={onMemberClose}
+          onClose={() => {
+            onMemberClose();
+            void refreshMemberInfo();
+          }}
           onStatusChanged={(id) => setRecords((prev) => prev.filter((record) => record.id !== id))}
         />
       )}

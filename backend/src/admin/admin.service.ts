@@ -9,7 +9,7 @@ import type { CreateMemberDto } from './dto/create-member.dto';
 import type { UpdateMemberDto } from './dto/update-member.dto';
 import type { UpdateMemberStatusDto } from './dto/update-member-status.dto';
 import { MemberStatusService } from '../members/member-status.service';
-import { countUnexcusedAbsences, getEuropeBerlinStartOfDay } from './unexcused-absence-count';
+import { countUnexcusedAbsences, getEuropeBerlinStartOfDay, getUnexcusedAbsenceRehearsalIds } from './unexcused-absence-count';
 import { detectCsvHeader, REQUIRED_CSV_HEADERS } from './csv-delimiter';
 import { normalizeSingleMailbox } from '../common/single-mailbox';
 
@@ -384,9 +384,16 @@ export class AdminService {
   }
 
   async getMemberRehearsals(memberId: string) {
+    const member = await this.prisma.member.findUnique({
+      where: { id: memberId },
+      select: { createdAt: true },
+    });
+    if (!member) throw new NotFoundException('Mitglied nicht gefunden');
+
     const rehearsals = await this.prisma.rehearsal.findMany({
       orderBy: { date: 'asc' },
       include: {
+        _count: { select: { attendanceRecords: true } },
         attendanceRecords: {
           where: { memberId },
           select: { id: true },
@@ -398,6 +405,13 @@ export class AdminService {
       },
     });
 
+    const unexcusedRehearsalIds = new Set(getUnexcusedAbsenceRehearsalIds({
+      memberCreatedAt: member.createdAt,
+      rehearsals: rehearsals.map((r) => ({ ...r, hasAttendanceRecord: r._count.attendanceRecords > 0 })),
+      attendedRehearsalIds: rehearsals.filter((r) => r.attendanceRecords.length > 0).map((r) => r.id),
+      declinedRehearsalIds: rehearsals.filter((r) => r.attendancePlans[0]?.response === 'DECLINED').map((r) => r.id),
+    }));
+
     return rehearsals.map((r) => ({
       id: r.id,
       date: r.date,
@@ -405,6 +419,7 @@ export class AdminService {
       isOptional: r.isOptional,
       attended: r.attendanceRecords.length > 0,
       plan: r.attendancePlans[0]?.response ?? null,
+      isUnexcusedAbsence: unexcusedRehearsalIds.has(r.id),
     }));
   }
 

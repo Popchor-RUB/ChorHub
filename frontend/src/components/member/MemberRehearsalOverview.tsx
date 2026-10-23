@@ -24,6 +24,7 @@ type Props = {
   showEditToggle?: boolean;
   saveAttendancePlan?: (memberId: string, rehearsalId: string, response: 'CONFIRMED' | 'DECLINED' | null) => Promise<unknown>;
   saveAttendanceRecord?: (memberId: string, rehearsalId: string, attended: boolean) => Promise<unknown>;
+  loadRehearsals?: (memberId: string) => Promise<{ data: MemberRehearsalEntry[] }>;
 };
 
 export function MemberRehearsalOverview({
@@ -44,6 +45,7 @@ export function MemberRehearsalOverview({
   showEditToggle = true,
   saveAttendancePlan,
   saveAttendanceRecord,
+  loadRehearsals = adminMembersApi.rehearsals,
 }: Props) {
   const { t } = useTranslation();
   const cyclePlan = (current: 'CONFIRMED' | 'DECLINED' | null): 'CONFIRMED' | 'DECLINED' | null => {
@@ -93,6 +95,14 @@ export function MemberRehearsalOverview({
           (saveAttendancePlan ?? adminMembersApi.setAttendancePlan)(memberId, rehearsal.id, nextState.plan),
         ]);
       }
+      // The first or last attendance record can change whether an absence counts.
+      // Reload the backend classification instead of duplicating its rules here.
+      try {
+        const { data } = await loadRehearsals(memberId);
+        setRehearsals(data);
+      } catch {
+        onSaveError?.();
+      }
     } catch {
       setRehearsals((prev) =>
         prev.map((x) => (x.id === rehearsal.id ? { ...x, attended: rehearsal.attended, plan: rehearsal.plan } : x)),
@@ -112,7 +122,7 @@ export function MemberRehearsalOverview({
   const countablePast = past.filter((r) => !r.isOptional);
   const countableUpcoming = upcoming.filter((r) => !r.isOptional);
 
-  const unexcusedCount = countablePast.filter((r) => !r.attended && r.plan !== 'DECLINED').length;
+  const unexcusedCount = rehearsals.filter((r) => r.isUnexcusedAbsence).length;
   const excusedCount = countablePast.filter((r) => !r.attended && r.plan === 'DECLINED').length;
 
   return (
@@ -217,7 +227,7 @@ export function MemberRehearsalOverview({
           </p>
           <div className="flex flex-col gap-1">
             {past.map((r) => {
-              const unexcused = !r.isOptional && !r.attended && r.plan !== 'DECLINED';
+              const unexcused = r.isUnexcusedAbsence;
               const isSaving = savingId === r.id;
               const rowClassName = r.isOptional
                 ? 'bg-surface-secondary text-muted'
@@ -257,7 +267,9 @@ export function MemberRehearsalOverview({
                           ? t('detail_modal.attended')
                           : r.plan === 'DECLINED'
                           ? t('detail_modal.excused_short')
-                          : t('detail_modal.unexcused_short')}
+                          : unexcused
+                          ? t('detail_modal.unexcused_short')
+                          : t('detail_modal.absence_not_counted')}
                         {editMode && <span className="ml-1 opacity-50">⇄</span>}
                       </>
                     )}

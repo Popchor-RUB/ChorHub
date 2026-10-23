@@ -145,6 +145,7 @@ export interface MemberRehearsalEntry {
   isOptional: boolean;
   attended: boolean;
   plan: AttendanceResponse | null;
+  isUnexcusedAbsence: boolean;
 }
 
 export interface MemberSearchResult {
