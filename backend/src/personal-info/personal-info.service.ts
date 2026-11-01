@@ -232,7 +232,7 @@ export class PersonalInfoService {
 
   async getMemberRow(memberId: string) {
     const member = await this.prisma.member.findUnique({
-      where: { id: memberId },
+      where: { id: memberId, isDisabled: false },
       select: {
         id: true,
         firstName: true,
@@ -267,7 +267,7 @@ export class PersonalInfoService {
 
   async upsertMemberInfo(memberId: string, markdownContent: string) {
     const member = await this.prisma.member.findUnique({
-      where: { id: memberId },
+      where: { id: memberId, isDisabled: false },
       select: { id: true },
     });
 
@@ -454,6 +454,7 @@ export class PersonalInfoService {
     for (const email of recipientEmails) {
       const member = await this.prisma.member.findFirst({
         where: {
+          isDisabled: false,
           email: {
             equals: email,
             mode: 'insensitive',

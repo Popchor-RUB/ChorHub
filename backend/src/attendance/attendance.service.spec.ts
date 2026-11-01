@@ -24,6 +24,8 @@ const mockMember = {
   choirVoice: 'SOPRAN' as const,
   email: 'anna@choir.de',
   loginToken: null,
+  isDisabled: false,
+  disabledAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -34,6 +36,11 @@ describe('AttendanceService', () => {
 
   beforeEach(async () => {
     prismaMock = mockDeep<PrismaClient>();
+    prismaMock.member.findUnique.mockResolvedValue({
+      id: 'm1', firstName: 'Anna', lastName: 'Müller', email: 'anna@choir.de',
+      choirVoiceId: null, lastLoginAt: null, isDisabled: false, disabledAt: null,
+      disableReason: null, internalComment: null, createdAt: new Date(), updatedAt: new Date(),
+    });
     const module = await Test.createTestingModule({
       providers: [
         AttendanceService,
@@ -136,6 +143,7 @@ describe('AttendanceService', () => {
   });
 
   describe('getRecordsForRehearsal', () => {
+
     const rehearsalA = { ...mockRehearsal, id: 'r-a', date: new Date('2025-01-01') };
     const rehearsalB = { ...mockRehearsal, id: 'r-b', date: new Date('2025-02-01') };
     const rehearsalC = { ...mockRehearsal, id: 'r-c', date: new Date('2025-03-01') };
@@ -245,6 +253,19 @@ describe('AttendanceService', () => {
   });
 
   describe('setAttendanceRecord', () => {
+    it.each([true, false])('rejects disabled or missing members when attended=%s', async (attended) => {
+      prismaMock.rehearsal.findUnique.mockResolvedValue(mockRehearsal);
+      prismaMock.member.findUnique.mockResolvedValue(null);
+
+      await expect(service.setAttendanceRecord('rehearsal-1', 'disabled', attended))
+        .rejects.toThrow(NotFoundException);
+      expect(prismaMock.member.findUnique).toHaveBeenCalledWith({
+        where: { id: 'disabled', isDisabled: false }, select: { id: true },
+      });
+      expect(prismaMock.attendanceRecord.upsert).not.toHaveBeenCalled();
+      expect(prismaMock.attendanceRecord.deleteMany).not.toHaveBeenCalled();
+    });
+
     it('throws NotFoundException when rehearsal does not exist', async () => {
       prismaMock.rehearsal.findUnique.mockResolvedValue(null);
       await expect(
@@ -307,6 +328,11 @@ describe('AttendanceService', () => {
       expect(prismaMock.rehearsal.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { date: { gte: startOfToday } },
+          include: expect.objectContaining({
+            attendancePlans: expect.objectContaining({
+              where: { response: 'CONFIRMED' },
+            }),
+          }),
         }),
       );
       expect(result[0].totalConfirmed).toBe(3);
@@ -325,7 +351,7 @@ describe('AttendanceService', () => {
         {
           ...mockRehearsal,
           date: new Date('2024-01-01'),
-          attendancePlans: [{ response: 'CONFIRMED' }, { response: 'CONFIRMED' }],
+          attendancePlans: [{ response: 'CONFIRMED', member: mockMember }, { response: 'CONFIRMED', member: mockMember }],
           attendanceRecords: [
             { member: { choirVoice: { name: 'Alt' } } },
             { member: { choirVoice: { name: 'Tenor' } } },
@@ -342,7 +368,7 @@ describe('AttendanceService', () => {
           include: expect.objectContaining({
             attendancePlans: {
               where: { response: 'CONFIRMED' },
-              select: { id: true },
+              select: { member: { select: { isDisabled: true, disabledAt: true } } },
             },
           }),
         }),
@@ -374,7 +400,7 @@ describe('AttendanceService', () => {
             ...mockRehearsal,
             id: 'started-rehearsal',
             date: new Date('2030-01-01T11:00:00.000Z'),
-            attendancePlans: [{ response: 'CONFIRMED' }],
+            attendancePlans: [{ response: 'CONFIRMED', member: mockMember }],
             attendanceRecords: [
               { member: { choirVoice: { name: 'Alt' } } },
               { member: { choirVoice: { name: 'Alt' } } },

@@ -3,8 +3,16 @@ import { Test } from '@nestjs/testing';
 import { MailerService } from '@nestjs-modules/mailer';
 import { MailService } from './mail.service';
 import { MailTemplateService } from './mail-template.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { mockDeep } from 'jest-mock-extended';
 
 describe('MailService', () => {
+  const prisma = mockDeep<PrismaService>();
+
+  beforeEach(() => {
+    prisma.member.findMany.mockResolvedValue([]);
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
@@ -21,6 +29,7 @@ describe('MailService', () => {
     const module = await Test.createTestingModule({
       providers: [
         MailService,
+        { provide: PrismaService, useValue: prisma },
         { provide: MailerService, useValue: mailerService },
         { provide: MailTemplateService, useValue: templateService },
       ],
@@ -52,6 +61,7 @@ describe('MailService', () => {
     const module = await Test.createTestingModule({
       providers: [
         MailService,
+        { provide: PrismaService, useValue: prisma },
         { provide: MailerService, useValue: mailerService },
         { provide: MailTemplateService, useValue: templateService },
       ],
@@ -83,6 +93,7 @@ describe('MailService', () => {
       const module = await Test.createTestingModule({
         providers: [
           MailService,
+          { provide: PrismaService, useValue: prisma },
           { provide: MailerService, useValue: mailerService },
           { provide: MailTemplateService, useValue: { render: jest.fn().mockResolvedValue({ subject: 'Disabled', html: '<p>disabled</p>' }) } },
         ],
@@ -116,6 +127,7 @@ describe('MailService', () => {
     const module = await Test.createTestingModule({
       providers: [
         MailService,
+        { provide: PrismaService, useValue: prisma },
         { provide: MailerService, useValue: mailerService },
         { provide: MailTemplateService, useValue: templateService },
       ],
@@ -165,7 +177,7 @@ describe('MailService', () => {
       render: jest.fn().mockResolvedValue({ subject: '[Popchor Mitglieder] Hallo', html: '<p>rendered</p>' }),
     };
     const module = await Test.createTestingModule({
-      providers: [MailService, { provide: MailerService, useValue: mailerService }, { provide: MailTemplateService, useValue: templateService }],
+      providers: [MailService, { provide: PrismaService, useValue: prisma }, { provide: MailerService, useValue: mailerService }, { provide: MailTemplateService, useValue: templateService }],
     }).compile();
     const service = module.get(MailService);
 

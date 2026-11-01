@@ -6,6 +6,8 @@ import type { Member } from '../generated/prisma/client';
 import { InvalidMailRecipientError } from '../common/invalid-mail-recipient.error';
 import { MailService } from './mail.service';
 import { MailTemplateService } from './mail-template.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { mockDeep } from 'jest-mock-extended';
 
 describe('MailService recipient validation', () => {
   const member: Member = {
@@ -15,6 +17,7 @@ describe('MailService recipient validation', () => {
   };
   const mailer = { sendMail: jest.fn().mockResolvedValue(undefined) };
   let service: MailService;
+  const prisma = mockDeep<PrismaService>();
   const message = {
     to: 'admin@example.test', bcc: ['member@example.test'], subject: 'News', rawSubject: 'News',
     markdownContent: 'Body', signatureMarkdown: '', attachments: [],
@@ -22,10 +25,12 @@ describe('MailService recipient validation', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    prisma.member.findMany.mockResolvedValue([]);
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
     const module = await Test.createTestingModule({
       providers: [
         MailService,
+        { provide: PrismaService, useValue: prisma },
         { provide: MailerService, useValue: mailer },
         { provide: MailTemplateService, useValue: {
           render: jest.fn().mockResolvedValue({ subject: 'News', html: '<p>Body</p>' }),
@@ -36,6 +41,63 @@ describe('MailService recipient validation', () => {
   });
 
   afterEach(() => jest.restoreAllMocks());
+
+  it.each(['invite', 'login', 'personal-info', 'reminder', 'test'])(
+    'blocks %s mail after a queued recipient is disabled', async (kind) => {
+      // The queued member snapshot is active; current database state wins.
+      prisma.member.findMany.mockResolvedValue([{ ...member, isDisabled: true }]);
+      let send: Promise<unknown>;
+      switch (kind) {
+        case 'invite':
+          send = service.sendMemberInvite(member, 'https://choir.test/login');
+          break;
+        case 'login':
+          send = service.sendMagicLink(member, 'https://choir.test/login', 'token', '123456');
+          break;
+        case 'personal-info':
+          send = service.sendPersonalInfo(member, 'News', 'Body');
+          break;
+        case 'reminder':
+          send = service.sendPushFallbackReminderMail({
+            member, subject: 'News', title: 'Rehearsal', intro: 'Body', items: [],
+            magicUrl: 'https://choir.test/login', showGenericLogin: true,
+          });
+          break;
+        default:
+          send = service.sendInformationEmail({ ...message, to: member.email, bcc: [] });
+      }
+      await expect(send).rejects.toBeInstanceOf(InvalidMailRecipientError);
+      expect(prisma.member.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: { isDisabled: true },
+      }));
+      expect(mailer.sendMail).not.toHaveBeenCalled();
+    },
+  );
+
+  it('removes newly disabled BCC recipients immediately before SMTP', async () => {
+    prisma.member.findMany.mockResolvedValue([{ ...member, isDisabled: true }]);
+    await service.sendInformationEmail({
+      ...message, bcc: [' MEMBER@Example.Test ', 'active@example.test'],
+    });
+    expect(mailer.sendMail).toHaveBeenCalledWith(expect.objectContaining({
+      to: message.to, bcc: ['active@example.test'],
+    }));
+  });
+
+  it.each([false, true])('keeps disable notices deliverable when automatic=%s', async (automatic) => {
+    prisma.member.findMany.mockResolvedValue([{ ...member, isDisabled: true }]);
+    await service.sendMemberDisabledMail({
+      to: member.email, firstName: member.firstName, adminEmail: message.to, automatic,
+    });
+    expect(mailer.sendMail).toHaveBeenCalledWith(expect.objectContaining({ to: member.email }));
+    expect(prisma.member.findMany).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when current recipient status cannot be read', async () => {
+    prisma.member.findMany.mockRejectedValueOnce(new Error('Database unavailable'));
+    await expect(service.sendPersonalInfo(member, 'News', 'Body')).rejects.toThrow('Database unavailable');
+    expect(mailer.sendMail).not.toHaveBeenCalled();
+  });
 
   it.each([
     'member@example.test,external@example.test',

@@ -5,7 +5,8 @@ import type { Member } from '../generated/prisma/client';
 import type { SentEmailAttachment } from '../generated/prisma/client';
 import { MailTemplateService } from './mail-template.service';
 import type { MailTemplateKey } from './mail-template.types';
-import { requireSingleMailbox } from '../common/single-mailbox';
+import { PrismaService } from '../prisma/prisma.service';
+import { filterActiveMailRecipients } from './filter-active-mail-recipients';
 
 export interface PushFallbackReminderItem {
   label: string;
@@ -21,6 +22,7 @@ export class MailService {
   constructor(
     private readonly mailerService: MailerService,
     private readonly templateService: MailTemplateService,
+    private readonly prisma: PrismaService,
   ) {
     this.markdownRenderer = new MarkdownIt({ breaks: true, html: false, linkify: true });
   }
@@ -165,8 +167,7 @@ export class MailService {
     },
   ): Promise<void> {
     try {
-      const to = requireSingleMailbox(options.to);
-      const bcc = options.bcc?.map(requireSingleMailbox);
+      const { to, bcc } = await filterActiveMailRecipients(this.prisma, template, options.to, options.bcc);
       await this.mailerService.sendMail({ ...options, to, ...(bcc ? { bcc } : {}) });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

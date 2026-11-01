@@ -129,7 +129,7 @@ describe("VoiceAdminService", () => {
     await expect(service.updateMemberComment("admin-member", "target", "  Hinweis  "))
       .resolves.toEqual({ comment: "Hinweis" });
     expect(prismaMock.member.updateMany).toHaveBeenCalledWith({
-      where: { id: "target", choirVoiceId: { in: ["voice-a"] } },
+      where: { id: "target", isDisabled: false, choirVoiceId: { in: ["voice-a"] } },
       data: { internalComment: "Hinweis" },
     });
 
@@ -185,6 +185,34 @@ describe("VoiceAdminService", () => {
       service.getMemberRehearsals("admin-member", "target"),
     ).rejects.toThrow(ForbiddenException);
     expect(adminService.getMemberRehearsals).not.toHaveBeenCalled();
+  });
+
+  it("rejects disabled targets for every voice-admin member action", async () => {
+    prismaMock.voiceAdminGrant.findMany.mockResolvedValue([
+      { memberId: "admin-member", choirVoiceId: "voice-a" },
+    ]);
+    prismaMock.member.findUnique.mockResolvedValue(null);
+    prismaMock.member.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.getMemberRehearsals("admin-member", "disabled"))
+      .rejects.toThrow(ForbiddenException);
+    await expect(service.setRecord("admin-member", "r1", "disabled", true))
+      .rejects.toThrow(ForbiddenException);
+    await expect(service.setMemberAttendancePlan("admin-member", "disabled", "r1", "CONFIRMED"))
+      .rejects.toThrow(ForbiddenException);
+    await expect(service.updateMemberComment("admin-member", "disabled", "note"))
+      .rejects.toThrow(ForbiddenException);
+
+    expect(prismaMock.member.findUnique).toHaveBeenCalledTimes(3);
+    for (const [query] of prismaMock.member.findUnique.mock.calls) {
+      expect(query).toEqual({
+        where: { id: "disabled", isDisabled: false },
+        select: { id: true, choirVoiceId: true },
+      });
+    }
+    expect(adminService.getMemberRehearsals).not.toHaveBeenCalled();
+    expect(adminService.adminSetMemberAttendancePlan).not.toHaveBeenCalled();
+    expect(attendanceService.setAttendanceRecord).not.toHaveBeenCalled();
   });
 
   it("denies ordinary members access to the public check-in key", async () => {

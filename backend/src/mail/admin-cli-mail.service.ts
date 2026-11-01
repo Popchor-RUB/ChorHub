@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { MAIL_TEMPLATE_DEFINITIONS } from "./mail-template.catalog";
 import { createMailTemplatePreviewContext } from "./mail-template-preview";
 import { MailTemplateService } from "./mail-template.service";
+import { filterActiveMailRecipients } from "./filter-active-mail-recipients";
 
 interface MailMember {
   id: string;
@@ -81,7 +82,9 @@ export class AdminCliMailService {
       context.magicUrl = `${this.config.getOrThrow<string>("APP_URL").replace(/\/+$/, "")}/login`;
     }
 
-    return this.templates.render(selection.key, context);
+    const mail = await this.templates.render(selection.key, context);
+    await filterActiveMailRecipients(this.prisma, selection.key, member.email);
+    return mail;
   }
 
   async createSessionCredentials(memberId: string, includeCode = false) {

@@ -488,6 +488,17 @@ describe('AdminService', () => {
   });
 
   describe('getMemberOverview', () => {
+    it.each(['active', 'disabled'] as const)('returns only %s members when explicitly requested', async (status) => {
+      prismaMock.rehearsal.findMany.mockResolvedValue([]);
+      prismaMock.member.findMany.mockResolvedValue([]);
+
+      await service.getMemberOverview(status);
+
+      expect(prismaMock.member.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: { isDisabled: status === 'disabled' },
+      }));
+    });
+
     const countableRehearsals = ['r-1', 'r-2', 'r-3'].map((id, index) => ({
       id,
       date: new Date(`2025-01-0${index + 1}T18:00:00Z`),

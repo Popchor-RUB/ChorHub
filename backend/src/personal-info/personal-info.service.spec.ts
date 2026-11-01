@@ -478,4 +478,33 @@ describe('PersonalInfoService', () => {
     );
     expect(rows.map((row) => row.id)).toEqual(['m-1']);
   });
+
+  it('rejects disabled recipients from uploaded files before saving or queuing mail', async () => {
+    prismaMock.member.findFirst.mockResolvedValue(null);
+
+    await expect(service.publish({
+      markdownTemplate: 'Hi {{firstname}}', emailSubject: 'News', sendEmail: true,
+      recipientMode: 'file', recipientFile: txtFile('recipients', ['disabled@choir.de']),
+      placeholderNamesJson: '[]', placeholderFiles: [],
+    })).rejects.toThrow('Empfänger nicht gefunden');
+
+    expect(prismaMock.member.findFirst).toHaveBeenCalledWith({
+      where: { isDisabled: false, email: { equals: 'disabled@choir.de', mode: 'insensitive' } },
+    });
+    expect(prismaMock.personalInfoEntry.upsert).not.toHaveBeenCalled();
+    expect(mailService.sendPersonalInfo).not.toHaveBeenCalled();
+  });
+
+  it('rejects disabled members on individual personal-information endpoints', async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+    await expect(service.getMemberRow('disabled')).rejects.toThrow('Mitglied nicht gefunden');
+    await expect(service.upsertMemberInfo('disabled', 'Body')).rejects.toThrow('Mitglied nicht gefunden');
+    expect(prismaMock.member.findUnique).toHaveBeenCalledTimes(2);
+    for (const [query] of prismaMock.member.findUnique.mock.calls) {
+      expect(query).toEqual(expect.objectContaining({
+        where: { id: 'disabled', isDisabled: false },
+      }));
+    }
+    expect(prismaMock.personalInfoEntry.upsert).not.toHaveBeenCalled();
+  });
 });

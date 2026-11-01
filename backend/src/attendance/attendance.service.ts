@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceResponse } from '../generated/prisma/client';
 import { SetAttendancePlanDto } from './dto/attendance.dto';
+import { isMemberVisibleAtRehearsal } from './is-member-visible-at-rehearsal';
 
 @Injectable()
 export class AttendanceService {
@@ -64,7 +65,7 @@ export class AttendanceService {
       pastAttendances,
     );
 
-    return members.map((m) => ({
+    return members.filter((member) => isMemberVisibleAtRehearsal(member, rehearsal.date)).map((m) => ({
       id: m.id,
       firstName: m.firstName,
       lastName: m.lastName,
@@ -92,6 +93,8 @@ export class AttendanceService {
         firstName: true,
         lastName: true,
         internalComment: true,
+        isDisabled: true,
+        disabledAt: true,
         choirVoice: { select: { id: true, name: true } },
         attendanceRecords: { where: { rehearsalId }, select: { id: true } },
         attendancePlans: { where: { rehearsalId }, select: { response: true } },
@@ -113,7 +116,7 @@ export class AttendanceService {
       records,
     );
 
-    return members.map((member) => ({
+    return members.filter((member) => isMemberVisibleAtRehearsal(member, rehearsal.date)).map((member) => ({
       id: member.id,
       firstName: member.firstName,
       lastName: member.lastName,
@@ -130,6 +133,12 @@ export class AttendanceService {
     if (rehearsal.isOptional) {
       throw new ForbiddenException('Für optionale Proben wird keine Anwesenheit erfasst');
     }
+
+    const member = await this.prisma.member.findUnique({
+      where: { id: memberId, isDisabled: false },
+      select: { id: true },
+    });
+    if (!member) throw new NotFoundException('Mitglied nicht gefunden');
 
     if (attended) {
       await this.prisma.attendanceRecord.upsert({
@@ -175,22 +184,25 @@ export class AttendanceService {
       include: {
         attendancePlans: {
           where: { response: AttendanceResponse.CONFIRMED },
-          include: { member: { select: { choirVoice: { select: { name: true } } } } },
+          include: { member: { select: { isDisabled: true, disabledAt: true, choirVoice: { select: { name: true } } } } },
         },
       },
     });
 
-    return rehearsals.map((r) => ({
-      id: r.id,
-      date: r.date,
-      title: r.title,
-      durationMinutes: r.durationMinutes,
-      isOptional: r.isOptional,
-      totalConfirmed: r.attendancePlans.length,
-      byVoice: this.groupByVoice(
-        r.attendancePlans.map((p) => p.member.choirVoice?.name),
-      ),
-    }));
+    return rehearsals.map((r) => {
+      const plans = r.attendancePlans.filter((plan) => isMemberVisibleAtRehearsal(plan.member, r.date));
+      return {
+        id: r.id,
+        date: r.date,
+        title: r.title,
+        durationMinutes: r.durationMinutes,
+        isOptional: r.isOptional,
+        totalConfirmed: plans.length,
+        byVoice: this.groupByVoice(
+          plans.map((p) => p.member.choirVoice?.name),
+        ),
+      };
+    });
   }
 
   private async getPastOverviewFrom(boundary: Date, includeBoundary: boolean) {
@@ -200,26 +212,30 @@ export class AttendanceService {
       include: {
         attendancePlans: {
           where: { response: AttendanceResponse.CONFIRMED },
-          select: { id: true },
+          select: { member: { select: { isDisabled: true, disabledAt: true } } },
         },
         attendanceRecords: {
-          include: { member: { select: { choirVoice: { select: { name: true } } } } },
+          include: { member: { select: { isDisabled: true, disabledAt: true, choirVoice: { select: { name: true } } } } },
         },
       },
     });
 
-    return rehearsals.map((r) => ({
-      id: r.id,
-      date: r.date,
-      title: r.title,
-      durationMinutes: r.durationMinutes,
-      isOptional: r.isOptional,
-      totalConfirmed: r.attendancePlans.length,
-      totalAttended: r.attendanceRecords.length,
-      byVoice: this.groupByVoice(
-        r.attendanceRecords.map((rec) => rec.member.choirVoice?.name),
-      ),
-    }));
+    return rehearsals.map((r) => {
+      const plans = r.attendancePlans.filter((plan) => isMemberVisibleAtRehearsal(plan.member, r.date));
+      const records = r.attendanceRecords.filter((record) => isMemberVisibleAtRehearsal(record.member, r.date));
+      return {
+        id: r.id,
+        date: r.date,
+        title: r.title,
+        durationMinutes: r.durationMinutes,
+        isOptional: r.isOptional,
+        totalConfirmed: plans.length,
+        totalAttended: records.length,
+        byVoice: this.groupByVoice(
+          records.map((rec) => rec.member.choirVoice?.name),
+        ),
+      };
+    });
   }
 
   private groupByVoice(voices: (string | null | undefined)[]): Record<string, number> {

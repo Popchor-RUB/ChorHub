@@ -33,6 +33,7 @@ describe("AdminCliMailService", () => {
     prisma.mailTemplate.findMany.mockResolvedValue([]);
     prisma.mailTemplate.updateMany.mockResolvedValue({ count: 0 });
     prisma.member.updateMany.mockResolvedValue({ count: 1 });
+    prisma.member.findMany.mockResolvedValue([]);
     jest
       .spyOn(prisma, "$transaction")
       .mockImplementation((callback) => callback(prisma));
@@ -108,6 +109,20 @@ describe("AdminCliMailService", () => {
     );
     expect(prisma.memberLoginToken.create).not.toHaveBeenCalled();
     expect(prisma.memberLoginCode.create).not.toHaveBeenCalled();
+  });
+
+  it.each(["personal-info", "push-fallback-reminder"])("blocks CLI %s mail to disabled members", async (key) => {
+    const defaults = await loadMailTemplateDefaults();
+    const template = defaults.find((definition) => definition.key === key)!;
+    prisma.mailTemplate.findUnique.mockResolvedValue({
+      ...template, createdAt: new Date(), updatedAt: new Date(),
+    });
+    prisma.member.findMany.mockResolvedValue([{
+      ...member, choirVoiceId: null, lastLoginAt: null, isDisabled: true,
+      disabledAt: new Date(), disableReason: null, internalComment: null,
+      createdAt: new Date(), updatedAt: new Date(),
+    }]);
+    await expect(service.build(key, member)).rejects.toThrow("Disabled members cannot receive email");
   });
 
   it("stores hashed credentials with a fifteen-minute code expiry", async () => {

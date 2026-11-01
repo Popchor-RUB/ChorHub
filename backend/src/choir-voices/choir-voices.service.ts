@@ -9,7 +9,7 @@ export class ChoirVoicesService {
   async findAll() {
     const voices = await this.prisma.choirVoice.findMany({
       orderBy: { sortOrder: 'asc' },
-      include: { _count: { select: { members: true } } },
+      include: { _count: { select: { members: { where: { isDisabled: false } } } } },
     });
     return voices.map(({ _count, ...voice }) => ({ ...voice, memberCount: _count.members }));
   }

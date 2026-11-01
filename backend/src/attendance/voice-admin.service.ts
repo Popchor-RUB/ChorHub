@@ -61,7 +61,7 @@ export class VoiceAdminService {
     const voiceIds = await this.requireVoiceIds(memberId);
     const normalizedComment = comment.trim() || null;
     const result = await this.prisma.member.updateMany({
-      where: { id: targetMemberId, choirVoiceId: { in: voiceIds } },
+      where: { id: targetMemberId, isDisabled: false, choirVoiceId: { in: voiceIds } },
       data: { internalComment: normalizedComment },
     });
     if (result.count === 0) {
@@ -89,7 +89,7 @@ export class VoiceAdminService {
 
   private async requireTargetMemberVoice(memberId: string, voiceIds: string[]) {
     const member = await this.prisma.member.findUnique({
-      where: { id: memberId },
+      where: { id: memberId, isDisabled: false },
       select: { id: true, choirVoiceId: true },
     });
     if (!member?.choirVoiceId || !voiceIds.includes(member.choirVoiceId)) {
